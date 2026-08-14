@@ -539,24 +539,25 @@ function switchView(name, btn) {
 
 function toggleTheme() {
   const cur = document.documentElement.getAttribute('data-theme');
-  if (cur === 'light') {
+  if (cur === 'dark') {
     document.documentElement.removeAttribute('data-theme');
     document.getElementById('theme-icon').textContent = 'dark_mode';
-    localStorage.setItem('jec_theme', 'dark');
-  } else {
-    document.documentElement.setAttribute('data-theme', 'light');
-    document.getElementById('theme-icon').textContent = 'light_mode';
     localStorage.setItem('jec_theme', 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.getElementById('theme-icon').textContent = 'light_mode';
+    localStorage.setItem('jec_theme', 'dark');
   }
 }
 
 function applyTheme() {
   const saved = localStorage.getItem('jec_theme');
-  const t = saved || 'light';
-  if (t === 'light') {
-    document.documentElement.setAttribute('data-theme', 'light');
+  const t = saved || 'light'; // Default ke light (lebih vibrant)
+  if (t === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
     document.getElementById('theme-icon').textContent = 'light_mode';
   } else {
+    document.documentElement.removeAttribute('data-theme');
     document.getElementById('theme-icon').textContent = 'dark_mode';
   }
 }
