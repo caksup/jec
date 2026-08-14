@@ -1,0 +1,105 @@
+{
+  "settings": {},
+  "students": [
+    {
+      "id": "260101",
+      "pin": "1234",
+      "name": "Student 260101",
+      "class": "Batch 1 2026",
+      "batch": "2601",
+      "active": true,
+      "startDate": "2026-08-14",
+      "sessionDuration": 30
+    },
+    {
+      "id": "260102",
+      "pin": "1234",
+      "name": "Student 260102",
+      "class": "Batch 1 2026",
+      "batch": "2601",
+      "active": true,
+      "startDate": "2026-08-14",
+      "sessionDuration": 30
+    },
+    {
+      "id": "260103",
+      "pin": "1234",
+      "name": "Student 260103",
+      "class": "Batch 1 2026",
+      "batch": "2601",
+      "active": true,
+      "startDate": "2026-08-14",
+      "sessionDuration": 30
+    },
+    {
+      "id": "260104",
+      "pin": "1234",
+      "name": "Student 260104",
+      "class": "Batch 1 2026",
+      "batch": "2601",
+      "active": true,
+      "startDate": "2026-08-14",
+      "sessionDuration": 30
+    },
+    {
+      "id": "260105",
+      "pin": "1234",
+      "name": "Student 260105",
+      "class": "Batch 1 2026",
+      "batch": "2601",
+      "active": true,
+      "startDate": "2026-08-14",
+      "sessionDuration": 30
+    },
+    {
+      "id": "260106",
+      "pin": "1234",
+      "name": "Student 260106",
+      "class": "Batch 1 2026",
+      "batch": "2601",
+      "active": true,
+      "startDate": "2026-08-14",
+      "sessionDuration": 30
+    },
+    {
+      "id": "260107",
+      "pin": "1234",
+      "name": "Student 260107",
+      "class": "Batch 1 2026",
+      "batch": "2601",
+      "active": true,
+      "startDate": "2026-08-14",
+      "sessionDuration": 30
+    },
+    {
+      "id": "260108",
+      "pin": "1234",
+      "name": "Student 260108",
+      "class": "Batch 1 2026",
+      "batch": "2601",
+      "active": true,
+      "startDate": "2026-08-14",
+      "sessionDuration": 30
+    },
+    {
+      "id": "260109",
+      "pin": "1234",
+      "name": "Student 260109",
+      "class": "Batch 1 2026",
+      "batch": "2601",
+      "active": true,
+      "startDate": "2026-08-14",
+      "sessionDuration": 30
+    },
+    {
+      "id": "260110",
+      "pin": "1234",
+      "name": "Student 260110",
+      "class": "Batch 1 2026",
+      "batch": "2601",
+      "active": true,
+      "startDate": "2026-08-14",
+      "sessionDuration": 30
+    }
+  ]
+}
