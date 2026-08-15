@@ -1,7 +1,10 @@
-// JEC v.1.09 | 15/08/2026 | j/j.js | Core Engine - Fix Login + Graceful Feature Loading
+// JEC v.2.00 | 15/08/2026 | j/j.js | Core Engine - Fast First Load
+// Arsitektur: Splash → Login → Dashboard (built-in)
+// Lazy loading untuk modul non-critical
 
 'use strict';
 
+// ═══════════ GLOBAL STATE ═══════════
 const JEC = {
   config: window.JEC_CONFIG || {},
   user: null,
@@ -18,6 +21,7 @@ const JEC = {
   currentDC: null,
   dcToday: null,
   featureStates: {},
+  featureQueue: [],
   activeView: 'learn',
   currentModule: null,
   currentUnitId: null,
@@ -30,6 +34,7 @@ const JEC = {
   flmActive: false,
   appState: 'boot',
   featuresLoaded: false,
+  dashboardReady: false,
   stats: {
     partsDone: 0, perfectQuiz: false, perfectCount: 0, avgQuiz: 0,
     quizCount: 0, streak: 0, loginCount: 0, focusCount: 0,
@@ -41,13 +46,26 @@ const JEC = {
   }
 };
 
-// ═══════════ BOOTSTRAP (FIXED - Login Binding Restored) ═══════════
+// ═══════════ MODULE LOADING STRATEGY ═══════════
+// Priority 1: Blocking - harus load sebelum dashboard
+JEC.PRIORITY_1 = ['learn'];
+
+// Priority 2: After dashboard - load segera setelah dashboard tampil
+JEC.PRIORITY_2 = ['profile', 'dc', 'ach', 'focus'];
+
+// Priority 3: Lazy - load saat user pertama kali akses
+JEC.PRIORITY_3 = ['practice', 'extra', 'bm', 'notes', 'logbook', 'react'];
+
+// Built-in: tidak perlu load external
+JEC.BUILT_IN = ['splash', 'login', 'header'];
+
+// ═══════════ BOOTSTRAP ═══════════
 document.addEventListener('DOMContentLoaded', function() {
   JEC.applyTheme();
   JEC.applyLang();
   JEC.setupOfflineDetection();
   JEC.startClock();
-  JEC.initBuiltInLogin();  // ← FIX: Binding tombol login
+  JEC.initBuiltInLogin();
   JEC.initHashRouter();
   JEC.boot();
 });
@@ -59,17 +77,18 @@ JEC.boot = async function() {
   const loginPage = document.getElementById('feat-login');
   const dashboard = document.getElementById('dashboard');
   
+  // Tampilkan splash
   if (splash) {
     splash.style.display = 'flex';
     splash.classList.remove('hide');
   }
   
-  // JANGAN tampilkan login page dulu - tunggu auto-login
+  // Sembunyikan login dan dashboard dulu
   if (loginPage) loginPage.classList.add('hidden');
   if (dashboard) dashboard.classList.remove('active');
   
-  // Start loading features di background (non-blocking)
-  JEC.initFeatureRouter();
+  // Mulai load Priority 1 modules di background (non-blocking)
+  JEC.loadPriorityModules(JEC.PRIORITY_1);
   
   // Cek saved session
   const savedUser = localStorage.getItem('jec_user');
@@ -90,8 +109,8 @@ JEC.boot = async function() {
   // Tunggu minimal 3 detik splash
   await new Promise(resolve => setTimeout(resolve, 3000));
   
-  // Tunggu features load (max 3 detik, jangan stuck)
-  await JEC.waitForFeatures(3000);
+  // Tunggu Priority 1 modules selesai (max 3 detik)
+  await JEC.waitForModules(JEC.PRIORITY_1, 3000);
   
   // Fade out splash
   if (splash) {
@@ -101,165 +120,28 @@ JEC.boot = async function() {
     }, 500);
   }
   
-  // Tentukan halaman yang tampil
+  // Tentukan halaman
   if (sessionValid && JEC.user) {
     JEC.enterDashboard();
+    // Load Priority 2 modules setelah dashboard tampil
+    setTimeout(function() {
+      JEC.loadPriorityModules(JEC.PRIORITY_2);
+    }, 100);
+    // Navigate dari hash jika ada
     setTimeout(function() {
       JEC.navigateFromHash();
-    }, 300);
+    }, 500);
   } else {
     JEC.showLoginPage();
   }
 };
 
-// ═══════════ WAIT FOR FEATURES (FIXED - Timeout Shorter) ═══════════
-JEC.waitForFeatures = function(timeoutMs) {
-  timeoutMs = timeoutMs || 3000;
-  return new Promise(function(resolve) {
-    const startTime = Date.now();
-    
-    const checkInterval = setInterval(function() {
-      const features = JEC.config.FEATURES || {};
-      const featureNames = Object.keys(features);
-      const builtIn = ['splash', 'login', 'header'];
-      
-      const allDone = featureNames.every(function(name) {
-        if (builtIn.includes(name)) return true;
-        const state = JEC.featureStates[name];
-        if (!state) return false;
-        return state.loaded === true || 
-               state.disabled === true || 
-               state.error || 
-               state.notFound;
-      });
-      
-      const elapsed = Date.now() - startTime;
-      
-      if (allDone || elapsed > timeoutMs) {
-        clearInterval(checkInterval);
-        JEC.featuresLoaded = true;
-        if (JEC.config.DEBUG_MODE) {
-          console.log('[JEC] Features loading done in ' + elapsed + 'ms');
-        }
-        resolve();
-      }
-    }, 100);
-  });
-};
-
-// ═══════════ SHOW/HIDE PAGES ═══════════
-JEC.showLoginPage = function() {
-  JEC.appState = 'login';
-  
-  const loginPage = document.getElementById('feat-login');
-  const dashboard = document.getElementById('dashboard');
-  
-  if (loginPage) loginPage.classList.remove('hidden');
-  if (dashboard) dashboard.classList.remove('active');
-};
-
-JEC.enterDashboard = function() {
-  JEC.appState = 'dashboard';
-  
-  const loginPage = document.getElementById('feat-login');
-  const dashboard = document.getElementById('dashboard');
-  
-  if (loginPage) loginPage.classList.add('hidden');
-  if (dashboard) dashboard.classList.add('active');
-  
-  const userName = document.getElementById('user-name');
-  if (userName && JEC.user) {
-    userName.textContent = JEC.user.nickname ? '@' + JEC.user.nickname : JEC.user.name;
-  }
-  
-  JEC.applyHeaderBg();
-  JEC.applyCustomLogo();
-  JEC.fetchOnlineCount();
-  
-  if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
-    JEC_UI.showFLMFab();
-  }
-  
-  JEC.refreshActiveFeatureUI();
-};
-
-// ═══════════ BUILT-IN LOGIN (FIXED - Dipanggil di boot) ═══════════
-JEC.initBuiltInLogin = function() {
-  const loginBtn = document.getElementById('login-btn');
-  const loginPin = document.getElementById('login-pin');
-  const loginId = document.getElementById('login-id');
-  
-  if (loginBtn) {
-    loginBtn.onclick = function() { 
-      JEC.doLogin(); 
-    };
-  }
-  
-  if (loginPin) {
-    loginPin.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') JEC.doLogin();
-    });
-  }
-  
-  if (loginId) {
-    loginId.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') loginPin.focus();
-    });
-  }
-};
-
-JEC.doLogin = async function() {
-  const idEl = document.getElementById('login-id');
-  const pinEl = document.getElementById('login-pin');
-  const errorEl = document.getElementById('login-error');
-  const errorMsg = document.getElementById('login-error-msg');
-  const loadingEl = document.getElementById('login-loading');
-  
-  if (!idEl || !pinEl) {
-    console.error('[JEC] Login elements not found');
-    return;
-  }
-  
-  const id = idEl.value.trim().toLowerCase();
-  const pin = pinEl.value.trim();
-  
-  if (errorEl) errorEl.classList.remove('show');
-  
-  if (!id || !pin) {
-    if (errorMsg) errorMsg.textContent = JEC.t('fill_all_fields') || 'Please fill all fields';
-    if (errorEl) errorEl.classList.add('show');
-    return;
-  }
-  
-  if (loadingEl) loadingEl.classList.add('show');
-  
-  try {
-    const result = await JEC.login(id, pin);
-    if (loadingEl) loadingEl.classList.remove('show');
-    
-    if (result.success) {
-      JEC.enterDashboard();
-      setTimeout(function() {
-        JEC.navigateFromHash();
-      }, 300);
-    } else {
-      if (errorMsg) errorMsg.textContent = result.msg || JEC.t('login_failed') || 'Login failed';
-      if (errorEl) errorEl.classList.add('show');
-    }
-  } catch(e) {
-    if (loadingEl) loadingEl.classList.remove('show');
-    if (errorMsg) errorMsg.textContent = JEC.t('network_error') || 'Network error: ' + e.message;
-    if (errorEl) errorEl.classList.add('show');
-  }
-};
-
-// ═══════════ FEATURE ROUTER (FIXED - Graceful Degradation) ═══════════
-JEC.initFeatureRouter = function() {
+// ═══════════ MODULE LOADING ═══════════
+JEC.loadPriorityModules = function(moduleNames) {
   const features = JEC.config.FEATURES || {};
-  const featureNames = Object.keys(features);
-  const builtIn = ['splash', 'login', 'header'];
+  const builtIn = JEC.BUILT_IN;
   
-  featureNames.forEach(function(name) {
+  moduleNames.forEach(function(name) {
     if (builtIn.includes(name)) {
       JEC.featureStates[name] = { loaded: true, builtin: true };
       return;
@@ -268,14 +150,15 @@ JEC.initFeatureRouter = function() {
     const cfg = features[name];
     if (!cfg || !cfg.enabled) {
       JEC.featureStates[name] = { loaded: false, disabled: true };
-      // Jangan render placeholder dulu, tunggu DOM ready
       setTimeout(function() {
         JEC.renderMaintenancePlaceholder(name, 'maintenance');
       }, 100);
       return;
     }
     
-    // Load feature dengan timeout protection
+    // Jangan load ulang jika sudah di-load
+    if (JEC.featureStates[name] && JEC.featureStates[name].loaded) return;
+    
     JEC.loadFeatureWithTimeout(name, cfg.js);
   });
 };
@@ -348,6 +231,37 @@ JEC.loadFeature = function(name, jsFile, callback) {
   document.head.appendChild(script);
 };
 
+JEC.waitForModules = function(moduleNames, timeoutMs) {
+  timeoutMs = timeoutMs || 3000;
+  return new Promise(function(resolve) {
+    const startTime = Date.now();
+    const builtIn = JEC.BUILT_IN;
+    
+    const checkInterval = setInterval(function() {
+      const allDone = moduleNames.every(function(name) {
+        if (builtIn.includes(name)) return true;
+        const state = JEC.featureStates[name];
+        if (!state) return false;
+        return state.loaded === true || 
+               state.disabled === true || 
+               state.error || 
+               state.notFound ||
+               state.timeout;
+      });
+      
+      const elapsed = Date.now() - startTime;
+      
+      if (allDone || elapsed > timeoutMs) {
+        clearInterval(checkInterval);
+        if (JEC.config.DEBUG_MODE) {
+          console.log('[JEC] Modules loading done in ' + elapsed + 'ms');
+        }
+        resolve();
+      }
+    }, 50);
+  });
+};
+
 JEC.renderMaintenancePlaceholder = function(featureName, type) {
   const containerId = 'feat-' + featureName;
   const container = document.getElementById(containerId);
@@ -377,6 +291,137 @@ JEC.renderMaintenancePlaceholder = function(featureName, type) {
 JEC.isFeatureLoaded = function(name) {
   const state = JEC.featureStates[name];
   return state && state.loaded === true;
+};
+
+// Lazy load saat user pertama kali akses view
+JEC.lazyLoadForView = function(viewName) {
+  const viewModuleMap = {
+    'learn': ['learn'],
+    'practice': ['practice'],
+    'extra': ['extra', 'logbook'],
+    'profile': ['profile', 'bm', 'notes', 'ach']
+  };
+  
+  const modules = viewModuleMap[viewName] || [];
+  const toLoad = modules.filter(function(m) {
+    const state = JEC.featureStates[m];
+    return !state || (!state.loaded && !state.disabled && !state.notFound);
+  });
+  
+  if (toLoad.length > 0) {
+    JEC.loadPriorityModules(toLoad);
+  }
+};
+
+// ═══════════ SHOW/HIDE PAGES ═══════════
+JEC.showLoginPage = function() {
+  JEC.appState = 'login';
+  
+  const loginPage = document.getElementById('feat-login');
+  const dashboard = document.getElementById('dashboard');
+  
+  if (loginPage) loginPage.classList.remove('hidden');
+  if (dashboard) dashboard.classList.remove('active');
+};
+
+JEC.enterDashboard = function() {
+  JEC.appState = 'dashboard';
+  JEC.dashboardReady = true;
+  
+  const loginPage = document.getElementById('feat-login');
+  const dashboard = document.getElementById('dashboard');
+  
+  if (loginPage) loginPage.classList.add('hidden');
+  if (dashboard) dashboard.classList.add('active');
+  
+  const userName = document.getElementById('user-name');
+  if (userName && JEC.user) {
+    userName.textContent = JEC.user.nickname ? '@' + JEC.user.nickname : JEC.user.name;
+  }
+  
+  JEC.applyHeaderBg();
+  JEC.applyCustomLogo();
+  JEC.fetchOnlineCount();
+  
+  if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
+    JEC_UI.showFLMFab();
+  }
+  
+  JEC.refreshActiveFeatureUI();
+};
+
+// ═══════════ BUILT-IN LOGIN ═══════════
+JEC.initBuiltInLogin = function() {
+  const loginBtn = document.getElementById('login-btn');
+  const loginPin = document.getElementById('login-pin');
+  const loginId = document.getElementById('login-id');
+  
+  if (loginBtn) {
+    loginBtn.onclick = function() { 
+      JEC.doLogin(); 
+    };
+  }
+  
+  if (loginPin) {
+    loginPin.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') JEC.doLogin();
+    });
+  }
+  
+  if (loginId) {
+    loginId.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') loginPin.focus();
+    });
+  }
+};
+
+JEC.doLogin = async function() {
+  const idEl = document.getElementById('login-id');
+  const pinEl = document.getElementById('login-pin');
+  const errorEl = document.getElementById('login-error');
+  const errorMsg = document.getElementById('login-error-msg');
+  const loadingEl = document.getElementById('login-loading');
+  
+  if (!idEl || !pinEl) {
+    console.error('[JEC] Login elements not found');
+    return;
+  }
+  
+  const id = idEl.value.trim().toLowerCase();
+  const pin = pinEl.value.trim();
+  
+  if (errorEl) errorEl.classList.remove('show');
+  
+  if (!id || !pin) {
+    if (errorMsg) errorMsg.textContent = JEC.t('fill_all_fields') || 'Please fill all fields';
+    if (errorEl) errorEl.classList.add('show');
+    return;
+  }
+  
+  if (loadingEl) loadingEl.classList.add('show');
+  
+  try {
+    const result = await JEC.login(id, pin);
+    if (loadingEl) loadingEl.classList.remove('show');
+    
+    if (result.success) {
+      JEC.enterDashboard();
+      // Load Priority 2 modules setelah login
+      setTimeout(function() {
+        JEC.loadPriorityModules(JEC.PRIORITY_2);
+      }, 100);
+      setTimeout(function() {
+        JEC.navigateFromHash();
+      }, 500);
+    } else {
+      if (errorMsg) errorMsg.textContent = result.msg || JEC.t('login_failed') || 'Login failed';
+      if (errorEl) errorEl.classList.add('show');
+    }
+  } catch(e) {
+    if (loadingEl) loadingEl.classList.remove('show');
+    if (errorMsg) errorMsg.textContent = JEC.t('network_error') || 'Network error: ' + e.message;
+    if (errorEl) errorEl.classList.add('show');
+  }
 };
 
 // ═══════════ CLOCK ═══════════
@@ -682,6 +727,7 @@ JEC.logout = function() {
   localStorage.removeItem('jec_user');
   JEC.user = null;
   JEC.appState = 'boot';
+  JEC.dashboardReady = false;
   location.reload();
 };
 
@@ -1054,6 +1100,9 @@ JEC.switchView = function(name, btn) {
   if (btn) btn.classList.add('active');
   
   JEC.activeView = name;
+  
+  // Lazy load modules untuk view ini
+  JEC.lazyLoadForView(name);
 };
 
 JEC.toggleFullscreen = function() {
@@ -1150,11 +1199,14 @@ JEC.forceRefresh = async function() {
 
 // ═══════════ DEBUG MODE ═══════════
 JEC.debug = function() {
-  console.log('══════ JEC DEBUG v1.09 ══════');
+  console.log('══════ JEC DEBUG v2.00 ══════');
   console.log('App State:', JEC.appState);
+  console.log('Dashboard Ready:', JEC.dashboardReady);
   console.log('User:', JEC.user);
-  console.log('Features Loaded:', JEC.featuresLoaded);
   console.log('Feature States:', JEC.featureStates);
+  console.log('Priority 1:', JEC.PRIORITY_1);
+  console.log('Priority 2:', JEC.PRIORITY_2);
+  console.log('Priority 3:', JEC.PRIORITY_3);
   
   const features = JEC.config.FEATURES || {};
   Object.keys(features).forEach(function(name) {
@@ -1164,7 +1216,8 @@ JEC.debug = function() {
       name + ':',
       'enabled=' + (features[name].enabled ? 'yes' : 'no'),
       'initFn=' + (typeof initFn === 'function' ? 'OK' : 'MISSING'),
-      'container=' + (container ? 'OK' : 'MISSING')
+      'container=' + (container ? 'OK' : 'MISSING'),
+      'state=' + JSON.stringify(JEC.featureStates[name] || {})
     );
   });
   console.log('══════ END DEBUG ══════');
