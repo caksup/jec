@@ -2,6 +2,21 @@
 
 window.JEC_I18N = {
   en: {
+    // Tambahan di bagian 'en':
+loading: 'Signing in...',
+loading_sub: 'Please wait a moment',
+motivation: 'Learning English is easy and fun!',
+cta: "Let's learn together with Jagat E Course!",
+flm: 'FLM',
+flm_title: 'Focus Learn Mode',
+flm_ready: 'Ready to Focus?',
+flm_desc: 'Focus Learn Mode will lock your navigation. You can only access the current unit and its parts. No distractions, just learning!',
+flm_play: 'Start Focus',
+flm_active: 'Focus Learn Mode Active',
+flm_complete: 'Focus session completed!',
+flm_exit_confirm: 'Exit Focus Learn Mode?',
+cancel: 'Cancel',
+fill_all_fields: 'Please fill all fields',
     login_subtitle: 'Student Portal',
     student_id: 'Student ID',
     login_btn: 'SIGN IN',
@@ -52,6 +67,21 @@ window.JEC_I18N = {
     }
   },
   id: {
+    // Tambahan di bagian 'id':
+loading: 'Sedang masuk...',
+loading_sub: 'Mohon tunggu sebentar',
+motivation: 'Belajar bahasa Inggris itu mudah dan menyenangkan!',
+cta: 'Ayo belajar bersama Jagat E Course!',
+flm: 'FLM',
+flm_title: 'Mode Fokus Belajar',
+flm_ready: 'Siap untuk Fokus?',
+flm_desc: 'Mode Fokus Belajar akan mengunci navigasi Anda. Anda hanya bisa mengakses unit dan bagian di dalamnya. Tanpa gangguan, hanya belajar!',
+flm_play: 'Mulai Fokus',
+flm_active: 'Mode Fokus Belajar Aktif',
+flm_complete: 'Sesi fokus selesai!',
+flm_exit_confirm: 'Keluar dari Mode Fokus Belajar?',
+cancel: 'Batal',
+fill_all_fields: 'Mohon isi semua field',
     login_subtitle: 'Portal Siswa',
     student_id: 'ID Siswa',
     login_btn: 'MASUK',
