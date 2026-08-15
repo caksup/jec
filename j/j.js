@@ -1,4 +1,4 @@
-// JEC v.1.08 | 15/08/2026 | j/j.js | Core Engine - Fix Race Condition + Auto-Login
+// JEC v.1.09 | 15/08/2026 | j/j.js | Core Engine - Fix Login + Graceful Feature Loading
 
 'use strict';
 
@@ -18,7 +18,6 @@ const JEC = {
   currentDC: null,
   dcToday: null,
   featureStates: {},
-  featurePromises: {},
   activeView: 'learn',
   currentModule: null,
   currentUnitId: null,
@@ -29,7 +28,7 @@ const JEC = {
   flmSeconds: 0,
   flmTotalSeconds: 0,
   flmActive: false,
-  appState: 'boot',  // boot, splash, login, dashboard
+  appState: 'boot',
   featuresLoaded: false,
   stats: {
     partsDone: 0, perfectQuiz: false, perfectCount: 0, avgQuiz: 0,
@@ -42,12 +41,14 @@ const JEC = {
   }
 };
 
-// ═══════════ BOOTSTRAP (STATE MACHINE) ═══════════
+// ═══════════ BOOTSTRAP (FIXED - Login Binding Restored) ═══════════
 document.addEventListener('DOMContentLoaded', function() {
   JEC.applyTheme();
   JEC.applyLang();
   JEC.setupOfflineDetection();
   JEC.startClock();
+  JEC.initBuiltInLogin();  // ← FIX: Binding tombol login
+  JEC.initHashRouter();
   JEC.boot();
 });
 
@@ -63,14 +64,14 @@ JEC.boot = async function() {
     splash.classList.remove('hide');
   }
   
-  // JANGAN tampilkan login page dulu - tunggu auto-login selesai
+  // JANGAN tampilkan login page dulu - tunggu auto-login
   if (loginPage) loginPage.classList.add('hidden');
   if (dashboard) dashboard.classList.remove('active');
   
-  // Start loading features di background (jangan tunggu)
+  // Start loading features di background (non-blocking)
   JEC.initFeatureRouter();
   
-  // Cek apakah ada saved session
+  // Cek saved session
   const savedUser = localStorage.getItem('jec_user');
   let sessionValid = false;
   
@@ -86,12 +87,11 @@ JEC.boot = async function() {
     }
   }
   
-  // Tunggu minimal 3 detik splash (atau sampai features load)
-  const minSplashTime = new Promise(resolve => setTimeout(resolve, 3000));
-  await minSplashTime;
+  // Tunggu minimal 3 detik splash
+  await new Promise(resolve => setTimeout(resolve, 3000));
   
-  // Tunggu features selesai load (max 5 detik)
-  await JEC.waitForFeatures(5000);
+  // Tunggu features load (max 3 detik, jangan stuck)
+  await JEC.waitForFeatures(3000);
   
   // Fade out splash
   if (splash) {
@@ -101,10 +101,9 @@ JEC.boot = async function() {
     }, 500);
   }
   
-  // Sekarang tentukan halaman yang tampil
+  // Tentukan halaman yang tampil
   if (sessionValid && JEC.user) {
     JEC.enterDashboard();
-    // Coba navigate dari hash jika ada
     setTimeout(function() {
       JEC.navigateFromHash();
     }, 300);
@@ -113,27 +112,35 @@ JEC.boot = async function() {
   }
 };
 
-// ═══════════ WAIT FOR FEATURES ═══════════
+// ═══════════ WAIT FOR FEATURES (FIXED - Timeout Shorter) ═══════════
 JEC.waitForFeatures = function(timeoutMs) {
-  timeoutMs = timeoutMs || 5000;
+  timeoutMs = timeoutMs || 3000;
   return new Promise(function(resolve) {
-    if (JEC.featuresLoaded) {
-      resolve();
-      return;
-    }
-    
     const startTime = Date.now();
+    
     const checkInterval = setInterval(function() {
-      const allDone = Object.keys(JEC.config.FEATURES || {}).every(function(name) {
-        // Skip built-in features
-        if (name === 'splash' || name === 'login' || name === 'header') return true;
+      const features = JEC.config.FEATURES || {};
+      const featureNames = Object.keys(features);
+      const builtIn = ['splash', 'login', 'header'];
+      
+      const allDone = featureNames.every(function(name) {
+        if (builtIn.includes(name)) return true;
         const state = JEC.featureStates[name];
-        return state && (state.loaded === true || state.disabled === true || state.error || state.notFound);
+        if (!state) return false;
+        return state.loaded === true || 
+               state.disabled === true || 
+               state.error || 
+               state.notFound;
       });
       
-      if (allDone || (Date.now() - startTime) > timeoutMs) {
+      const elapsed = Date.now() - startTime;
+      
+      if (allDone || elapsed > timeoutMs) {
         clearInterval(checkInterval);
         JEC.featuresLoaded = true;
+        if (JEC.config.DEBUG_MODE) {
+          console.log('[JEC] Features loading done in ' + elapsed + 'ms');
+        }
         resolve();
       }
     }, 100);
@@ -142,7 +149,6 @@ JEC.waitForFeatures = function(timeoutMs) {
 
 // ═══════════ SHOW/HIDE PAGES ═══════════
 JEC.showLoginPage = function() {
-  if (JEC.appState === 'login') return;
   JEC.appState = 'login';
   
   const loginPage = document.getElementById('feat-login');
@@ -153,7 +159,6 @@ JEC.showLoginPage = function() {
 };
 
 JEC.enterDashboard = function() {
-  if (JEC.appState === 'dashboard') return;
   JEC.appState = 'dashboard';
   
   const loginPage = document.getElementById('feat-login');
@@ -175,11 +180,80 @@ JEC.enterDashboard = function() {
     JEC_UI.showFLMFab();
   }
   
-  // Refresh semua feature yang sudah load
   JEC.refreshActiveFeatureUI();
 };
 
-// ═══════════ FEATURE ROUTER (PROMISE-BASED) ═══════════
+// ═══════════ BUILT-IN LOGIN (FIXED - Dipanggil di boot) ═══════════
+JEC.initBuiltInLogin = function() {
+  const loginBtn = document.getElementById('login-btn');
+  const loginPin = document.getElementById('login-pin');
+  const loginId = document.getElementById('login-id');
+  
+  if (loginBtn) {
+    loginBtn.onclick = function() { 
+      JEC.doLogin(); 
+    };
+  }
+  
+  if (loginPin) {
+    loginPin.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') JEC.doLogin();
+    });
+  }
+  
+  if (loginId) {
+    loginId.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') loginPin.focus();
+    });
+  }
+};
+
+JEC.doLogin = async function() {
+  const idEl = document.getElementById('login-id');
+  const pinEl = document.getElementById('login-pin');
+  const errorEl = document.getElementById('login-error');
+  const errorMsg = document.getElementById('login-error-msg');
+  const loadingEl = document.getElementById('login-loading');
+  
+  if (!idEl || !pinEl) {
+    console.error('[JEC] Login elements not found');
+    return;
+  }
+  
+  const id = idEl.value.trim().toLowerCase();
+  const pin = pinEl.value.trim();
+  
+  if (errorEl) errorEl.classList.remove('show');
+  
+  if (!id || !pin) {
+    if (errorMsg) errorMsg.textContent = JEC.t('fill_all_fields') || 'Please fill all fields';
+    if (errorEl) errorEl.classList.add('show');
+    return;
+  }
+  
+  if (loadingEl) loadingEl.classList.add('show');
+  
+  try {
+    const result = await JEC.login(id, pin);
+    if (loadingEl) loadingEl.classList.remove('show');
+    
+    if (result.success) {
+      JEC.enterDashboard();
+      setTimeout(function() {
+        JEC.navigateFromHash();
+      }, 300);
+    } else {
+      if (errorMsg) errorMsg.textContent = result.msg || JEC.t('login_failed') || 'Login failed';
+      if (errorEl) errorEl.classList.add('show');
+    }
+  } catch(e) {
+    if (loadingEl) loadingEl.classList.remove('show');
+    if (errorMsg) errorMsg.textContent = JEC.t('network_error') || 'Network error: ' + e.message;
+    if (errorEl) errorEl.classList.add('show');
+  }
+};
+
+// ═══════════ FEATURE ROUTER (FIXED - Graceful Degradation) ═══════════
 JEC.initFeatureRouter = function() {
   const features = JEC.config.FEATURES || {};
   const featureNames = Object.keys(features);
@@ -192,16 +266,31 @@ JEC.initFeatureRouter = function() {
     }
     
     const cfg = features[name];
-    if (!cfg.enabled) {
+    if (!cfg || !cfg.enabled) {
       JEC.featureStates[name] = { loaded: false, disabled: true };
-      JEC.renderMaintenancePlaceholder(name, 'maintenance');
+      // Jangan render placeholder dulu, tunggu DOM ready
+      setTimeout(function() {
+        JEC.renderMaintenancePlaceholder(name, 'maintenance');
+      }, 100);
       return;
     }
     
-    // Buat promise untuk setiap feature
-    JEC.featurePromises[name] = new Promise(function(resolve) {
-      JEC.loadFeature(name, cfg.js, resolve);
-    });
+    // Load feature dengan timeout protection
+    JEC.loadFeatureWithTimeout(name, cfg.js);
+  });
+};
+
+JEC.loadFeatureWithTimeout = function(name, jsFile) {
+  const timeout = setTimeout(function() {
+    if (!JEC.featureStates[name] || !JEC.featureStates[name].loaded) {
+      console.warn('[JEC] Feature load timeout: ' + name);
+      JEC.featureStates[name] = { loaded: false, timeout: true };
+      JEC.renderMaintenancePlaceholder(name, 'error');
+    }
+  }, 5000);
+  
+  JEC.loadFeature(name, jsFile, function() {
+    clearTimeout(timeout);
   });
 };
 
@@ -223,6 +312,7 @@ JEC.loadFeature = function(name, jsFile, callback) {
         console.error('[JEC] ✗ Error init feature ' + name + ':', err);
         JEC.featureStates[name] = { loaded: false, error: err.message };
         JEC.renderMaintenancePlaceholder(name, 'error');
+        
         // Retry sekali setelah 1 detik
         setTimeout(function() {
           try {
@@ -289,7 +379,7 @@ JEC.isFeatureLoaded = function(name) {
   return state && state.loaded === true;
 };
 
-// ═══════════ CLOCK (JAM REAL-TIME) ═══════════
+// ═══════════ CLOCK ═══════════
 JEC.startClock = function() {
   JEC.updateClock();
   setInterval(JEC.updateClock, 1000);
@@ -531,43 +621,6 @@ JEC.apiPost = async function(data) {
 };
 
 // ═══════════ LOGIN & SESSION ═══════════
-JEC.doLogin = async function() {
-  const id = document.getElementById('login-id').value.trim().toLowerCase();
-  const pin = document.getElementById('login-pin').value.trim();
-  const errorEl = document.getElementById('login-error');
-  const errorMsg = document.getElementById('login-error-msg');
-  const loadingEl = document.getElementById('login-loading');
-  
-  if (errorEl) errorEl.classList.remove('show');
-  
-  if (!id || !pin) {
-    if (errorMsg) errorMsg.textContent = JEC.t('fill_all_fields') || 'Please fill all fields';
-    if (errorEl) errorEl.classList.add('show');
-    return;
-  }
-  
-  if (loadingEl) loadingEl.classList.add('show');
-  
-  try {
-    const result = await JEC.login(id, pin);
-    if (loadingEl) loadingEl.classList.remove('show');
-    
-    if (result.success) {
-      JEC.enterDashboard();
-      setTimeout(function() {
-        JEC.navigateFromHash();
-      }, 300);
-    } else {
-      if (errorMsg) errorMsg.textContent = result.msg || JEC.t('login_failed');
-      if (errorEl) errorEl.classList.add('show');
-    }
-  } catch(e) {
-    if (loadingEl) loadingEl.classList.remove('show');
-    if (errorMsg) errorMsg.textContent = JEC.t('network_error') || 'Network error';
-    if (errorEl) errorEl.classList.add('show');
-  }
-};
-
 JEC.login = async function(id, pin) {
   try {
     const data = await JEC.apiGet({ action: 'login', id: id, pin: pin });
@@ -614,7 +667,6 @@ JEC.autoLogin = async function(u) {
     }
   } catch(e) {
     console.warn('[JEC] Auto-login check failed:', e);
-    // Fallback: load data offline (dari localStorage)
     try {
       JEC.user = u;
       await JEC.loadAllData();
@@ -1098,11 +1150,23 @@ JEC.forceRefresh = async function() {
 
 // ═══════════ DEBUG MODE ═══════════
 JEC.debug = function() {
-  console.log('══════ JEC DEBUG v1.08 ══════');
+  console.log('══════ JEC DEBUG v1.09 ══════');
   console.log('App State:', JEC.appState);
   console.log('User:', JEC.user);
   console.log('Features Loaded:', JEC.featuresLoaded);
   console.log('Feature States:', JEC.featureStates);
+  
+  const features = JEC.config.FEATURES || {};
+  Object.keys(features).forEach(function(name) {
+    const initFn = window['JEC_' + name.toUpperCase() + '_INIT'];
+    const container = document.getElementById('feat-' + name);
+    console.log(
+      name + ':',
+      'enabled=' + (features[name].enabled ? 'yes' : 'no'),
+      'initFn=' + (typeof initFn === 'function' ? 'OK' : 'MISSING'),
+      'container=' + (container ? 'OK' : 'MISSING')
+    );
+  });
   console.log('══════ END DEBUG ══════');
 };
 
@@ -1184,10 +1248,5 @@ setInterval(function() {
     JEC.fetchOnlineCount();
   }
 }, 30000);
-
-// Init hash router after DOM ready
-setTimeout(function() {
-  JEC.initHashRouter();
-}, 100);
 
 window.JEC = JEC;
