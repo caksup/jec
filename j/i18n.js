@@ -3,6 +3,10 @@
 window.JEC_I18N = {
   en: {
     // Tambahan di bagian 'en':
+invalid_module: 'Invalid module',
+invalid_unit: 'Invalid unit',
+invalid_part: 'Invalid part',
+    // Tambahan di bagian 'en':
 set_nickname: 'Tap to set nickname',
 enter_nickname: 'Enter nickname',
 nickname: 'Nickname',
@@ -85,6 +89,10 @@ fill_all_fields: 'Please fill all fields',
     }
   },
   id: {
+    // Tambahan di bagian 'id':
+invalid_module: 'Modul tidak valid',
+invalid_unit: 'Unit tidak valid',
+invalid_part: 'Bagian tidak valid',
     // Tambahan di bagian 'id':
 set_nickname: 'Tap untuk atur nama panggilan',
 enter_nickname: 'Masukkan nama panggilan',
