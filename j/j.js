@@ -1,11 +1,11 @@
-// JEC v.2.00 | 15/08/2026 | j/j.js | Core Engine - Fast First Load
-// Arsitektur: Splash → Login → Dashboard (built-in)
-// Lazy loading untuk modul non-critical
+// JEC v.6.00 FINAL SYNC | 16/08/2026 | j/j.js
+// Compatible dengan sv1.html v1.03
+// Full Sync: GitHub (data) + Apps Script (backend)
 
 'use strict';
 
-// ═══════════ GLOBAL STATE ═══════════
 const JEC = {
+  // ═══════════ STATE ═══════════
   config: window.JEC_CONFIG || {},
   user: null,
   lang: localStorage.getItem('jec_lang') || 'en',
@@ -21,7 +21,6 @@ const JEC = {
   currentDC: null,
   dcToday: null,
   featureStates: {},
-  featureQueue: [],
   activeView: 'learn',
   currentModule: null,
   currentUnitId: null,
@@ -32,7 +31,7 @@ const JEC = {
   flmSeconds: 0,
   flmTotalSeconds: 0,
   flmActive: false,
-  appState: 'boot',
+  appState: 'boot', // boot, splash, login, dashboard
   featuresLoaded: false,
   dashboardReady: false,
   stats: {
@@ -46,17 +45,10 @@ const JEC = {
   }
 };
 
-// ═══════════ MODULE LOADING STRATEGY ═══════════
-// Priority 1: Blocking - harus load sebelum dashboard
-JEC.PRIORITY_1 = ['learn'];
-
-// Priority 2: After dashboard - load segera setelah dashboard tampil
-JEC.PRIORITY_2 = ['profile', 'dc', 'ach', 'focus'];
-
-// Priority 3: Lazy - load saat user pertama kali akses
-JEC.PRIORITY_3 = ['practice', 'extra', 'bm', 'notes', 'logbook', 'react'];
-
-// Built-in: tidak perlu load external
+// ═══════════ MODULE PRIORITIES ═══════════
+JEC.PRIORITY_1 = ['learn']; // Blocking - harus load sebelum dashboard
+JEC.PRIORITY_2 = ['profile', 'dc', 'ach', 'focus']; // After dashboard
+JEC.PRIORITY_3 = ['practice', 'extra', 'bm', 'notes', 'logbook', 'react']; // Lazy
 JEC.BUILT_IN = ['splash', 'login', 'header'];
 
 // ═══════════ BOOTSTRAP ═══════════
@@ -83,11 +75,11 @@ JEC.boot = async function() {
     splash.classList.remove('hide');
   }
   
-  // Sembunyikan login dan dashboard dulu
+  // Sembunyikan login & dashboard dulu
   if (loginPage) loginPage.classList.add('hidden');
   if (dashboard) dashboard.classList.remove('active');
   
-  // Mulai load Priority 1 modules di background (non-blocking)
+  // Load Priority 1 di background
   JEC.loadPriorityModules(JEC.PRIORITY_1);
   
   // Cek saved session
@@ -109,7 +101,7 @@ JEC.boot = async function() {
   // Tunggu minimal 3 detik splash
   await new Promise(resolve => setTimeout(resolve, 3000));
   
-  // Tunggu Priority 1 modules selesai (max 3 detik)
+  // Tunggu Priority 1 selesai (max 3 detik)
   await JEC.waitForModules(JEC.PRIORITY_1, 3000);
   
   // Fade out splash
@@ -123,11 +115,9 @@ JEC.boot = async function() {
   // Tentukan halaman
   if (sessionValid && JEC.user) {
     JEC.enterDashboard();
-    // Load Priority 2 modules setelah dashboard tampil
     setTimeout(function() {
       JEC.loadPriorityModules(JEC.PRIORITY_2);
     }, 100);
-    // Navigate dari hash jika ada
     setTimeout(function() {
       JEC.navigateFromHash();
     }, 500);
@@ -139,10 +129,9 @@ JEC.boot = async function() {
 // ═══════════ MODULE LOADING ═══════════
 JEC.loadPriorityModules = function(moduleNames) {
   const features = JEC.config.FEATURES || {};
-  const builtIn = JEC.BUILT_IN;
   
   moduleNames.forEach(function(name) {
-    if (builtIn.includes(name)) {
+    if (JEC.BUILT_IN.includes(name)) {
       JEC.featureStates[name] = { loaded: true, builtin: true };
       return;
     }
@@ -156,9 +145,7 @@ JEC.loadPriorityModules = function(moduleNames) {
       return;
     }
     
-    // Jangan load ulang jika sudah di-load
     if (JEC.featureStates[name] && JEC.featureStates[name].loaded) return;
-    
     JEC.loadFeatureWithTimeout(name, cfg.js);
   });
 };
@@ -188,15 +175,12 @@ JEC.loadFeature = function(name, jsFile, callback) {
       try {
         initFn(JEC);
         JEC.featureStates[name] = { loaded: true };
-        if (JEC.config.DEBUG_MODE) {
-          console.log('[JEC] ✓ Feature loaded: ' + name);
-        }
+        console.log('[JEC] ✓ Feature loaded: ' + name);
       } catch(err) {
         console.error('[JEC] ✗ Error init feature ' + name + ':', err);
         JEC.featureStates[name] = { loaded: false, error: err.message };
         JEC.renderMaintenancePlaceholder(name, 'error');
         
-        // Retry sekali setelah 1 detik
         setTimeout(function() {
           try {
             if (typeof initFn === 'function') {
@@ -213,9 +197,6 @@ JEC.loadFeature = function(name, jsFile, callback) {
       }
     } else {
       JEC.featureStates[name] = { loaded: true };
-      if (JEC.config.DEBUG_MODE) {
-        console.log('[JEC] ✓ Feature loaded (no init): ' + name);
-      }
     }
     if (callback) callback();
   };
@@ -235,11 +216,10 @@ JEC.waitForModules = function(moduleNames, timeoutMs) {
   timeoutMs = timeoutMs || 3000;
   return new Promise(function(resolve) {
     const startTime = Date.now();
-    const builtIn = JEC.BUILT_IN;
     
     const checkInterval = setInterval(function() {
       const allDone = moduleNames.every(function(name) {
-        if (builtIn.includes(name)) return true;
+        if (JEC.BUILT_IN.includes(name)) return true;
         const state = JEC.featureStates[name];
         if (!state) return false;
         return state.loaded === true || 
@@ -249,13 +229,8 @@ JEC.waitForModules = function(moduleNames, timeoutMs) {
                state.timeout;
       });
       
-      const elapsed = Date.now() - startTime;
-      
-      if (allDone || elapsed > timeoutMs) {
+      if (allDone || (Date.now() - startTime) > timeoutMs) {
         clearInterval(checkInterval);
-        if (JEC.config.DEBUG_MODE) {
-          console.log('[JEC] Modules loading done in ' + elapsed + 'ms');
-        }
         resolve();
       }
     }, 50);
@@ -263,8 +238,7 @@ JEC.waitForModules = function(moduleNames, timeoutMs) {
 };
 
 JEC.renderMaintenancePlaceholder = function(featureName, type) {
-  const containerId = 'feat-' + featureName;
-  const container = document.getElementById(containerId);
+  const container = document.getElementById('feat-' + featureName);
   if (!container) return;
   
   const msg = JEC.config.I18N || {};
@@ -293,7 +267,6 @@ JEC.isFeatureLoaded = function(name) {
   return state && state.loaded === true;
 };
 
-// Lazy load saat user pertama kali akses view
 JEC.lazyLoadForView = function(viewName) {
   const viewModuleMap = {
     'learn': ['learn'],
@@ -316,10 +289,8 @@ JEC.lazyLoadForView = function(viewName) {
 // ═══════════ SHOW/HIDE PAGES ═══════════
 JEC.showLoginPage = function() {
   JEC.appState = 'login';
-  
   const loginPage = document.getElementById('feat-login');
   const dashboard = document.getElementById('dashboard');
-  
   if (loginPage) loginPage.classList.remove('hidden');
   if (dashboard) dashboard.classList.remove('active');
 };
@@ -330,7 +301,6 @@ JEC.enterDashboard = function() {
   
   const loginPage = document.getElementById('feat-login');
   const dashboard = document.getElementById('dashboard');
-  
   if (loginPage) loginPage.classList.add('hidden');
   if (dashboard) dashboard.classList.add('active');
   
@@ -357,17 +327,13 @@ JEC.initBuiltInLogin = function() {
   const loginId = document.getElementById('login-id');
   
   if (loginBtn) {
-    loginBtn.onclick = function() { 
-      JEC.doLogin(); 
-    };
+    loginBtn.onclick = function() { JEC.doLogin(); };
   }
-  
   if (loginPin) {
     loginPin.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') JEC.doLogin();
     });
   }
-  
   if (loginId) {
     loginId.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') loginPin.focus();
@@ -406,7 +372,6 @@ JEC.doLogin = async function() {
     
     if (result.success) {
       JEC.enterDashboard();
-      // Load Priority 2 modules setelah login
       setTimeout(function() {
         JEC.loadPriorityModules(JEC.PRIORITY_2);
       }, 100);
@@ -452,11 +417,11 @@ JEC.updateClock = function() {
   const greetEl = document.getElementById('greet-text');
   if (greetEl) {
     const hour = now.getHours();
-    let greetKey = 'morning';
-    if (hour >= 12 && hour < 15) greetKey = 'afternoon';
-    else if (hour >= 15 && hour < 18) greetKey = 'evening';
-    else if (hour >= 18 || hour < 5) greetKey = 'night';
-    greetEl.textContent = JEC.t('greet.' + greetKey);
+    let greetKey = 'greet.morning';
+    if (hour >= 12 && hour < 15) greetKey = 'greet.afternoon';
+    else if (hour >= 15 && hour < 18) greetKey = 'greet.evening';
+    else if (hour >= 18 || hour < 5) greetKey = 'greet.night';
+    greetEl.textContent = JEC.t(greetKey) || JEC.t('greet.morning');
   }
 };
 
@@ -1100,8 +1065,6 @@ JEC.switchView = function(name, btn) {
   if (btn) btn.classList.add('active');
   
   JEC.activeView = name;
-  
-  // Lazy load modules untuk view ini
   JEC.lazyLoadForView(name);
 };
 
@@ -1126,6 +1089,13 @@ JEC.openOv = function(id) {
 JEC.closeOv = function(id) {
   const el = document.getElementById(id);
   if (el) el.classList.remove('active');
+};
+
+JEC.closeGM = function() {
+  const overlay = document.getElementById('gm-overlay');
+  const frame = document.getElementById('gm-frame');
+  if (overlay) overlay.classList.remove('active');
+  if (frame) frame.src = 'about:blank';
 };
 
 // ═══════════ TOAST ═══════════
@@ -1197,9 +1167,9 @@ JEC.forceRefresh = async function() {
   JEC.toast('Refreshed!', 'success');
 };
 
-// ═══════════ DEBUG MODE ═══════════
+// ═══════════ DEBUG ═══════════
 JEC.debug = function() {
-  console.log('══════ JEC DEBUG v2.00 ══════');
+  console.log('══════ JEC DEBUG v6.00 ══════');
   console.log('App State:', JEC.appState);
   console.log('Dashboard Ready:', JEC.dashboardReady);
   console.log('User:', JEC.user);
