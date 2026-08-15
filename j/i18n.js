@@ -3,6 +3,20 @@
 window.JEC_I18N = {
   en: {
     // Tambahan di bagian 'en':
+set_nickname: 'Tap to set nickname',
+enter_nickname: 'Enter nickname',
+nickname: 'Nickname',
+nickname_saved: 'Nickname saved!',
+choose_avatar: 'Choose Avatar',
+avatar_saved: 'Avatar updated!',
+days: 'days',
+data: 'Data',
+dc_completed: 'Completed today!',
+dc_pending: 'Complete this challenge to earn XP',
+dc_auto_hint: 'This challenge will be completed automatically when you do the activity.',
+no_ach: 'No achievements yet',
+ach_loading: 'Loading achievements...',
+    // Tambahan di bagian 'en':
 no_units: 'No units available',
 write_notes: 'Write your notes here...',
 flm_locked_nav: 'Navigation locked during Focus Mode',
@@ -71,6 +85,20 @@ fill_all_fields: 'Please fill all fields',
     }
   },
   id: {
+    // Tambahan di bagian 'id':
+set_nickname: 'Tap untuk atur nama panggilan',
+enter_nickname: 'Masukkan nama panggilan',
+nickname: 'Nama Panggilan',
+nickname_saved: 'Nama panggilan disimpan!',
+choose_avatar: 'Pilih Avatar',
+avatar_saved: 'Avatar diperbarui!',
+days: 'hari',
+data: 'Data',
+dc_completed: 'Selesai hari ini!',
+dc_pending: 'Selesaikan tantangan ini untuk dapat XP',
+dc_auto_hint: 'Tantangan ini akan selesai otomatis saat Anda melakukan aktivitasnya.',
+no_ach: 'Belum ada pencapaian',
+ach_loading: 'Memuat pencapaian...',
     // Tambahan di bagian 'id':
 no_units: 'Tidak ada unit tersedia',
 write_notes: 'Tulis catatan Anda di sini...',
