@@ -1,8 +1,7 @@
-// JEC v.1.04 | 15/08/2026 | j/j.js | Core Engine + Built-in Splash & Login
+// JEC v.1.05 | 15/08/2026 | j/j.js | Core Engine + FLM Timer + Smooth Auto-Login
 
 'use strict';
 
-// ═══════════ GLOBAL STATE ═══════════
 const JEC = {
   config: window.JEC_CONFIG || {},
   user: null,
@@ -25,6 +24,10 @@ const JEC = {
   currentPartId: null,
   leaderboardData: [],
   onlineCount: 0,
+  flmTimer: null,
+  flmSeconds: 0,
+  flmTotalSeconds: 0,
+  flmActive: false,
   stats: {
     partsDone: 0, perfectQuiz: false, perfectCount: 0, avgQuiz: 0,
     quizCount: 0, streak: 0, loginCount: 0, focusCount: 0,
@@ -46,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
   JEC.initFeatureRouter();
 });
 
-// ═══════════ BUILT-IN SPLASH (tidak perlu f/splash.js) ═══════════
+// ═══════════ BUILT-IN SPLASH (SMOOTH AUTO-LOGIN) ═══════════
 JEC.initBuiltInSplash = function() {
   const splash = document.getElementById('feat-splash');
   if (!splash) return;
@@ -54,26 +57,36 @@ JEC.initBuiltInSplash = function() {
   splash.style.display = 'flex';
   splash.classList.remove('hide');
   
+  const savedUser = localStorage.getItem('jec_user');
+  let autoLoginPromise = null;
+  
+  if (savedUser) {
+    try {
+      const u = JSON.parse(savedUser);
+      autoLoginPromise = JEC.autoLogin(u);
+    } catch(e) {
+      autoLoginPromise = Promise.resolve(false);
+    }
+  } else {
+    autoLoginPromise = Promise.resolve(false);
+  }
+  
   setTimeout(function() {
     splash.classList.add('hide');
     
     setTimeout(function() {
       splash.style.display = 'none';
       
-      const savedUser = localStorage.getItem('jec_user');
-      if (savedUser) {
-        try {
-          const u = JSON.parse(savedUser);
-          JEC.autoLogin(u).then(function(success) {
-            if (success) {
-              JEC.enterDashboard();
-            } else {
-              JEC.showLoginPage();
-            }
-          });
-        } catch(e) {
+      if (autoLoginPromise) {
+        autoLoginPromise.then(function(success) {
+          if (success && JEC.user) {
+            JEC.enterDashboard();
+          } else {
+            JEC.showLoginPage();
+          }
+        }).catch(function() {
           JEC.showLoginPage();
-        }
+        });
       } else {
         JEC.showLoginPage();
       }
@@ -81,24 +94,20 @@ JEC.initBuiltInSplash = function() {
   }, 3000);
 };
 
-// ═══════════ BUILT-IN LOGIN (tidak perlu f/login.js) ═══════════
+// ═══════════ BUILT-IN LOGIN ═══════════
 JEC.initBuiltInLogin = function() {
   const loginBtn = document.getElementById('login-btn');
   const loginPin = document.getElementById('login-pin');
   const loginId = document.getElementById('login-id');
   
   if (loginBtn) {
-    loginBtn.onclick = function() {
-      JEC.doLogin();
-    };
+    loginBtn.onclick = function() { JEC.doLogin(); };
   }
-  
   if (loginPin) {
     loginPin.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') JEC.doLogin();
     });
   }
-  
   if (loginId) {
     loginId.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') loginPin.focus();
@@ -135,7 +144,7 @@ JEC.doLogin = async function() {
     }
   } catch(e) {
     if (loadingEl) loadingEl.classList.remove('show');
-    if (errorMsg) errorMsg.textContent = JEC.t('network_error') || 'Network error: ' + e.message;
+    if (errorMsg) errorMsg.textContent = JEC.t('network_error') || 'Network error';
     if (errorEl) errorEl.classList.add('show');
   }
 };
@@ -169,16 +178,85 @@ JEC.enterDashboard = function() {
   }
 };
 
-// ═══════════ FEATURE ROUTER (untuk fitur non-kritis) ═══════════
+// ═══════════ FLM TIMER DI HEADER ═══════════
+JEC.startFLMTimer = function(duration) {
+  duration = duration || JEC.config.MFL_DEFAULT || 25;
+  JEC.flmTotalSeconds = duration * 60;
+  JEC.flmSeconds = JEC.flmTotalSeconds;
+  JEC.flmActive = true;
+  
+  const activeBar = document.getElementById('flm-active-bar');
+  if (activeBar) activeBar.classList.remove('hidden');
+  
+  JEC.updateFLMHeaderTimer();
+  
+  if (JEC.flmTimer) clearInterval(JEC.flmTimer);
+  JEC.flmTimer = setInterval(function() {
+    JEC.flmSeconds--;
+    JEC.updateFLMHeaderTimer();
+    
+    if (JEC.flmSeconds <= 0) {
+      JEC.completeFLM();
+    }
+  }, 1000);
+};
+
+JEC.updateFLMHeaderTimer = function() {
+  const timerEl = document.getElementById('flm-header-timer');
+  if (timerEl) {
+    const elapsed = JEC.flmTotalSeconds - JEC.flmSeconds;
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    timerEl.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+};
+
+JEC.completeFLM = function() {
+  if (JEC.flmTimer) clearInterval(JEC.flmTimer);
+  JEC.flmActive = false;
+  JEC.flmTimer = null;
+  
+  const activeBar = document.getElementById('flm-active-bar');
+  if (activeBar) activeBar.classList.add('hidden');
+  
+  JEC.saveFocusMode(
+    JEC.currentModule,
+    JEC.currentUnitId,
+    null,
+    JEC.flmTotalSeconds / 60,
+    true
+  );
+  
+  JEC.toast(JEC.t('flm_complete') || 'Focus session completed!', 'success', 3000);
+  
+  if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
+    JEC_UI.showFLMFab();
+  }
+};
+
+JEC.exitFLM = function() {
+  if (!confirm(JEC.t('flm_exit_confirm') || 'Exit Focus Learn Mode?')) return;
+  
+  if (JEC.flmTimer) clearInterval(JEC.flmTimer);
+  JEC.flmActive = false;
+  JEC.flmTimer = null;
+  
+  const activeBar = document.getElementById('flm-active-bar');
+  if (activeBar) activeBar.classList.add('hidden');
+  
+  if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
+    JEC_UI.showFLMFab();
+  }
+};
+
+// ═══════════ FEATURE ROUTER ═══════════
 JEC.initFeatureRouter = function() {
   const features = JEC.config.FEATURES || {};
   const featureNames = Object.keys(features);
   
   let delay = 100;
   featureNames.forEach(function(name) {
-    if (name === 'splash' || name === 'login' || name === 'header') {
-      return;
-    }
+    if (name === 'splash' || name === 'login' || name === 'header') return;
     
     const cfg = features[name];
     if (!cfg.enabled) {
@@ -204,9 +282,7 @@ JEC.loadFeature = function(name, jsFile) {
       try {
         initFn(JEC);
         JEC.featureStates[name] = { loaded: true };
-        console.log('[JEC] Feature loaded: ' + name);
       } catch(err) {
-        console.error('[JEC] Error init feature ' + name + ':', err);
         JEC.featureStates[name] = { loaded: false, error: err.message };
         JEC.renderMaintenancePlaceholder(name, 'error');
       }
@@ -216,7 +292,6 @@ JEC.loadFeature = function(name, jsFile) {
   };
   
   script.onerror = function() {
-    console.warn('[JEC] Feature JS not found: ' + jsFile);
     JEC.featureStates[name] = { loaded: false, notFound: true };
     JEC.renderMaintenancePlaceholder(name, 'maintenance');
   };
@@ -437,6 +512,7 @@ JEC.autoLogin = async function(u) {
       return true;
     } else {
       localStorage.removeItem('jec_user');
+      JEC.user = null;
       return false;
     }
   } catch(e) {
@@ -585,29 +661,13 @@ JEC.triggerDailyChallenge = function(trigger, data) {
   let shouldComplete = false;
   
   switch(trigger) {
-    case 'speak':
-    case 'writing':
-    case 'review':
-    case 'note':
-    case 'bookmark':
-    case 'login':
-      shouldComplete = true;
-      break;
-    case 'voc_part':
-      shouldComplete = data && data.module === 'voc';
-      break;
-    case 'lis_part':
-      shouldComplete = data && data.module === 'lis';
-      break;
-    case 'quiz_80':
-      shouldComplete = data && data.score >= 80;
-      break;
-    case 'quiz_100':
-      shouldComplete = data && data.score === 100;
-      break;
-    case 'focus':
-      shouldComplete = data && data.completed;
-      break;
+    case 'speak': case 'writing': case 'review': case 'note': case 'bookmark': case 'login':
+      shouldComplete = true; break;
+    case 'voc_part': shouldComplete = data && data.module === 'voc'; break;
+    case 'lis_part': shouldComplete = data && data.module === 'lis'; break;
+    case 'quiz_80': shouldComplete = data && data.score >= 80; break;
+    case 'quiz_100': shouldComplete = data && data.score === 100; break;
+    case 'focus': shouldComplete = data && data.completed; break;
     case 'tts_3':
       JEC.dcToday.triggerCount++;
       shouldComplete = JEC.dcToday.triggerCount >= 3;
@@ -627,9 +687,7 @@ JEC.triggerDailyChallenge = function(trigger, data) {
       break;
   }
   
-  if (shouldComplete) {
-    JEC.completeDailyChallenge();
-  }
+  if (shouldComplete) JEC.completeDailyChallenge();
 };
 
 JEC.completeDailyChallenge = function() {
@@ -642,9 +700,8 @@ JEC.completeDailyChallenge = function() {
   
   const xp = JEC.currentDC.xp || 20;
   JEC.toast(
-    (JEC.config.I18N.dc_complete && JEC.config.I18N.dc_complete[JEC.lang]) || 'Daily Challenge Completed!' + ' +' + xp + ' XP',
-    'success',
-    3000
+    ((JEC.config.I18N.dc_complete && JEC.config.I18N.dc_complete[JEC.lang]) || 'Daily Challenge Completed!') + ' +' + xp + ' XP',
+    'success', 3000
   );
   
   JEC.apiPost({
@@ -728,12 +785,8 @@ JEC.markDone = function(module, unitId, partId, score) {
   
   JEC.apiPost({
     action: 'mark_done',
-    id: JEC.user.id,
-    batch: JEC.user.batch,
-    module: module,
-    unitId: unitId,
-    partId: partId,
-    score: score
+    id: JEC.user.id, batch: JEC.user.batch,
+    module: module, unitId: unitId, partId: partId, score: score
   }).catch(function() {});
   
   JEC.updateStats();
@@ -747,14 +800,9 @@ JEC.saveScore = function(module, unitId, partId, score, totalQ, correctA) {
   
   JEC.apiPost({
     action: 'save_score',
-    id: JEC.user.id,
-    batch: JEC.user.batch,
-    module: module,
-    unitId: unitId,
-    partId: partId,
-    score: score,
-    totalQuestions: totalQ,
-    correctAnswers: correctA
+    id: JEC.user.id, batch: JEC.user.batch,
+    module: module, unitId: unitId, partId: partId,
+    score: score, totalQuestions: totalQ, correctAnswers: correctA
   }).catch(function() {});
   
   JEC.stats.quizCount++;
@@ -763,10 +811,7 @@ JEC.saveScore = function(module, unitId, partId, score, totalQ, correctA) {
     JEC.stats.perfectCount++;
     JEC.triggerDailyChallenge('quiz_100', { score: score });
   }
-  if (score >= 80) {
-    JEC.triggerDailyChallenge('quiz_80', { score: score });
-  }
-  
+  if (score >= 80) JEC.triggerDailyChallenge('quiz_80', { score: score });
   JEC.checkAllAchievements();
 };
 
@@ -775,13 +820,9 @@ JEC.saveFocusMode = function(module, unitId, partId, duration, completed) {
   
   JEC.apiPost({
     action: 'save_focus_mode',
-    id: JEC.user.id,
-    batch: JEC.user.batch,
-    module: module,
-    unitId: unitId,
-    partId: partId,
-    duration: duration,
-    completed: completed
+    id: JEC.user.id, batch: JEC.user.batch,
+    module: module, unitId: unitId, partId: partId,
+    duration: duration, completed: completed
   }).catch(function() {});
   
   if (completed) {
@@ -802,11 +843,8 @@ JEC.addBookmark = function(module, unitId, partId) {
   
   JEC.apiPost({
     action: 'add_bookmark',
-    id: JEC.user.id,
-    batch: JEC.user.batch,
-    module: module,
-    unitId: unitId,
-    partId: partId
+    id: JEC.user.id, batch: JEC.user.batch,
+    module: module, unitId: unitId, partId: partId
   }).catch(function() {});
   
   JEC.updateStats();
@@ -825,11 +863,8 @@ JEC.removeBookmark = function(module, unitId, partId) {
   
   JEC.apiPost({
     action: 'remove_bookmark',
-    id: JEC.user.id,
-    batch: JEC.user.batch,
-    module: module,
-    unitId: unitId,
-    partId: partId
+    id: JEC.user.id, batch: JEC.user.batch,
+    module: module, unitId: unitId, partId: partId
   }).catch(function() {});
   
   JEC.updateStats();
@@ -848,12 +883,8 @@ JEC.saveNote = function(module, unitId, partId, content) {
   
   JEC.apiPost({
     action: 'save_note',
-    id: JEC.user.id,
-    batch: JEC.user.batch,
-    module: module,
-    unitId: unitId,
-    partId: partId,
-    content: content
+    id: JEC.user.id, batch: JEC.user.batch,
+    module: module, unitId: unitId, partId: partId, content: content
   }).catch(function() {});
   
   JEC.updateStats();
@@ -863,15 +894,11 @@ JEC.saveNote = function(module, unitId, partId, content) {
 
 // ═══════════ VIEW ROUTER ═══════════
 JEC.switchView = function(name, btn) {
-  document.querySelectorAll('.view').forEach(function(v) {
-    v.classList.remove('active');
-  });
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
   const target = document.getElementById('view-' + name);
   if (target) target.classList.add('active');
   
-  document.querySelectorAll('.nav-btn').forEach(function(b) {
-    b.classList.remove('active');
-  });
+  document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
   
   JEC.activeView = name;
@@ -902,7 +929,7 @@ JEC.closeOv = function(id) {
   if (el) el.classList.remove('active');
 };
 
-// ═══════════ TOAST (TOP INLINE) ═══════════
+// ═══════════ TOAST ═══════════
 JEC.toast = function(msg, type, duration) {
   type = type || 'success';
   duration = duration || 2000;
@@ -927,7 +954,6 @@ JEC.toast = function(msg, type, duration) {
   toastBar.className = 'toast-bar toast-' + type;
   icon.textContent = iconChar;
   msgEl.textContent = msg;
-  
   toastBar.classList.add('show');
   
   if (JEC._toastTimer) clearTimeout(JEC._toastTimer);
@@ -939,10 +965,8 @@ JEC.toast = function(msg, type, duration) {
 // ═══════════ UTILITIES ═══════════
 JEC.esc = function(s) {
   return (s || '').toString()
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 };
 
@@ -982,5 +1006,4 @@ setInterval(function() {
   }
 }, 30000);
 
-// Expose to global
 window.JEC = JEC;
