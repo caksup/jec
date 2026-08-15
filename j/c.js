@@ -1,6 +1,6 @@
 // JEC v.7.00 MODULAR | 16/08/2026 | j/c.js | Config + Registry
 // Arsitektur: 1 fitur = 1 file JS di folder j/f/
-// Sinkron: GitHub (data) + Apps Script (backend)
+// Sinkron: GitHub (data) + Apps Script (backend) + Firebase (Ujian/Gatekeeper)
 
 window.JEC_CONFIG = {
   // ═══════════ META ═══════════
@@ -20,8 +20,18 @@ window.JEC_CONFIG = {
   JS: 'https://raw.githubusercontent.com/caksup/jec/main/j/',
   FEATURES_JS: 'https://raw.githubusercontent.com/caksup/jec/main/j/f/',
 
-  // ═══════════ BACKEND: APPS SCRIPT ═══════════
+  // ═══════════ BACKEND: APPS SCRIPT & FIREBASE ═══════════
   LOG: 'https://script.google.com/macros/s/AKfycbyX0L09UNGjNrlfuhcGsubD0HwkAv9NPwpnLCA4lBFE_9Z7BFR8_fGwDBwT-f7DtSc/exec',
+  
+  FIREBASE_URL: 'https://jagatecourse-default-rtdb.firebaseio.com',
+  FIREBASE_CONFIG: {
+    apiKey: "AIzaSyCv2hhgeTsLYH4LrO8dkQ7ddlzSoeAHPPk",
+    authDomain: "jagatecourse.firebaseapp.com",
+    projectId: "jagatecourse",
+    storageBucket: "jagatecourse.firebasestorage.app",
+    messagingSenderId: "681583819676",
+    appId: "1:681583819676:web:2fda4dad28f0e0f1bee659"
+  },
 
   // ═══════════ PAGES ═══════════
   EXE_URL: 'https://caksup.github.io/jec/p/exe.html',
@@ -110,14 +120,11 @@ window.JEC_CONFIG = {
 
   // ═══════════ ACHIEVEMENTS (44 BADGES) ═══════════
   ACHIEVEMENTS: [
-    // ─── CATEGORY 1: FIRST STEPS (5) ───
     { id:'first_login',   icon:'rocket_launch',     en:'First Steps',      id:'Langkah Pertama',   en_d:'Login for the first time',          id_d:'Login pertama kali',                  cond:function(s){return s.partsDone>=0}, xp:5 },
     { id:'profile_setup', icon:'person_add',        en:'Profile Ready',    id:'Profil Siap',       en_d:'Set up your profile',               id_d:'Atur profil kamu',                    cond:function(s){return s.hasProfile}, xp:5 },
     { id:'first_note',    icon:'sticky_note_2',     en:'First Note',       id:'Catatan Pertama',   en_d:'Write your first note',             id_d:'Tulis catatan pertamamu',             cond:function(s){return s.notesCount>=1}, xp:5 },
     { id:'first_bm',      icon:'bookmark_add',      en:'First Bookmark',   id:'Bookmark Pertama',  en_d:'Save your first material',          id_d:'Simpan materi pertamamu',             cond:function(s){return s.bmCount>=1}, xp:5 },
     { id:'first_dc',      icon:'event_available',   en:'Daily Starter',    id:'Starter Harian',    en_d:'Complete first Daily Challenge',    id_d:'Selesaikan Tantangan Harian pertama', cond:function(s){return s.dcCount>=1}, xp:10 },
-
-    // ─── CATEGORY 2: LEARNING PROGRESS (10) ───
     { id:'part_1',        icon:'auto_stories',      en:'Bookworm',         id:'Kutu Buku',         en_d:'Complete 1 part',                   id_d:'Selesaikan 1 bagian',                 cond:function(s){return s.partsDone>=1}, xp:10 },
     { id:'part_5',        icon:'menu_book',         en:'Rising Star',      id:'Bintang Baru',      en_d:'Complete 5 parts',                  id_d:'Selesaikan 5 bagian',                 cond:function(s){return s.partsDone>=5}, xp:25 },
     { id:'part_10',       icon:'trending_up',       en:'On Fire',          id:'Semangat Membara',  en_d:'Complete 10 parts',                 id_d:'Selesaikan 10 bagian',                cond:function(s){return s.partsDone>=10}, xp:50 },
@@ -128,44 +135,32 @@ window.JEC_CONFIG = {
     { id:'all_voc',       icon:'spellcheck',        en:'Vocab Master',     id:'Master Kosakata',   en_d:'Complete all Vocabulary units',     id_d:'Selesaikan semua unit Kosakata',      cond:function(s){return s.vocComplete}, xp:150 },
     { id:'all_gra',       icon:'functions',         en:'Grammar Guru',     id:'Guru Tata Bahasa',  en_d:'Complete all Grammar units',        id_d:'Selesaikan semua unit Grammar',       cond:function(s){return s.graComplete}, xp:150 },
     { id:'all_modules',   icon:'school',            en:'Scholar',          id:'Cendekia',          en_d:'Complete all modules',              id_d:'Selesaikan semua modul',              cond:function(s){return s.allModules}, xp:1000 },
-
-    // ─── CATEGORY 3: QUIZ & SCORES (6) ───
     { id:'first_quiz',    icon:'quiz',              en:'Quiz Taker',       id:'Pengerja Kuis',     en_d:'Complete your first quiz',          id_d:'Selesaikan kuis pertamamu',           cond:function(s){return s.quizCount>=1}, xp:10 },
     { id:'perfect_quiz',  icon:'stars',             en:'Quiz Master',      id:'Master Kuis',       en_d:'Get 100% in a quiz',              id_d:'Dapatkan 100% di kuis',               cond:function(s){return s.perfectQuiz}, xp:50 },
     { id:'five_perfect',  icon:'diamond',           en:'Perfect Streak',   id:'Seri Sempurna',     en_d:'Get 5 perfect quizzes',           id_d:'Dapatkan 5 kuis sempurna',            cond:function(s){return s.perfectCount>=5}, xp:150 },
     { id:'ten_perfect',   icon:'diamond',           en:'Quiz Legend',      id:'Legenda Kuis',      en_d:'Get 10 perfect quizzes',          id_d:'Dapatkan 10 kuis sempurna',           cond:function(s){return s.perfectCount>=10}, xp:300 },
     { id:'avg_80',        icon:'emoji_events',      en:'High Achiever',    id:'Pencapaian Tinggi', en_d:'Average quiz score 80+',          id_d:'Rata-rata skor kuis 80+',             cond:function(s){return s.avgQuiz>=80}, xp:100 },
     { id:'avg_95',        icon:'workspace_premium', en:'Top Performer',    id:'Pemain Terbaik',    en_d:'Average quiz score 95+',          id_d:'Rata-rata skor kuis 95+',             cond:function(s){return s.avgQuiz>=95}, xp:250 },
-
-    // ─── CATEGORY 4: STREAKS & CONSISTENCY (6) ───
     { id:'streak_3',      icon:'local_fire_department', en:'Consistent',     id:'Konsisten',         en_d:'3 day streak',                      id_d:'3 hari berturut-turut',               cond:function(s){return s.streak>=3}, xp:30 },
     { id:'streak_7',      icon:'local_fire_department', en:'Week Warrior',   id:'Pejuang Minggu',    en_d:'7 day streak',                      id_d:'7 hari berturut-turut',               cond:function(s){return s.streak>=7}, xp:70 },
     { id:'streak_14',     icon:'local_fire_department', en:'Two Week Pro',   id:'Pro 2 Minggu',      en_d:'14 day streak',                     id_d:'14 hari berturut-turut',              cond:function(s){return s.streak>=14}, xp:150 },
     { id:'streak_30',     icon:'local_fire_department', en:'Monthly Master', id:'Master Bulanan',    en_d:'30 day streak',                     id_d:'30 hari berturut-turut',              cond:function(s){return s.streak>=30}, xp:350 },
     { id:'streak_100',    icon:'local_fire_department', en:'Unstoppable',    id:'Tak Terhentikan',   en_d:'100 day streak',                    id_d:'100 hari berturut-turut',             cond:function(s){return s.streak>=100}, xp:1000 },
     { id:'login_50',      icon:'login',             en:'Regular Visitor',  id:'Pengunjung Tetap',  en_d:'Login 50 times',                    id_d:'Login 50 kali',                       cond:function(s){return s.loginCount>=50}, xp:100 },
-
-    // ─── CATEGORY 5: FOCUS MODE (5) ───
     { id:'focus_1',       icon:'timer',             en:'First Focus',      id:'Fokus Pertama',     en_d:'Complete 1 focus session',          id_d:'Selesaikan 1 sesi fokus',             cond:function(s){return s.focusCount>=1}, xp:15 },
     { id:'focus_10',      icon:'timer',             en:'Focus Addict',     id:'Kecanduan Fokus',   en_d:'Complete 10 focus sessions',        id_d:'Selesaikan 10 sesi fokus',            cond:function(s){return s.focusCount>=10}, xp:75 },
     { id:'focus_60',      icon:'hourglass_top',     en:'Hour Master',      id:'Master Jam',        en_d:'60 hours of focus time',            id_d:'60 jam waktu fokus',                  cond:function(s){return s.focusHours>=60}, xp:500 },
     { id:'focus_100',     icon:'hourglass_bottom',  en:'Marathon',         id:'Maraton',           en_d:'100 hours of focus time',           id_d:'100 jam waktu fokus',                 cond:function(s){return s.focusHours>=100}, xp:1000 },
     { id:'focus_perfect', icon:'check_circle',      en:'No-Skip Hero',     id:'Pahlawan No-Skip',  en_d:'Complete 5 sessions without skip',  id_d:'5 sesi tanpa skip',                   cond:function(s){return s.focusNoSkip>=5}, xp:150 },
-
-    // ─── CATEGORY 6: SOCIAL & ENGAGEMENT (5) ───
     { id:'bm_10',         icon:'collections_bookmark', en:'Collector',     id:'Kolektor',          en_d:'Bookmark 10 materials',             id_d:'Bookmark 10 materi',                  cond:function(s){return s.bmCount>=10}, xp:50 },
     { id:'bm_25',         icon:'bookmarks',         en:'Library',          id:'Perpustakaan',      en_d:'Bookmark 25 materials',             id_d:'Bookmark 25 materi',                  cond:function(s){return s.bmCount>=25}, xp:125 },
     { id:'notes_10',      icon:'description',       en:'Note Taker',       id:'Pencatat',          en_d:'Write 10 notes',                    id_d:'Tulis 10 catatan',                    cond:function(s){return s.notesCount>=10}, xp:50 },
     { id:'notes_50',      icon:'article',           en:'Note Master',      id:'Master Catatan',    en_d:'Write 50 notes',                    id_d:'Tulis 50 catatan',                    cond:function(s){return s.notesCount>=50}, xp:150 },
     { id:'react_10',      icon:'thumb_up',          en:'Feedback Fan',     id:'Penggemar Feedback',en_d:'Give feedback 10 times',            id_d:'Kasih feedback 10 kali',              cond:function(s){return s.reactCount>=10}, xp:30 },
-
-    // ─── CATEGORY 7: DAILY CHALLENGE (4) ───
     { id:'dc_7',          icon:'today',             en:'Week Challenger',  id:'Penantang Minggu',  en_d:'Complete 7 Daily Challenges',       id_d:'Selesaikan 7 Tantangan Harian',       cond:function(s){return s.dcCount>=7}, xp:100 },
     { id:'dc_30',         icon:'calendar_month',    en:'Month Champion',   id:'Juara Bulan',       en_d:'Complete 30 Daily Challenges',      id_d:'Selesaikan 30 Tantangan Harian',      cond:function(s){return s.dcCount>=30}, xp:500 },
     { id:'dc_all',        icon:'verified',          en:'Challenge Master', id:'Master Tantangan',  en_d:'Complete all Daily Challenges',     id_d:'Selesaikan semua Tantangan Harian',   cond:function(s){return s.dcCount>=100}, xp:1500 },
     { id:'dc_streak_10',  icon:'bolt',              en:'DC Streaker',      id:'DC Streaker',       en_d:'10 day DC streak',                  id_d:'10 hari DC berturut-turut',           cond:function(s){return s.dcStreak>=10}, xp:200 },
-
-    // ─── CATEGORY 8: SPEAKING & LISTENING (3) ───
     { id:'speak_10',      icon:'graphic_eq',        en:'Speaker',          id:'Pembicara',         en_d:'Record 10 speaking clips',          id_d:'Rekam 10 klip berbicara',             cond:function(s){return s.speakCount>=10}, xp:75 },
     { id:'speak_50',      icon:'surround_sound',    en:'Chatterbox',       id:'Periang',           en_d:'Record 50 speaking clips',          id_d:'Rekam 50 klip berbicara',             cond:function(s){return s.speakCount>=50}, xp:200 },
     { id:'listen_20',     icon:'headphones',        en:'Active Listener',  id:'Pendengar Aktif',   en_d:'Listen to 20 audio materials',      id_d:'Dengarkan 20 materi audio',           cond:function(s){return s.listenCount>=20}, xp:50 }
