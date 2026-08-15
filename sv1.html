@@ -1,4 +1,4 @@
-<!--15-22-->
+<!--15/08/2026 | 15.35.00 WIB v.1.0.1 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,10 +21,16 @@
   <div class="loader"></div>
 </div>
 
+<!-- OFFLINE INDICATOR -->
+<div id="offline-bar">
+  <span class="material-icons-round">wifi_off</span>
+  <span data-i18n="offline">You're offline</span>
+</div>
+
 <!-- DAILY CHALLENGE BALLOON -->
 <div id="dc-balloon" onclick="openDailyChallenge();this.classList.remove('on')">
   <span class="material-icons-round">emoji_events</span>
-  <span class="dc-text">Daily Challenge!</span>
+  <span class="dc-text" data-i18n="daily_challenge">Daily Challenge!</span>
 </div>
 
 <!-- LOGIN SCREEN -->
@@ -60,6 +66,9 @@
         <span id="course-name">JEC</span>
       </div>
       <div class="header-actions">
+        <button class="icon-btn" onclick="toggleFullscreen()" title="Fullscreen">
+          <span class="material-icons-round" id="fs-icon">fullscreen</span>
+        </button>
         <button class="icon-btn" onclick="toggleTheme()" title="Theme">
           <span class="material-icons-round" id="theme-icon">dark_mode</span>
         </button>
@@ -123,10 +132,16 @@
         </div>
         <div class="materi-header">
           <div class="materi-title" id="materi-title">—</div>
-          <button class="audio-btn" onclick="playAudio()" id="audio-btn">
-            <span class="material-icons-round" style="font-size:16px">volume_up</span>
-            <span data-i18n="listen">Listen</span>
-          </button>
+          <div class="materi-actions">
+            <button class="audio-btn" onclick="playAudio()" id="audio-btn">
+              <span class="material-icons-round" style="font-size:16px">volume_up</span>
+              <span data-i18n="listen">Listen</span>
+            </button>
+            <button class="exercise-btn" onclick="openExercise()" id="exercise-btn">
+              <span class="material-icons-round" style="font-size:16px">quiz</span>
+              <span data-i18n="exercise">Exercise</span>
+            </button>
+          </div>
         </div>
         <div class="materi-content" id="materi-content"></div>
         
@@ -136,6 +151,15 @@
             <span data-i18n="quiz">Quiz</span>
           </div>
           <div id="quiz-body"></div>
+        </div>
+        
+        <!-- NOTES -->
+        <div class="notes-section">
+          <div class="section-title" style="margin-bottom:.6rem">
+            <span class="material-icons-round" style="font-size:18px">edit_note</span>
+            <span data-i18n="my_notes">My Notes</span>
+          </div>
+          <textarea id="notes-ta" placeholder="Write your notes here..." oninput="saveNote()"></textarea>
         </div>
       </div>
     </div>
@@ -162,7 +186,30 @@
         <span class="material-icons-round">more_horiz</span>
         <span data-i18n="extra">Extra</span>
       </div>
-      <div id="extra-list"></div>
+      <div class="subtab" id="extra-tabs">
+        <button class="active" onclick="extraTab('tools',this)">
+          <span class="material-icons-round" style="font-size:16px">language</span>
+          <span data-i18n="tools">Tools</span>
+        </button>
+        <button onclick="extraTab('logbook',this)">
+          <span class="material-icons-round" style="font-size:16px">menu_book</span>
+          <span data-i18n="logbook">Logbook</span>
+        </button>
+        <button onclick="extraTab('games',this)">
+          <span class="material-icons-round" style="font-size:16px">sports_esports</span>
+          <span data-i18n="games">Games</span>
+        </button>
+      </div>
+      <div id="extra-tools">
+        <div id="extra-list"></div>
+      </div>
+      <div id="extra-logbook" class="hidden">
+        <div class="logbook-info" data-i18n="logbook_desc">Your offline meeting notes will appear here.</div>
+        <div id="logbook-list"></div>
+      </div>
+      <div id="extra-games" class="hidden">
+        <div class="card-grid" id="games-grid"></div>
+      </div>
     </div>
 
     <!-- PROFILE VIEW -->
@@ -195,34 +242,66 @@
         </div>
       </div>
       
-      <!-- ACHIEVEMENTS -->
+      <!-- PROFILE TABS -->
       <div class="profile-card">
-        <div class="section-title" style="margin-bottom:.7rem">
-          <span class="material-icons-round" style="font-size:18px">emoji_events</span>
-          <span data-i18n="achievements">Achievements</span>
-          <span class="ach-count" id="ach-count">0/8</span>
+        <div class="ptabs">
+          <button class="active" onclick="profTab('data',this)">
+            <span class="material-icons-round" style="font-size:16px">person</span>
+            <span data-i18n="data">Data</span>
+          </button>
+          <button onclick="profTab('ach',this)">
+            <span class="material-icons-round" style="font-size:16px">emoji_events</span>
+            <span data-i18n="achievements">Achievements</span>
+          </button>
+          <button onclick="profTab('bm',this)">
+            <span class="material-icons-round" style="font-size:16px">bookmark</span>
+            <span data-i18n="bookmarks">Bookmarks</span>
+          </button>
+          <button onclick="profTab('notes',this)">
+            <span class="material-icons-round" style="font-size:16px">edit_note</span>
+            <span data-i18n="notes">Notes</span>
+          </button>
         </div>
-        <div class="ach-grid" id="ach-grid"></div>
+        
+        <div id="pf-data">
+          <div class="info-row">
+            <strong data-i18n="class">Class:</strong>
+            <span id="profile-class">—</span>
+          </div>
+          <div class="info-row">
+            <strong data-i18n="batch">Batch:</strong>
+            <span id="profile-batch">—</span>
+          </div>
+          <div class="info-row">
+            <strong data-i18n="expires">Expires:</strong>
+            <span id="profile-expires">—</span>
+          </div>
+          <div class="info-row">
+            <strong data-i18n="joined">Joined:</strong>
+            <span id="profile-joined">—</span>
+          </div>
+        </div>
+        
+        <div id="pf-ach" class="hidden">
+          <div class="ach-count-display">
+            <span class="material-icons-round">emoji_events</span>
+            <span id="ach-count">0/8</span>
+            <span data-i18n="unlocked">unlocked</span>
+          </div>
+          <div class="ach-grid" id="ach-grid"></div>
+        </div>
+        
+        <div id="pf-bm" class="hidden">
+          <div class="empty-state" id="bm-empty" data-i18n="no_bookmarks">No bookmarks yet. Tap 🔖 on any material to save it.</div>
+          <div id="bm-list"></div>
+        </div>
+        
+        <div id="pf-notes" class="hidden">
+          <div class="empty-state" id="notes-empty" data-i18n="no_notes">No notes yet. Write notes while studying.</div>
+          <div id="notes-list"></div>
+        </div>
       </div>
       
-      <div class="profile-card">
-        <div class="section-title" style="margin-bottom:.7rem">
-          <span class="material-icons-round" style="font-size:18px">info</span>
-          <span data-i18n="account">Account</span>
-        </div>
-        <div class="info-row">
-          <strong data-i18n="class">Class:</strong>
-          <span id="profile-class">—</span>
-        </div>
-        <div class="info-row">
-          <strong data-i18n="batch">Batch:</strong>
-          <span id="profile-batch">—</span>
-        </div>
-        <div class="info-row">
-          <strong data-i18n="expires">Expires:</strong>
-          <span id="profile-expires">—</span>
-        </div>
-      </div>
       <button class="btn btn-ghost" onclick="doLogout()" style="color:#ed4956;border-color:#ed4956">
         <span class="material-icons-round">logout</span>
         <span data-i18n="logout">Logout</span>
@@ -313,9 +392,19 @@
     </div>
     <div id="react-step2" class="hidden">
       <div class="react-thanks" data-i18n="thanks_feedback">Thanks for your feedback! 🎉</div>
-      <button class="btn" onclick="closeOv('ov-react')" style="margin-top:1rem">
-        <span data-i18n="continue">Continue</span>
-      </button>
+      <div class="react-next-btns">
+        <button class="btn" onclick="closeOv('ov-react');openExercise()">
+          <span class="material-icons-round">quiz</span>
+          <span data-i18n="exercise">Exercise</span>
+        </button>
+        <button class="btn" onclick="closeOv('ov-react');openMinigames()" style="background:linear-gradient(45deg,#405DE6,#5851D8);margin-top:.5rem">
+          <span class="material-icons-round">sports_esports</span>
+          <span data-i18n="minigames">Minigames</span>
+        </button>
+        <button class="btn btn-ghost" onclick="closeOv('ov-react')" style="margin-top:.5rem">
+          <span data-i18n="continue_learning">Continue Learning</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -339,6 +428,14 @@
         <span class="material-icons-round">close</span>
       </button>
     </div>
+    <button class="menu-item" onclick="closeOv('ov-menu');openGuide()">
+      <span class="material-icons-round">menu_book</span>
+      <span data-i18n="guide">Guide</span>
+    </button>
+    <button class="menu-item" onclick="closeOv('ov-menu');openReport()">
+      <span class="material-icons-round">report_problem</span>
+      <span data-i18n="report">Report Issue</span>
+    </button>
     <button class="menu-item" onclick="closeOv('ov-menu');forceRefresh()">
       <span class="material-icons-round">refresh</span>
       <span data-i18n="refresh_data">Refresh Data</span>
@@ -354,13 +451,77 @@
   </div>
 </div>
 
+<!-- GUIDE OVERLAY -->
+<div class="overlay" id="ov-guide">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round">menu_book</span>
+      <span data-i18n="guide">Guide</span>
+      <button class="icon-btn" onclick="closeOv('ov-guide')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="guide-list">
+      <div class="guide-item">
+        <span class="guide-icon">📚</span>
+        <div class="guide-text" data-i18n="guide_learn">Choose a module in Learn tab, then select unit and part to study.</div>
+      </div>
+      <div class="guide-item">
+        <span class="guide-icon">🎯</span>
+        <div class="guide-text" data-i18n="guide_focus">Focus Mode helps you concentrate for 25 minutes before studying.</div>
+      </div>
+      <div class="guide-item">
+        <span class="guide-icon">📝</span>
+        <div class="guide-text" data-i18n="guide_exercise">After studying, tap Exercise to test your understanding.</div>
+      </div>
+      <div class="guide-item">
+        <span class="guide-icon">🔖</span>
+        <div class="guide-text" data-i18n="guide_bookmark">Tap bookmark icon to save materials for later.</div>
+      </div>
+      <div class="guide-item">
+        <span class="guide-icon">🏆</span>
+        <div class="guide-text" data-i18n="guide_ach">Complete challenges to unlock achievements!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT OVERLAY -->
+<div class="overlay" id="ov-report">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round">report_problem</span>
+      <span data-i18n="report">Report Issue</span>
+      <button class="icon-btn" onclick="closeOv('ov-report')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <textarea id="report-ta" rows="4" placeholder="Describe the problem..." data-i18n-placeholder="report_placeholder"></textarea>
+    <button class="btn" onclick="sendReport()" style="background:#25D366;margin-top:.7rem">
+      <span class="material-icons-round">chat</span>
+      <span data-i18n="send_wa">Send via WhatsApp</span>
+    </button>
+  </div>
+</div>
+
+<!-- EXERCISE/MINIGAMES IFRAME -->
+<div id="gm-overlay">
+  <div class="gm-header">
+    <button class="icon-btn" onclick="closeGM()">
+      <span class="material-icons-round">close</span>
+    </button>
+    <span class="gm-title" id="gm-title">Exercise</span>
+  </div>
+  <iframe id="gm-frame" src="about:blank"></iframe>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast">
   <span class="material-icons-round" id="toast-icon">check_circle</span>
   <span id="toast-message">OK</span>
 </div>
 
-<script src="https://jec-46840.wasmer.app/j/j/c.js"></script>
+<script src="https://jec-46840.wasmer.app/j/c.js"></script>
 <script src="https://jec-46840.wasmer.app/j/j.js"></script>
 </body>
 </html>
