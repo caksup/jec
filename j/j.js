@@ -1,5 +1,4 @@
-//new 15.24 // 
-
+//new 15.48 // 
 const I18N = {
   en: {
     login_subtitle:"Student Portal",student_id:"Student ID",login_btn:"SIGN IN",
@@ -8,7 +7,7 @@ const I18N = {
     listen:"Listen",quiz:"Quiz",focus_mode:"Focus Mode",skip:"Skip",
     start:"Start",pause:"Pause",parts_done:"Parts Done",day_streak:"Day Streak",
     days_left:"Days Left",account:"Account",class:"Class",batch:"Batch",
-    expires:"Expires",logout:"Logout",menu:"Menu",refresh_data:"Refresh Data",
+    expires:"Expires",joined:"Joined",logout:"Logout",menu:"Menu",refresh_data:"Refresh Data",
     leaderboard:"Leaderboard",online:"online",achievements:"Achievements",
     daily_challenge:"Daily Challenge",mark_done:"Mark as Done",
     feedback:"Feedback",how_was_lesson:"How was this lesson?",
@@ -22,7 +21,20 @@ const I18N = {
     login_failed:"Invalid ID or PIN",network_error:"Network error",
     bookmark_added:"Added to bookmarks! 🔖",
     bookmark_removed:"Removed from bookmarks",
-    dc_done:"Daily Challenge completed! +20 XP 🎉"
+    dc_done:"Daily Challenge completed! +20 XP 🎉",
+    offline:"You're offline",exercise:"Exercise",my_notes:"My Notes",
+    logbook:"Logbook",tools:"Tools",games:"Games",
+    logbook_desc:"Your offline meeting notes will appear here.",
+    guide:"Guide",report:"Report Issue",report_placeholder:"Describe the problem...",
+    send_wa:"Send via WhatsApp",minigames:"Minigames",continue_learning:"Continue Learning",
+    data:"Data",bookmarks:"Bookmarks",notes:"Notes",unlocked:"unlocked",
+    no_bookmarks:"No bookmarks yet. Tap 🔖 on any material to save it.",
+    no_notes:"No notes yet. Write notes while studying.",
+    guide_learn:"Choose a module in Learn tab, then select unit and part to study.",
+    guide_focus:"Focus Mode helps you concentrate for 25 minutes before studying.",
+    guide_exercise:"After studying, tap Exercise to test your understanding.",
+    guide_bookmark:"Tap bookmark icon to save materials for later.",
+    guide_ach:"Complete challenges to unlock achievements!"
   },
   id: {
     login_subtitle:"Portal Siswa",student_id:"ID Siswa",login_btn:"MASUK",
@@ -31,7 +43,7 @@ const I18N = {
     listen:"Dengarkan",quiz:"Kuis",focus_mode:"Mode Fokus",skip:"Lewati",
     start:"Mulai",pause:"Jeda",parts_done:"Bagian Selesai",day_streak:"Hari Berturut",
     days_left:"Hari Tersisa",account:"Akun",class:"Kelas",batch:"Angkatan",
-    expires:"Berakhir",logout:"Keluar",menu:"Menu",refresh_data:"Muat Ulang Data",
+    expires:"Berakhir",joined:"Bergabung",logout:"Keluar",menu:"Menu",refresh_data:"Muat Ulang Data",
     leaderboard:"Papan Peringkat",online:"online",achievements:"Pencapaian",
     daily_challenge:"Tantangan Harian",mark_done:"Tandai Selesai",
     feedback:"Umpan Balik",how_was_lesson:"Bagaimana pelajaran ini?",
@@ -45,11 +57,23 @@ const I18N = {
     login_failed:"ID atau PIN salah",network_error:"Kesalahan jaringan",
     bookmark_added:"Ditambahkan ke bookmark! 🔖",
     bookmark_removed:"Dihapus dari bookmark",
-    dc_done:"Tantangan Harian selesai! +20 XP 🎉"
+    dc_done:"Tantangan Harian selesai! +20 XP 🎉",
+    offline:"Anda sedang offline",exercise:"Latihan",my_notes:"Catatan Saya",
+    logbook:"Buku Catatan",tools:"Alat",games:"Permainan",
+    logbook_desc:"Catatan pertemuan offline Anda akan muncul di sini.",
+    guide:"Panduan",report:"Lapor Masalah",report_placeholder:"Jelaskan masalahnya...",
+    send_wa:"Kirim via WhatsApp",minigames:"Minigames",continue_learning:"Lanjut Belajar",
+    data:"Data",bookmarks:"Bookmark",notes:"Catatan",unlocked:"terbuka",
+    no_bookmarks:"Belum ada bookmark. Tap 🔖 pada materi untuk menyimpan.",
+    no_notes:"Belum ada catatan. Tulis catatan saat belajar.",
+    guide_learn:"Pilih modul di tab Belajar, lalu pilih unit dan bagian untuk dipelajari.",
+    guide_focus:"Mode Fokus membantu Anda berkonsentrasi 25 menit sebelum belajar.",
+    guide_exercise:"Setelah belajar, tap Latihan untuk menguji pemahaman.",
+    guide_bookmark:"Tap ikon bookmark untuk menyimpan materi.",
+    guide_ach:"Selesaikan tantangan untuk membuka pencapaian!"
   }
 };
 
-// ACHIEVEMENTS DEFINITION
 const ACHIEVEMENTS = [
   {id:'first_login', icon:'🚀', name:'First Steps', desc:'Login for the first time', condition:(s)=>s.partsDone>=0},
   {id:'first_part', icon:'📖', name:'Bookworm', desc:'Complete 1 part', condition:(s)=>s.partsDone>=1},
@@ -61,7 +85,6 @@ const ACHIEVEMENTS = [
   {id:'streak_3', icon:'💪', name:'Consistent', desc:'3 day streak', condition:(s)=>s.streak>=3}
 ];
 
-// DAILY CHALLENGES
 const DAILY_CHALLENGES = [
   {emoji:'🗣️', title:'Speak It Out', desc:'Read 3 English sentences aloud'},
   {emoji:'📚', title:'Word Hunter', desc:'Learn 5 new vocabulary words'},
@@ -78,15 +101,18 @@ let currentModule = null, currentUnitId = null, currentPartId = null;
 let materiData = {spe:{},voc:{},gra:{},wri:{},lis:{}};
 let progressMap = {};
 let extData = {tabs:[]};
+let lbData = {sessions:[]};
 let focusTimer = null, focusSeconds = 0, focusRunning = false;
 let leaderboardData = [];
 let bookmarkList = [];
 let unlockedAch = [];
 let currentDC = null;
+let notesMap = {};
 
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme();
   applyLang();
+  setupOfflineDetection();
   setTimeout(() => {
     document.getElementById('splash').classList.add('hide');
     setTimeout(() => {
@@ -106,6 +132,20 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(heartbeat, 30000);
   setInterval(fetchOnlineCount, 30000);
 });
+
+function setupOfflineDetection() {
+  const updateOnlineStatus = () => {
+    const offlineBar = document.getElementById('offline-bar');
+    if (!navigator.onLine) {
+      offlineBar.classList.add('show');
+    } else {
+      offlineBar.classList.remove('show');
+    }
+  };
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  updateOnlineStatus();
+}
 
 function showLogin() {
   document.getElementById('login').classList.add('active');
@@ -148,7 +188,6 @@ async function doLogin() {
       await loadAllData();
       showDashboard();
       showToast('Welcome, ' + currentUser.name + '!', 'success');
-      // Unlock first_login achievement
       unlockAchievement('first_login');
     } else {
       errEl.textContent = data.msg || t('login_failed');
@@ -199,20 +238,21 @@ async function loadAllData() {
     }
     const er = await fetch(CFG.DATA + 'ext.json?v=' + (CFG.APP_VERSION || Date.now()));
     if (er.ok) extData = await er.json();
+    const lr = await fetch(CFG.DATA + 'lb.json?v=' + (CFG.APP_VERSION || Date.now()));
+    if (lr.ok) lbData = await lr.json();
     const pr = await fetch(CFG.LOG + '?action=fetch_progress&id=' + encodeURIComponent(currentUser.id));
     if (pr.ok) {
       const arr = await pr.json();
       progressMap = {};
       arr.forEach(p => progressMap[p.module + '_' + p.unitId + '_' + p.partId] = p.status);
     }
-    const lr = await fetch(CFG.LOG + '?action=fetch_leaderboard&batch=' + encodeURIComponent(currentUser.batch));
-    if (lr.ok) {
-      leaderboardData = await lr.json();
+    const lbr = await fetch(CFG.LOG + '?action=fetch_leaderboard&batch=' + encodeURIComponent(currentUser.batch));
+    if (lbr.ok) {
+      leaderboardData = await lbr.json();
     }
-    // Load unlocked achievements from localStorage
     unlockedAch = JSON.parse(localStorage.getItem('jec_ach_' + currentUser.id) || '[]');
-    // Load bookmarks
     bookmarkList = JSON.parse(localStorage.getItem('jec_bm_' + currentUser.id) || '[]');
+    notesMap = JSON.parse(localStorage.getItem('jec_notes_' + currentUser.id) || '{}');
   } catch(e) {
     console.warn('Data load failed:', e);
   }
@@ -251,7 +291,6 @@ function checkDailyChallenge() {
     document.getElementById('dc-balloon').classList.remove('on');
     return;
   }
-  // Pick random challenge based on date (same challenge all day)
   const dateSeed = new Date().getDate() + new Date().getMonth();
   currentDC = DAILY_CHALLENGES[dateSeed % DAILY_CHALLENGES.length];
   setTimeout(() => {
@@ -276,7 +315,6 @@ function completeDailyChallenge() {
   document.getElementById('ov-dc').classList.remove('active');
   document.getElementById('dc-balloon').classList.remove('on');
   showToast(t('dc_done'), 'success');
-  // Log to Apps Script
   fetch(CFG.LOG, {
     method: 'POST',
     mode: 'no-cors',
@@ -318,13 +356,11 @@ function unlockAchievement(achId) {
   localStorage.setItem('jec_ach_' + currentUser.id, JSON.stringify(unlockedAch));
   const ach = ACHIEVEMENTS.find(a => a.id === achId);
   if (ach) {
-    // Show achievement toast
     document.getElementById('ach-toast-icon').textContent = ach.icon;
     document.getElementById('ach-toast-name').textContent = ach.name;
     const toast = document.getElementById('ach-toast');
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 3500);
-    // Log to Apps Script
     fetch(CFG.LOG, {
       method: 'POST',
       mode: 'no-cors',
@@ -363,7 +399,6 @@ function toggleBookmark() {
   if (idx === -1) {
     bookmarkList.push(key);
     showToast(t('bookmark_added'), 'success');
-    // Log to Apps Script
     fetch(CFG.LOG, {
       method: 'POST',
       mode: 'no-cors',
@@ -396,6 +431,87 @@ function updateBookmarkBtn() {
   icon.textContent = isBookmarked ? 'bookmark' : 'bookmark_border';
 }
 
+function renderBookmarks() {
+  const list = document.getElementById('bm-list');
+  const empty = document.getElementById('bm-empty');
+  if (!bookmarkList.length) {
+    empty.classList.remove('hidden');
+    list.innerHTML = '';
+    return;
+  }
+  empty.classList.add('hidden');
+  list.innerHTML = bookmarkList.map((key, idx) => {
+    const [mod, unitId, partId] = key.split('_');
+    const unit = materiData[mod]?.materials?.[unitId];
+    const part = unit?.parts?.[partId];
+    const title = part?.title || partId;
+    const unitTitle = unit?.title || unitId;
+    return `<div class="bm-item">
+      <div class="bm-info">
+        <div class="bm-title">${esc(title)}</div>
+        <div class="bm-sub">${esc(unitTitle)} • ${t('modules.' + mod)}</div>
+      </div>
+      <button class="bm-del" onclick="removeBookmark(${idx})">
+        <span class="material-icons-round" style="font-size:18px">delete</span>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function removeBookmark(idx) {
+  bookmarkList.splice(idx, 1);
+  localStorage.setItem('jec_bm_' + currentUser.id, JSON.stringify(bookmarkList));
+  renderBookmarks();
+  checkAchievements();
+  showToast(t('bookmark_removed'), 'warning');
+}
+
+// =====================================================
+// NOTES
+// =====================================================
+
+function saveNote() {
+  if (!currentUser || !currentModule || !currentUnitId || !currentPartId) return;
+  const key = currentModule + '_' + currentUnitId + '_' + currentPartId;
+  const content = document.getElementById('notes-ta').value;
+  if (content.trim()) {
+    notesMap[key] = content;
+  } else {
+    delete notesMap[key];
+  }
+  localStorage.setItem('jec_notes_' + currentUser.id, JSON.stringify(notesMap));
+}
+
+function loadNote() {
+  if (!currentUser || !currentModule || !currentUnitId || !currentPartId) return;
+  const key = currentModule + '_' + currentUnitId + '_' + currentPartId;
+  document.getElementById('notes-ta').value = notesMap[key] || '';
+}
+
+function renderNotes() {
+  const list = document.getElementById('notes-list');
+  const empty = document.getElementById('notes-empty');
+  const entries = Object.entries(notesMap);
+  if (!entries.length) {
+    empty.classList.remove('hidden');
+    list.innerHTML = '';
+    return;
+  }
+  empty.classList.add('hidden');
+  list.innerHTML = entries.map(([key, content]) => {
+    const [mod, unitId, partId] = key.split('_');
+    const unit = materiData[mod]?.materials?.[unitId];
+    const part = unit?.parts?.[partId];
+    const title = part?.title || partId;
+    return `<div class="note-item">
+      <div class="note-info">
+        <div class="note-title">${esc(title)}</div>
+        <div class="note-sub">${esc(content.substring(0, 50))}${content.length > 50 ? '...' : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // =====================================================
 // REACT/FEEDBACK
 // =====================================================
@@ -424,6 +540,147 @@ function sendReact(type) {
 }
 
 // =====================================================
+// EXERCISE & MINIGAMES
+// =====================================================
+
+function openExercise() {
+  if (!CFG.EXE_URL) {
+    showToast('Exercise page not configured', 'warning');
+    return;
+  }
+  const url = CFG.EXE_URL + '?mod=' + currentModule + '&u=' + currentUnitId + '&p=' + currentPartId;
+  document.getElementById('gm-title').textContent = 'Exercise';
+  document.getElementById('gm-frame').src = url;
+  document.getElementById('gm-overlay').classList.add('active');
+}
+
+function openMinigames() {
+  if (!CFG.MINIGAMES) {
+    showToast('Minigames page not configured', 'warning');
+    return;
+  }
+  document.getElementById('gm-title').textContent = 'Minigames';
+  document.getElementById('gm-frame').src = CFG.MINIGAMES;
+  document.getElementById('gm-overlay').classList.add('active');
+}
+
+function closeGM() {
+  document.getElementById('gm-overlay').classList.remove('active');
+  document.getElementById('gm-frame').src = 'about:blank';
+}
+
+// =====================================================
+// FULLSCREEN
+// =====================================================
+
+function toggleFullscreen() {
+  const icon = document.getElementById('fs-icon');
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().then(() => {
+      icon.textContent = 'fullscreen_exit';
+    }).catch(() => {});
+  } else {
+    document.exitFullscreen().then(() => {
+      icon.textContent = 'fullscreen';
+    }).catch(() => {});
+  }
+}
+
+// =====================================================
+// GUIDE & REPORT
+// =====================================================
+
+function openGuide() {
+  document.getElementById('ov-guide').classList.add('active');
+}
+
+function openReport() {
+  document.getElementById('ov-report').classList.add('active');
+}
+
+function sendReport() {
+  const text = document.getElementById('report-ta').value;
+  if (!text.trim()) {
+    showToast('Please describe the problem', 'warning');
+    return;
+  }
+  const wa = CFG.WA_ADMIN || '6285335913758';
+  const msg = encodeURIComponent('[JEC Report]\nID: ' + currentUser.id + '\nName: ' + currentUser.name + '\n\n' + text);
+  window.open('https://wa.me/' + wa + '?text=' + msg, '_blank');
+  closeOv('ov-report');
+  document.getElementById('report-ta').value = '';
+  showToast('Opening WhatsApp...', 'success');
+}
+
+// =====================================================
+// LOGBOOK
+// =====================================================
+
+function renderLogbook() {
+  const list = document.getElementById('logbook-list');
+  const sessions = (lbData.sessions || []).filter(s => s.studentId === currentUser.id);
+  if (!sessions.length) {
+    list.innerHTML = '<div class="empty-state">' + t('logbook_desc') + '</div>';
+    return;
+  }
+  sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+  list.innerHTML = sessions.map(s => `
+    <div class="logbook-item">
+      <div class="logbook-date">📅 ${esc(s.date)} ${esc(s.time || '')}</div>
+      <div class="logbook-detail">
+        <strong>${t('modules.' + (s.module || 'spe'))}</strong> • ${esc(s.unit || '')} • ${esc(s.part || '')}<br>
+        ${esc(s.notes || '')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// =====================================================
+// EXTRA TABS
+// =====================================================
+
+function extraTab(name, btn) {
+  document.querySelectorAll('#extra-tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['tools', 'logbook', 'games'].forEach(t => {
+    document.getElementById('extra-' + t).classList.toggle('hidden', t !== name);
+  });
+  if (name === 'logbook') renderLogbook();
+  if (name === 'games') renderGames();
+}
+
+function renderGames() {
+  const games = [
+    {icon:'🎮', title:'Word Scramble', desc:'Unscramble letters'},
+    {icon:'🎯', title:'Flashcards', desc:'Memory game'},
+    {icon:'🧩', title:'Puzzle Match', desc:'Match pairs'},
+    {icon:'🎲', title:'Word Dice', desc:'Roll and spell'}
+  ];
+  document.getElementById('games-grid').innerHTML = games.map(g => 
+    `<div class="learn-card" onclick="showToast('Coming soon','warning')">
+      <div class="icon">${g.icon}</div>
+      <div class="title">${g.title}</div>
+      <div class="count">${g.desc}</div>
+    </div>`
+  ).join('');
+}
+
+// =====================================================
+// PROFILE TABS
+// =====================================================
+
+function profTab(name, btn) {
+  document.querySelectorAll('.ptabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['data', 'ach', 'bm', 'notes'].forEach(t => {
+    document.getElementById('pf-' + t).classList.toggle('hidden', t !== name);
+  });
+  if (name === 'ach') renderAchievements();
+  if (name === 'bm') renderBookmarks();
+  if (name === 'notes') renderNotes();
+}
+
+// =====================================================
 // RENDER
 // =====================================================
 
@@ -436,6 +693,7 @@ function renderAll() {
   document.getElementById('profile-class').textContent = currentUser.class;
   document.getElementById('profile-batch').textContent = currentUser.batch;
   document.getElementById('profile-expires').textContent = currentUser.daysLeft + ' days';
+  document.getElementById('profile-joined').textContent = currentUser.startDate ? new Date(currentUser.startDate).toLocaleDateString() : '—';
   document.getElementById('stat-days').textContent = currentUser.daysLeft || 0;
   updateDateTime();
   renderLearnCards();
@@ -619,6 +877,7 @@ function renderMateri(module, unitId, partId) {
     quizSection.classList.add('hidden');
   }
   updateBookmarkBtn();
+  loadNote();
   markDone(module, unitId, partId);
 }
 
@@ -645,13 +904,11 @@ function answerQuiz(el, qIdx, optIdx, correctIdx) {
     options[correctIdx].classList.add('correct');
     showToast(t('wrong_answer'), 'error', 2000);
   }
-  // Check if all questions answered
   const allAnswered = [...document.querySelectorAll('.quiz-question')].every(q => {
     const opts = q.parentElement.querySelectorAll('.quiz-option');
     return [...opts].some(o => o.classList.contains('correct') || o.classList.contains('wrong'));
   });
   if (allAnswered) {
-    // Show react overlay after quiz
     setTimeout(() => showReactOverlay(), 1000);
   }
 }
@@ -683,7 +940,6 @@ function markDone(module, unitId, partId) {
   }).catch(e => console.warn('mark_done failed:', e));
   updateStats();
   checkAchievements();
-  // Show react overlay after finishing material (only if no quiz)
   const part = materiData[module]?.materials?.[unitId]?.parts?.[partId];
   if (!part || !part.quiz || !part.quiz.length) {
     setTimeout(() => showReactOverlay(), 500);
@@ -776,6 +1032,11 @@ function switchView(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   if (name === 'learn') showLearnCards();
+  if (name === 'profile') {
+    renderAchievements();
+    renderBookmarks();
+    renderNotes();
+  }
 }
 
 function toggleTheme() {
