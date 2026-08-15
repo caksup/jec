@@ -1,4 +1,4 @@
-// JEC v.1.06 | 15/08/2026 | j/j.js | Core Engine + Clock + Hash Routing
+// JEC v.1.08 | 15/08/2026 | j/j.js | Core Engine - Fix Race Condition + Auto-Login
 
 'use strict';
 
@@ -18,6 +18,7 @@ const JEC = {
   currentDC: null,
   dcToday: null,
   featureStates: {},
+  featurePromises: {},
   activeView: 'learn',
   currentModule: null,
   currentUnitId: null,
@@ -28,6 +29,8 @@ const JEC = {
   flmSeconds: 0,
   flmTotalSeconds: 0,
   flmActive: false,
+  appState: 'boot',  // boot, splash, login, dashboard
+  featuresLoaded: false,
   stats: {
     partsDone: 0, perfectQuiz: false, perfectCount: 0, avgQuiz: 0,
     quizCount: 0, streak: 0, loginCount: 0, focusCount: 0,
@@ -39,17 +42,252 @@ const JEC = {
   }
 };
 
-// ═══════════ BOOTSTRAP ═══════════
+// ═══════════ BOOTSTRAP (STATE MACHINE) ═══════════
 document.addEventListener('DOMContentLoaded', function() {
   JEC.applyTheme();
   JEC.applyLang();
   JEC.setupOfflineDetection();
   JEC.startClock();
-  JEC.initBuiltInSplash();
-  JEC.initBuiltInLogin();
-  JEC.initFeatureRouter();
-  JEC.initHashRouter();
+  JEC.boot();
 });
+
+JEC.boot = async function() {
+  JEC.appState = 'splash';
+  
+  const splash = document.getElementById('feat-splash');
+  const loginPage = document.getElementById('feat-login');
+  const dashboard = document.getElementById('dashboard');
+  
+  if (splash) {
+    splash.style.display = 'flex';
+    splash.classList.remove('hide');
+  }
+  
+  // JANGAN tampilkan login page dulu - tunggu auto-login selesai
+  if (loginPage) loginPage.classList.add('hidden');
+  if (dashboard) dashboard.classList.remove('active');
+  
+  // Start loading features di background (jangan tunggu)
+  JEC.initFeatureRouter();
+  
+  // Cek apakah ada saved session
+  const savedUser = localStorage.getItem('jec_user');
+  let sessionValid = false;
+  
+  if (savedUser) {
+    try {
+      const u = JSON.parse(savedUser);
+      JEC.user = u;
+      sessionValid = await JEC.autoLogin(u);
+    } catch(e) {
+      console.warn('[JEC] Failed to parse saved user:', e);
+      localStorage.removeItem('jec_user');
+      JEC.user = null;
+    }
+  }
+  
+  // Tunggu minimal 3 detik splash (atau sampai features load)
+  const minSplashTime = new Promise(resolve => setTimeout(resolve, 3000));
+  await minSplashTime;
+  
+  // Tunggu features selesai load (max 5 detik)
+  await JEC.waitForFeatures(5000);
+  
+  // Fade out splash
+  if (splash) {
+    splash.classList.add('hide');
+    setTimeout(function() {
+      splash.style.display = 'none';
+    }, 500);
+  }
+  
+  // Sekarang tentukan halaman yang tampil
+  if (sessionValid && JEC.user) {
+    JEC.enterDashboard();
+    // Coba navigate dari hash jika ada
+    setTimeout(function() {
+      JEC.navigateFromHash();
+    }, 300);
+  } else {
+    JEC.showLoginPage();
+  }
+};
+
+// ═══════════ WAIT FOR FEATURES ═══════════
+JEC.waitForFeatures = function(timeoutMs) {
+  timeoutMs = timeoutMs || 5000;
+  return new Promise(function(resolve) {
+    if (JEC.featuresLoaded) {
+      resolve();
+      return;
+    }
+    
+    const startTime = Date.now();
+    const checkInterval = setInterval(function() {
+      const allDone = Object.keys(JEC.config.FEATURES || {}).every(function(name) {
+        // Skip built-in features
+        if (name === 'splash' || name === 'login' || name === 'header') return true;
+        const state = JEC.featureStates[name];
+        return state && (state.loaded === true || state.disabled === true || state.error || state.notFound);
+      });
+      
+      if (allDone || (Date.now() - startTime) > timeoutMs) {
+        clearInterval(checkInterval);
+        JEC.featuresLoaded = true;
+        resolve();
+      }
+    }, 100);
+  });
+};
+
+// ═══════════ SHOW/HIDE PAGES ═══════════
+JEC.showLoginPage = function() {
+  if (JEC.appState === 'login') return;
+  JEC.appState = 'login';
+  
+  const loginPage = document.getElementById('feat-login');
+  const dashboard = document.getElementById('dashboard');
+  
+  if (loginPage) loginPage.classList.remove('hidden');
+  if (dashboard) dashboard.classList.remove('active');
+};
+
+JEC.enterDashboard = function() {
+  if (JEC.appState === 'dashboard') return;
+  JEC.appState = 'dashboard';
+  
+  const loginPage = document.getElementById('feat-login');
+  const dashboard = document.getElementById('dashboard');
+  
+  if (loginPage) loginPage.classList.add('hidden');
+  if (dashboard) dashboard.classList.add('active');
+  
+  const userName = document.getElementById('user-name');
+  if (userName && JEC.user) {
+    userName.textContent = JEC.user.nickname ? '@' + JEC.user.nickname : JEC.user.name;
+  }
+  
+  JEC.applyHeaderBg();
+  JEC.applyCustomLogo();
+  JEC.fetchOnlineCount();
+  
+  if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
+    JEC_UI.showFLMFab();
+  }
+  
+  // Refresh semua feature yang sudah load
+  JEC.refreshActiveFeatureUI();
+};
+
+// ═══════════ FEATURE ROUTER (PROMISE-BASED) ═══════════
+JEC.initFeatureRouter = function() {
+  const features = JEC.config.FEATURES || {};
+  const featureNames = Object.keys(features);
+  const builtIn = ['splash', 'login', 'header'];
+  
+  featureNames.forEach(function(name) {
+    if (builtIn.includes(name)) {
+      JEC.featureStates[name] = { loaded: true, builtin: true };
+      return;
+    }
+    
+    const cfg = features[name];
+    if (!cfg.enabled) {
+      JEC.featureStates[name] = { loaded: false, disabled: true };
+      JEC.renderMaintenancePlaceholder(name, 'maintenance');
+      return;
+    }
+    
+    // Buat promise untuk setiap feature
+    JEC.featurePromises[name] = new Promise(function(resolve) {
+      JEC.loadFeature(name, cfg.js, resolve);
+    });
+  });
+};
+
+JEC.loadFeature = function(name, jsFile, callback) {
+  const baseUrl = JEC.config.FEATURES_JS || (JEC.config.BASE_GH + 'j/f/');
+  const url = baseUrl + jsFile + '?v=' + Date.now();
+  const script = document.createElement('script');
+  
+  script.onload = function() {
+    const initFn = window['JEC_' + name.toUpperCase() + '_INIT'];
+    if (typeof initFn === 'function') {
+      try {
+        initFn(JEC);
+        JEC.featureStates[name] = { loaded: true };
+        if (JEC.config.DEBUG_MODE) {
+          console.log('[JEC] ✓ Feature loaded: ' + name);
+        }
+      } catch(err) {
+        console.error('[JEC] ✗ Error init feature ' + name + ':', err);
+        JEC.featureStates[name] = { loaded: false, error: err.message };
+        JEC.renderMaintenancePlaceholder(name, 'error');
+        // Retry sekali setelah 1 detik
+        setTimeout(function() {
+          try {
+            if (typeof initFn === 'function') {
+              initFn(JEC);
+              JEC.featureStates[name] = { loaded: true };
+              console.log('[JEC] ✓ Feature retry success: ' + name);
+            }
+          } catch(e2) {
+            console.error('[JEC] ✗ Retry failed for ' + name);
+          }
+          if (callback) callback();
+        }, 1000);
+        return;
+      }
+    } else {
+      JEC.featureStates[name] = { loaded: true };
+      if (JEC.config.DEBUG_MODE) {
+        console.log('[JEC] ✓ Feature loaded (no init): ' + name);
+      }
+    }
+    if (callback) callback();
+  };
+  
+  script.onerror = function() {
+    console.warn('[JEC] ⚠ Feature JS not found: ' + jsFile);
+    JEC.featureStates[name] = { loaded: false, notFound: true };
+    JEC.renderMaintenancePlaceholder(name, 'maintenance');
+    if (callback) callback();
+  };
+  
+  script.src = url;
+  document.head.appendChild(script);
+};
+
+JEC.renderMaintenancePlaceholder = function(featureName, type) {
+  const containerId = 'feat-' + featureName;
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const msg = JEC.config.I18N || {};
+  const lang = JEC.lang;
+  
+  let title, desc, icon;
+  if (type === 'error') {
+    title = (msg.error_load && msg.error_load[lang]) || 'Under Repair';
+    desc = (msg.error_desc && msg.error_desc[lang]) || 'Feature temporarily unavailable';
+    icon = 'build';
+  } else {
+    title = (msg.maintenance && msg.maintenance[lang]) || 'Maintenance Service';
+    desc = (msg.under_construction && msg.under_construction[lang]) || 'This feature is under development';
+    icon = 'engineering';
+  }
+  
+  container.innerHTML = '<div class="maintenance-card">' +
+    '<span class="material-icons-round maintenance-icon">' + icon + '</span>' +
+    '<div class="maintenance-title">' + JEC.esc(title) + '</div>' +
+    '<div class="maintenance-desc">' + JEC.esc(desc) + '</div>' +
+    '</div>';
+};
+
+JEC.isFeatureLoaded = function(name) {
+  const state = JEC.featureStates[name];
+  return state && state.loaded === true;
+};
 
 // ═══════════ CLOCK (JAM REAL-TIME) ═══════════
 JEC.startClock = function() {
@@ -148,294 +386,6 @@ JEC.updateHash = function(module, unitId, partId) {
   } else {
     history.replaceState(null, null, ' ');
   }
-};
-
-// ═══════════ BUILT-IN SPLASH (SMOOTH AUTO-LOGIN) ═══════════
-JEC.initBuiltInSplash = function() {
-  const splash = document.getElementById('feat-splash');
-  if (!splash) return;
-  
-  splash.style.display = 'flex';
-  splash.classList.remove('hide');
-  
-  const savedUser = localStorage.getItem('jec_user');
-  let autoLoginPromise = null;
-  
-  if (savedUser) {
-    try {
-      const u = JSON.parse(savedUser);
-      autoLoginPromise = JEC.autoLogin(u);
-    } catch(e) {
-      autoLoginPromise = Promise.resolve(false);
-    }
-  } else {
-    autoLoginPromise = Promise.resolve(false);
-  }
-  
-  setTimeout(function() {
-    splash.classList.add('hide');
-    
-    setTimeout(function() {
-      splash.style.display = 'none';
-      
-      if (autoLoginPromise) {
-        autoLoginPromise.then(function(success) {
-          if (success && JEC.user) {
-            JEC.enterDashboard();
-            setTimeout(function() {
-              JEC.navigateFromHash();
-            }, 500);
-          } else {
-            JEC.showLoginPage();
-          }
-        }).catch(function() {
-          JEC.showLoginPage();
-        });
-      } else {
-        JEC.showLoginPage();
-      }
-    }, 500);
-  }, 3000);
-};
-
-// ═══════════ BUILT-IN LOGIN ═══════════
-JEC.initBuiltInLogin = function() {
-  const loginBtn = document.getElementById('login-btn');
-  const loginPin = document.getElementById('login-pin');
-  const loginId = document.getElementById('login-id');
-  
-  if (loginBtn) {
-    loginBtn.onclick = function() { JEC.doLogin(); };
-  }
-  if (loginPin) {
-    loginPin.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') JEC.doLogin();
-    });
-  }
-  if (loginId) {
-    loginId.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') loginPin.focus();
-    });
-  }
-};
-
-JEC.doLogin = async function() {
-  const id = document.getElementById('login-id').value.trim().toLowerCase();
-  const pin = document.getElementById('login-pin').value.trim();
-  const errorEl = document.getElementById('login-error');
-  const errorMsg = document.getElementById('login-error-msg');
-  const loadingEl = document.getElementById('login-loading');
-  
-  if (errorEl) errorEl.classList.remove('show');
-  
-  if (!id || !pin) {
-    if (errorMsg) errorMsg.textContent = JEC.t('fill_all_fields') || 'Please fill all fields';
-    if (errorEl) errorEl.classList.add('show');
-    return;
-  }
-  
-  if (loadingEl) loadingEl.classList.add('show');
-  
-  try {
-    const result = await JEC.login(id, pin);
-    if (loadingEl) loadingEl.classList.remove('show');
-    
-    if (result.success) {
-      JEC.enterDashboard();
-      setTimeout(function() {
-        JEC.navigateFromHash();
-      }, 500);
-    } else {
-      if (errorMsg) errorMsg.textContent = result.msg || JEC.t('login_failed');
-      if (errorEl) errorEl.classList.add('show');
-    }
-  } catch(e) {
-    if (loadingEl) loadingEl.classList.remove('show');
-    if (errorMsg) errorMsg.textContent = JEC.t('network_error') || 'Network error';
-    if (errorEl) errorEl.classList.add('show');
-  }
-};
-
-JEC.showLoginPage = function() {
-  const loginPage = document.getElementById('feat-login');
-  const dashboard = document.getElementById('dashboard');
-  
-  if (loginPage) loginPage.classList.remove('hidden');
-  if (dashboard) dashboard.classList.remove('active');
-};
-
-JEC.enterDashboard = function() {
-  const loginPage = document.getElementById('feat-login');
-  const dashboard = document.getElementById('dashboard');
-  
-  if (loginPage) loginPage.classList.add('hidden');
-  if (dashboard) dashboard.classList.add('active');
-  
-  const userName = document.getElementById('user-name');
-  if (userName && JEC.user) {
-    userName.textContent = JEC.user.nickname ? '@' + JEC.user.nickname : JEC.user.name;
-  }
-  
-  JEC.applyHeaderBg();
-  JEC.applyCustomLogo();
-  JEC.fetchOnlineCount();
-  
-  if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
-    JEC_UI.showFLMFab();
-  }
-};
-
-// ═══════════ FLM TIMER DI HEADER ═══════════
-JEC.startFLMTimer = function(duration) {
-  duration = duration || JEC.config.MFL_DEFAULT || 25;
-  JEC.flmTotalSeconds = duration * 60;
-  JEC.flmSeconds = JEC.flmTotalSeconds;
-  JEC.flmActive = true;
-  
-  const activeBar = document.getElementById('flm-active-bar');
-  if (activeBar) activeBar.classList.remove('hidden');
-  
-  JEC.updateFLMHeaderTimer();
-  
-  if (JEC.flmTimer) clearInterval(JEC.flmTimer);
-  JEC.flmTimer = setInterval(function() {
-    JEC.flmSeconds--;
-    JEC.updateFLMHeaderTimer();
-    
-    if (JEC.flmSeconds <= 0) {
-      JEC.completeFLM();
-    }
-  }, 1000);
-};
-
-JEC.updateFLMHeaderTimer = function() {
-  const timerEl = document.getElementById('flm-header-timer');
-  if (timerEl) {
-    const elapsed = JEC.flmTotalSeconds - JEC.flmSeconds;
-    const m = Math.floor(elapsed / 60);
-    const s = elapsed % 60;
-    timerEl.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-  }
-};
-
-JEC.completeFLM = function() {
-  if (JEC.flmTimer) clearInterval(JEC.flmTimer);
-  JEC.flmActive = false;
-  JEC.flmTimer = null;
-  
-  const activeBar = document.getElementById('flm-active-bar');
-  if (activeBar) activeBar.classList.add('hidden');
-  
-  JEC.saveFocusMode(
-    JEC.currentModule,
-    JEC.currentUnitId,
-    null,
-    JEC.flmTotalSeconds / 60,
-    true
-  );
-  
-  JEC.toast(JEC.t('flm_complete') || 'Focus session completed!', 'success', 3000);
-  
-  if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
-    JEC_UI.showFLMFab();
-  }
-};
-
-JEC.exitFLM = function() {
-  if (!confirm(JEC.t('flm_exit_confirm') || 'Exit Focus Learn Mode?')) return;
-  
-  if (JEC.flmTimer) clearInterval(JEC.flmTimer);
-  JEC.flmActive = false;
-  JEC.flmTimer = null;
-  
-  const activeBar = document.getElementById('flm-active-bar');
-  if (activeBar) activeBar.classList.add('hidden');
-  
-  if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
-    JEC_UI.showFLMFab();
-  }
-};
-
-// ═══════════ FEATURE ROUTER ═══════════
-JEC.initFeatureRouter = function() {
-  const features = JEC.config.FEATURES || {};
-  const featureNames = Object.keys(features);
-  
-  let delay = 100;
-  featureNames.forEach(function(name) {
-    if (name === 'splash' || name === 'login' || name === 'header') return;
-    
-    const cfg = features[name];
-    if (!cfg.enabled) {
-      JEC.featureStates[name] = { loaded: false, disabled: true };
-      JEC.renderMaintenancePlaceholder(name);
-      return;
-    }
-    
-    setTimeout(function() {
-      JEC.loadFeature(name, cfg.js);
-    }, delay);
-    delay += 100;
-  });
-};
-
-JEC.loadFeature = function(name, jsFile) {
-  const url = JEC.config.FEATURES_JS + jsFile + '?v=' + Date.now();
-  const script = document.createElement('script');
-  
-  script.onload = function() {
-    const initFn = window['JEC_' + name.toUpperCase() + '_INIT'];
-    if (typeof initFn === 'function') {
-      try {
-        initFn(JEC);
-        JEC.featureStates[name] = { loaded: true };
-      } catch(err) {
-        JEC.featureStates[name] = { loaded: false, error: err.message };
-        JEC.renderMaintenancePlaceholder(name, 'error');
-      }
-    } else {
-      JEC.featureStates[name] = { loaded: true };
-    }
-  };
-  
-  script.onerror = function() {
-    JEC.featureStates[name] = { loaded: false, notFound: true };
-    JEC.renderMaintenancePlaceholder(name, 'maintenance');
-  };
-  
-  script.src = url;
-  document.head.appendChild(script);
-};
-
-JEC.renderMaintenancePlaceholder = function(featureName, type) {
-  const containerId = 'feat-' + featureName;
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  
-  const msg = JEC.config.I18N || {};
-  const lang = JEC.lang;
-  
-  let title, desc, icon;
-  if (type === 'error') {
-    title = (msg.error_load && msg.error_load[lang]) || 'Under Repair';
-    desc = (msg.error_desc && msg.error_desc[lang]) || 'Feature temporarily unavailable';
-    icon = 'build';
-  } else {
-    title = (msg.maintenance && msg.maintenance[lang]) || 'Maintenance Service';
-    desc = (msg.under_construction && msg.under_construction[lang]) || 'This feature is under development';
-    icon = 'engineering';
-  }
-  
-  container.innerHTML = '<div class="maintenance-card">' +
-    '<span class="material-icons-round maintenance-icon">' + icon + '</span>' +
-    '<div class="maintenance-title">' + JEC.esc(title) + '</div>' +
-    '<div class="maintenance-desc">' + JEC.esc(desc) + '</div>' +
-    '</div>';
-};
-
-JEC.isFeatureLoaded = function(name) {
-  const state = JEC.featureStates[name];
-  return state && state.loaded === true;
 };
 
 // ═══════════ THEME ═══════════
@@ -581,6 +531,43 @@ JEC.apiPost = async function(data) {
 };
 
 // ═══════════ LOGIN & SESSION ═══════════
+JEC.doLogin = async function() {
+  const id = document.getElementById('login-id').value.trim().toLowerCase();
+  const pin = document.getElementById('login-pin').value.trim();
+  const errorEl = document.getElementById('login-error');
+  const errorMsg = document.getElementById('login-error-msg');
+  const loadingEl = document.getElementById('login-loading');
+  
+  if (errorEl) errorEl.classList.remove('show');
+  
+  if (!id || !pin) {
+    if (errorMsg) errorMsg.textContent = JEC.t('fill_all_fields') || 'Please fill all fields';
+    if (errorEl) errorEl.classList.add('show');
+    return;
+  }
+  
+  if (loadingEl) loadingEl.classList.add('show');
+  
+  try {
+    const result = await JEC.login(id, pin);
+    if (loadingEl) loadingEl.classList.remove('show');
+    
+    if (result.success) {
+      JEC.enterDashboard();
+      setTimeout(function() {
+        JEC.navigateFromHash();
+      }, 300);
+    } else {
+      if (errorMsg) errorMsg.textContent = result.msg || JEC.t('login_failed');
+      if (errorEl) errorEl.classList.add('show');
+    }
+  } catch(e) {
+    if (loadingEl) loadingEl.classList.remove('show');
+    if (errorMsg) errorMsg.textContent = JEC.t('network_error') || 'Network error';
+    if (errorEl) errorEl.classList.add('show');
+  }
+};
+
 JEC.login = async function(id, pin) {
   try {
     const data = await JEC.apiGet({ action: 'login', id: id, pin: pin });
@@ -600,6 +587,7 @@ JEC.login = async function(id, pin) {
       JEC.checkDailyChallenge();
       JEC.checkAllAchievements();
       JEC.logActivity('login', 'Login successful');
+      localStorage.setItem('jec_last_login_' + JEC.user.id, Date.now());
       return { success: true };
     } else {
       return { success: false, msg: data.msg };
@@ -610,12 +598,14 @@ JEC.login = async function(id, pin) {
 };
 
 JEC.autoLogin = async function(u) {
-  JEC.user = u;
   try {
     const data = await JEC.apiGet({ action: 'check_session', id: u.id });
     if (data.active) {
+      JEC.user = u;
       JEC.user.daysLeft = data.daysLeft;
       await JEC.loadAllData();
+      JEC.checkDailyChallenge();
+      JEC.checkAllAchievements();
       return true;
     } else {
       localStorage.removeItem('jec_user');
@@ -623,7 +613,10 @@ JEC.autoLogin = async function(u) {
       return false;
     }
   } catch(e) {
+    console.warn('[JEC] Auto-login check failed:', e);
+    // Fallback: load data offline (dari localStorage)
     try {
+      JEC.user = u;
       await JEC.loadAllData();
       return true;
     } catch(e2) {
@@ -636,6 +629,7 @@ JEC.logout = function() {
   if (!confirm('Logout?')) return;
   localStorage.removeItem('jec_user');
   JEC.user = null;
+  JEC.appState = 'boot';
   location.reload();
 };
 
@@ -720,7 +714,6 @@ JEC.heartbeat = function() {
   }).catch(function() {});
 };
 
-// ═══════════ ONLINE COUNT ═══════════
 JEC.fetchOnlineCount = async function() {
   if (!JEC.user) return;
   try {
@@ -1011,7 +1004,6 @@ JEC.switchView = function(name, btn) {
   JEC.activeView = name;
 };
 
-// ═══════════ FULLSCREEN ═══════════
 JEC.toggleFullscreen = function() {
   const icon = document.getElementById('fs-icon');
   if (!document.fullscreenElement) {
@@ -1025,7 +1017,6 @@ JEC.toggleFullscreen = function() {
   }
 };
 
-// ═══════════ OVERLAY ═══════════
 JEC.openOv = function(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
@@ -1105,6 +1096,87 @@ JEC.forceRefresh = async function() {
   JEC.toast('Refreshed!', 'success');
 };
 
+// ═══════════ DEBUG MODE ═══════════
+JEC.debug = function() {
+  console.log('══════ JEC DEBUG v1.08 ══════');
+  console.log('App State:', JEC.appState);
+  console.log('User:', JEC.user);
+  console.log('Features Loaded:', JEC.featuresLoaded);
+  console.log('Feature States:', JEC.featureStates);
+  console.log('══════ END DEBUG ══════');
+};
+
+// ═══════════ FLM TIMER DI HEADER ═══════════
+JEC.startFLMTimer = function(duration) {
+  duration = duration || JEC.config.MFL_DEFAULT || 25;
+  JEC.flmTotalSeconds = duration * 60;
+  JEC.flmSeconds = JEC.flmTotalSeconds;
+  JEC.flmActive = true;
+  
+  const activeBar = document.getElementById('flm-active-bar');
+  if (activeBar) activeBar.classList.remove('hidden');
+  
+  JEC.updateFLMHeaderTimer();
+  
+  if (JEC.flmTimer) clearInterval(JEC.flmTimer);
+  JEC.flmTimer = setInterval(function() {
+    JEC.flmSeconds--;
+    JEC.updateFLMHeaderTimer();
+    
+    if (JEC.flmSeconds <= 0) {
+      JEC.completeFLM();
+    }
+  }, 1000);
+};
+
+JEC.updateFLMHeaderTimer = function() {
+  const timerEl = document.getElementById('flm-header-timer');
+  if (timerEl) {
+    const elapsed = JEC.flmTotalSeconds - JEC.flmSeconds;
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    timerEl.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+};
+
+JEC.completeFLM = function() {
+  if (JEC.flmTimer) clearInterval(JEC.flmTimer);
+  JEC.flmActive = false;
+  JEC.flmTimer = null;
+  
+  const activeBar = document.getElementById('flm-active-bar');
+  if (activeBar) activeBar.classList.add('hidden');
+  
+  JEC.saveFocusMode(
+    JEC.currentModule,
+    JEC.currentUnitId,
+    null,
+    JEC.flmTotalSeconds / 60,
+    true
+  );
+  
+  JEC.toast(JEC.t('flm_complete') || 'Focus session completed!', 'success', 3000);
+  
+  if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
+    JEC_UI.showFLMFab();
+  }
+};
+
+JEC.exitFLM = function() {
+  if (!confirm(JEC.t('flm_exit_confirm') || 'Exit Focus Learn Mode?')) return;
+  
+  if (JEC.flmTimer) clearInterval(JEC.flmTimer);
+  JEC.flmActive = false;
+  JEC.flmTimer = null;
+  
+  const activeBar = document.getElementById('flm-active-bar');
+  if (activeBar) activeBar.classList.add('hidden');
+  
+  if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
+    JEC_UI.showFLMFab();
+  }
+};
+
 // ═══════════ INTERVALS ═══════════
 setInterval(function() {
   if (JEC.user) {
@@ -1112,5 +1184,10 @@ setInterval(function() {
     JEC.fetchOnlineCount();
   }
 }, 30000);
+
+// Init hash router after DOM ready
+setTimeout(function() {
+  JEC.initHashRouter();
+}, 100);
 
 window.JEC = JEC;
