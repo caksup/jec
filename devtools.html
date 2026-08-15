@@ -1,0 +1,158 @@
+<!-- JEC DevTools v.1.06 | 15/08/2026 | devtools.html -->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#833AB4">
+<title>JEC DevTools - Diagnostic Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://jagatec.wasmer.app/s/devtools.css">
+</head>
+<body>
+
+<div class="app">
+  <header class="header">
+    <div class="brand">
+      <span class="material-icons-round brand-icon">build</span>
+      <div>
+        <div class="brand-name">JEC DevTools</div>
+        <div class="brand-sub">Diagnostic & Auto-Fix Tool · v1.06</div>
+      </div>
+    </div>
+    <button class="icon-btn" id="btn-theme" title="Toggle theme">
+      <span class="material-icons-round" id="theme-icon">dark_mode</span>
+    </button>
+  </header>
+
+  <main class="main">
+    <section class="input-section">
+      <div class="input-card">
+        <label class="input-label">
+          <span class="material-icons-round">link</span>
+          Target URL JEC
+        </label>
+        <div class="input-row">
+          <input type="text" id="target-url" 
+            placeholder="https://caksup.github.io/jec/sv1.html"
+            value="https://caksup.github.io/jec/sv1.html">
+          <button class="btn-primary" id="btn-scan">
+            <span class="material-icons-round">search</span>
+            <span>Periksa</span>
+          </button>
+        </div>
+        <div class="input-hint">
+          <span class="material-icons-round">info</span>
+          <span>DevTools akan scan file JS, CSS, HTML, Apps Script, dan data JSON</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="progress-section hidden" id="progress-section">
+      <div class="progress-card">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-text" id="progress-text">Memulai scan...</div>
+      </div>
+    </section>
+
+    <section class="summary-section hidden" id="summary-section">
+      <div class="summary-grid">
+        <div class="summary-card score-card">
+          <div class="score-circle" id="score-circle">
+            <span class="score-value" id="score-value">0</span>
+            <span class="score-total">/100</span>
+          </div>
+          <div class="score-label">Health Score</div>
+          <div class="score-status" id="score-status">—</div>
+        </div>
+        <div class="summary-card stat-card">
+          <div class="stat-icon critical">
+            <span class="material-icons-round">error</span>
+          </div>
+          <div class="stat-count" id="critical-count">0</div>
+          <div class="stat-label">Critical</div>
+        </div>
+        <div class="summary-card stat-card">
+          <div class="stat-icon warning">
+            <span class="material-icons-round">warning</span>
+          </div>
+          <div class="stat-count" id="warning-count">0</div>
+          <div class="stat-label">Warning</div>
+        </div>
+        <div class="summary-card stat-card">
+          <div class="stat-icon success">
+            <span class="material-icons-round">check_circle</span>
+          </div>
+          <div class="stat-count" id="success-count">0</div>
+          <div class="stat-label">Passed</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="results-section hidden" id="results-section">
+      <div class="results-toolbar">
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all">
+            <span class="material-icons-round">list</span>
+            Semua
+          </button>
+          <button class="filter-tab" data-filter="critical">
+            <span class="material-icons-round">error</span>
+            Critical
+          </button>
+          <button class="filter-tab" data-filter="warning">
+            <span class="material-icons-round">warning</span>
+            Warning
+          </button>
+          <button class="filter-tab" data-filter="success">
+            <span class="material-icons-round">check_circle</span>
+            Passed
+          </button>
+        </div>
+        <button class="btn-ghost" id="btn-export">
+          <span class="material-icons-round">download</span>
+          Export Report
+        </button>
+      </div>
+
+      <div class="results-list" id="results-list"></div>
+    </section>
+
+    <section class="fixes-section hidden" id="fixes-section">
+      <div class="fixes-header">
+        <span class="material-icons-round">auto_fix_high</span>
+        <span>Auto-Fix Commands</span>
+      </div>
+      <div class="fixes-list" id="fixes-list"></div>
+    </section>
+
+    <section class="file-tree-section hidden" id="file-tree-section">
+      <div class="file-tree-header">
+        <span class="material-icons-round">folder</span>
+        <span>Struktur File</span>
+      </div>
+      <div class="file-tree" id="file-tree"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-text">
+      JEC DevTools · Built for Jagat E Course · 
+      <span id="scan-time">Belum ada scan</span>
+    </div>
+  </footer>
+</div>
+
+<div class="toast" id="toast">
+  <span class="material-icons-round" id="toast-icon">check_circle</span>
+  <span id="toast-msg">OK</span>
+</div>
+
+<script src="https://jagatec.app/j/devtools.js"></script>
+</body>
+</html>
