@@ -8,10 +8,10 @@ window.JEC_CONFIG = {
 
   // ═══════════ GITHUB PATHS (RAW GITHUB - NO CDN) ═══════════
   BASE_GH: 'https://raw.githubusercontent.com/caksup/jec/main/',
-  DATA: 'https://raw.githubusercontent.com/caksup/jec/main/d/',
+  DATA: 'https://jagatec.wasmer.app/d/',
   ASSETS: 'https://raw.githubusercontent.com/caksup/jec/main/a/',
-  JS: 'https://raw.githubusercontent.com/caksup/jec/main/j/',
-  FEATURES_JS: 'https://raw.githubusercontent.com/caksup/jec/main/j/f/',
+  JS: 'https://jagatec.wasmer.app/j/',
+  FEATURES_JS: 'https://jagatec.wasmer.app/j/f/',
 
   // ═══════════ APPS SCRIPT ═══════════
   LOG: 'https://script.google.com/macros/s/AKfycbyX0L09UNGjNrlfuhcGsubD0HwkAv9NPwpnLCA4lBFE_9Z7BFR8_fGwDBwT-f7DtSc/exec',
