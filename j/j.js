@@ -1,4 +1,4 @@
-// JEC v.1.05 | 15/08/2026 | j/j.js | Core Engine + FLM Timer + Smooth Auto-Login
+// JEC v.1.06 | 15/08/2026 | j/j.js | Core Engine + Clock + Hash Routing
 
 'use strict';
 
@@ -44,10 +44,111 @@ document.addEventListener('DOMContentLoaded', function() {
   JEC.applyTheme();
   JEC.applyLang();
   JEC.setupOfflineDetection();
+  JEC.startClock();
   JEC.initBuiltInSplash();
   JEC.initBuiltInLogin();
   JEC.initFeatureRouter();
+  JEC.initHashRouter();
 });
+
+// ═══════════ CLOCK (JAM REAL-TIME) ═══════════
+JEC.startClock = function() {
+  JEC.updateClock();
+  setInterval(JEC.updateClock, 1000);
+};
+
+JEC.updateClock = function() {
+  const el = document.getElementById('datetime');
+  if (!el) return;
+  
+  const now = new Date();
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const day = days[now.getDay()];
+  const d = now.getDate();
+  const m = months[now.getMonth()];
+  const y = now.getFullYear();
+  let h = now.getHours();
+  const min = String(now.getMinutes()).padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  
+  el.textContent = day + ', ' + d + ' ' + m + ' ' + y + ' · ' + h + ':' + min + ' ' + ampm;
+  
+  const greetEl = document.getElementById('greet-text');
+  if (greetEl) {
+    const hour = now.getHours();
+    let greetKey = 'morning';
+    if (hour >= 12 && hour < 15) greetKey = 'afternoon';
+    else if (hour >= 15 && hour < 18) greetKey = 'evening';
+    else if (hour >= 18 || hour < 5) greetKey = 'night';
+    greetEl.textContent = JEC.t('greet.' + greetKey);
+  }
+};
+
+// ═══════════ URL HASH ROUTING ═══════════
+JEC.initHashRouter = function() {
+  window.addEventListener('hashchange', JEC.handleHashChange);
+};
+
+JEC.handleHashChange = function() {
+  if (!JEC.user) return;
+  JEC.navigateFromHash();
+};
+
+JEC.navigateFromHash = function() {
+  const hash = window.location.hash.substring(1);
+  if (!hash) return;
+  
+  const parts = hash.split('/');
+  if (parts.length < 3) return;
+  
+  const module = parts[0];
+  const unitId = parts[1];
+  const partId = parts[2];
+  
+  if (!JEC.materiData[module]) {
+    JEC.toast(JEC.t('invalid_module') || 'Invalid module', 'error');
+    return;
+  }
+  
+  const materi = JEC.materiData[module] || {};
+  const unit = (materi.materials || {})[unitId];
+  if (!unit) {
+    JEC.toast(JEC.t('invalid_unit') || 'Invalid unit', 'error');
+    return;
+  }
+  
+  const part = (unit.parts || {})[partId];
+  if (!part) {
+    JEC.toast(JEC.t('invalid_part') || 'Invalid part', 'error');
+    return;
+  }
+  
+  JEC.switchView('learn');
+  
+  if (typeof JEC_LEARN !== 'undefined') {
+    JEC.currentModule = module;
+    JEC.currentUnitId = unitId;
+    JEC.currentPartId = partId;
+    
+    JEC_LEARN.state.module = module;
+    JEC_LEARN.state.unitId = unitId;
+    JEC_LEARN.state.partId = partId;
+    JEC_LEARN.state.view = 'materi';
+    
+    JEC_LEARN.renderMateri(module, unitId, partId);
+  }
+};
+
+JEC.updateHash = function(module, unitId, partId) {
+  if (module && unitId && partId) {
+    window.location.hash = module + '/' + unitId + '/' + partId;
+  } else {
+    history.replaceState(null, null, ' ');
+  }
+};
 
 // ═══════════ BUILT-IN SPLASH (SMOOTH AUTO-LOGIN) ═══════════
 JEC.initBuiltInSplash = function() {
@@ -81,6 +182,9 @@ JEC.initBuiltInSplash = function() {
         autoLoginPromise.then(function(success) {
           if (success && JEC.user) {
             JEC.enterDashboard();
+            setTimeout(function() {
+              JEC.navigateFromHash();
+            }, 500);
           } else {
             JEC.showLoginPage();
           }
@@ -138,6 +242,9 @@ JEC.doLogin = async function() {
     
     if (result.success) {
       JEC.enterDashboard();
+      setTimeout(function() {
+        JEC.navigateFromHash();
+      }, 500);
     } else {
       if (errorMsg) errorMsg.textContent = result.msg || JEC.t('login_failed');
       if (errorEl) errorEl.classList.add('show');
