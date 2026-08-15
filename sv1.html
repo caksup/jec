@@ -1,4 +1,4 @@
-<!-- JEC v.1.02 | 15/08/2026 | sv1.html | Final Shell -->
+<!-- JEC v.1.03 | 15/08/2026 | sv1.html | Final Shell + FLM -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,12 +30,31 @@
 
 <!-- ═══════════ LOGIN PAGE ═══════════ -->
 <div id="feat-login" class="login-page">
+  
+  <!-- Login Language Switch -->
+  <button class="login-lang-btn" id="login-lang-btn" onclick="JEC.toggleLang()">EN</button>
+  
   <div class="login-card">
-    <div class="login-logo">
-      <span class="material-icons-round login-logo-icon">school</span>
-      <div class="login-title">JEC</div>
-      <div class="login-subtitle" data-i18n="login_subtitle">Student Portal</div>
+    
+    <!-- Logo Custom (fallback to Material Icon) -->
+    <div class="login-logo-container">
+      <img id="login-logo-img" class="login-logo-img" src="" alt="JEC Logo" 
+           onerror="this.style.display='none'; document.getElementById('login-logo-fallback').style.display='flex';">
+      <div id="login-logo-fallback" class="login-logo-fallback">
+        <span class="material-icons-round">school</span>
+      </div>
     </div>
+    
+    <div class="login-title">JEC</div>
+    <div class="login-subtitle" data-i18n="login_subtitle">Student Portal</div>
+    
+    <!-- Motivasi & Ajakan -->
+    <div class="login-motivation">
+      <span class="material-icons-round motivation-icon">auto_awesome</span>
+      <span data-i18n="motivation">Learning English is easy and fun!</span>
+    </div>
+    <div class="login-cta" data-i18n="cta">Let's learn together with Jagat E Course!</div>
+    
     <div class="login-form">
       <div class="login-field">
         <label data-i18n="student_id">Student ID</label>
@@ -49,52 +68,69 @@
         <span class="material-icons-round">error</span>
         <span id="login-error-msg"></span>
       </div>
-      <button class="btn-primary" id="login-btn">
+      <button class="btn-primary" id="login-btn" onclick="JEC_UI.doLogin()">
         <span class="material-icons-round">login</span>
         <span data-i18n="login_btn">SIGN IN</span>
       </button>
       <div class="login-footer" data-i18n="login_footer">Forgot PIN? Contact admin.</div>
     </div>
   </div>
+  
+  <!-- Login Loading Overlay -->
+  <div class="login-loading" id="login-loading">
+    <div class="login-loading-card">
+      <div class="login-loading-spinner"></div>
+      <div class="login-loading-text" data-i18n="loading">Signing in...</div>
+      <div class="login-loading-sub" data-i18n="loading_sub">Please wait a moment</div>
+    </div>
+  </div>
+  
 </div>
 
 <!-- ═══════════ DASHBOARD ═══════════ -->
 <div id="dashboard" class="dashboard">
 
-  <!-- HEADER -->
+  <!-- HEADER (dengan support background custom) -->
   <header class="header" id="feat-header">
-    <div class="header-top">
-      <div class="header-brand">
-        <span class="material-icons-round header-brand-icon">school</span>
-        <span class="header-brand-name" id="course-name">JEC</span>
+    <div class="header-bg" id="header-bg"></div>
+    <div class="header-content">
+      <div class="header-top">
+        <div class="header-brand">
+          <img id="header-logo-img" class="header-logo-img" src="" alt="JEC"
+               onerror="this.style.display='none'; document.getElementById('header-logo-fallback').style.display='flex';">
+          <div id="header-logo-fallback" class="header-logo-fallback">
+            <span class="material-icons-round">school</span>
+          </div>
+          <span class="header-brand-name" id="course-name">JEC</span>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" id="btn-fullscreen" onclick="JEC.toggleFullscreen()" title="Fullscreen">
+            <span class="material-icons-round" id="fs-icon">fullscreen</span>
+          </button>
+          <button class="icon-btn" id="btn-theme" onclick="JEC.toggleTheme()" title="Theme">
+            <span class="material-icons-round" id="theme-icon">light_mode</span>
+          </button>
+          <button class="icon-btn lang-btn" id="lang-btn" onclick="JEC.toggleLang()" title="Language">EN</button>
+          <button class="icon-btn" id="btn-menu" onclick="JEC.openOv('ov-menu')" title="Menu">
+            <span class="material-icons-round">more_vert</span>
+          </button>
+        </div>
       </div>
-      <div class="header-actions">
-        <button class="icon-btn" id="btn-fullscreen" onclick="JEC.toggleFullscreen()" title="Fullscreen">
-          <span class="material-icons-round" id="fs-icon">fullscreen</span>
-        </button>
-        <button class="icon-btn" id="btn-theme" onclick="JEC.toggleTheme()" title="Theme">
-          <span class="material-icons-round" id="theme-icon">light_mode</span>
-        </button>
-        <button class="icon-btn lang-btn" id="lang-btn" onclick="JEC.toggleLang()" title="Language">EN</button>
-        <button class="icon-btn" id="btn-menu" onclick="JEC.openOv('ov-menu')" title="Menu">
-          <span class="material-icons-round">more_vert</span>
-        </button>
-      </div>
-    </div>
-    <div class="header-info">
-      <div class="header-datetime-row">
-        <span class="header-datetime" id="datetime">—</span>
-        <span class="header-sep">•</span>
-        <span class="header-online">
-          <span class="online-dot"></span>
-          <span id="online-num">0</span>
-          <span data-i18n="online">online</span>
-        </span>
-      </div>
-      <div class="header-greeting">
-        <span id="greet-text" data-i18n="greet.morning">Good morning</span>,
-        <span class="header-username" id="user-name">—</span>
-        <span class="header-wave">👋</span>
+      <div class="header-info">
+        <div class="header-datetime-row">
+          <span class="header-datetime" id="datetime">—</span>
+          <span class="header-sep">•</span>
+          <span class="header-online">
+            <span class="online-dot"></span>
+            <span id="online-num">0</span>
+            <span data-i18n="online">online</span>
+          </span>
+        </div>
+        <div class="header-greeting">
+          <span id="greet-text" data-i18n="greet.morning">Good morning</span>,
+          <span class="header-username" id="user-name">—</span>
+          <span class="header-wave">👋</span>
+        </div>
       </div>
     </div>
   </header>
@@ -104,7 +140,7 @@
 
     <!-- VIEW: LEARN -->
     <div class="view active" id="view-learn">
-      <div class="view-header">
+      <div class="view-header" id="learn-view-header">
         <span class="material-icons-round view-icon">school</span>
         <span data-i18n="learn">Learn</span>
       </div>
@@ -141,7 +177,7 @@
   </div>
 
   <!-- BOTTOM NAV -->
-  <nav class="bottom-nav">
+  <nav class="bottom-nav" id="bottom-nav">
     <button class="nav-btn active" onclick="JEC.switchView('learn', this)">
       <span class="material-icons-round">school</span>
       <span class="nav-label" data-i18n="learn">Learn</span>
@@ -162,7 +198,55 @@
 
 </div>
 
-<!-- ═══════════ OVERLAY: FOCUS MODE ═══════════ -->
+<!-- ═══════════ FLM: FLOATING ACTION BUTTON (DRAGGABLE) ═══════════ -->
+<div id="flm-fab" class="flm-fab hidden">
+  <span class="material-icons-round flm-fab-icon">timer</span>
+  <span class="flm-fab-label" data-i18n="flm">FLM</span>
+</div>
+
+<!-- ═══════════ FLM: INFO POPUP ═══════════ -->
+<div class="overlay" id="ov-flm">
+  <div class="modal flm-modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">timer</span>
+      <span data-i18n="flm_title">Focus Learn Mode</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-flm')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="flm-info">
+      <div class="flm-info-icon">
+        <span class="material-icons-round">psychology</span>
+      </div>
+      <div class="flm-info-title" data-i18n="flm_ready">Ready to Focus?</div>
+      <div class="flm-info-text" data-i18n="flm_desc">
+        Focus Learn Mode will lock your navigation. You can only access the current unit and its parts. No distractions, just learning!
+      </div>
+      <div class="flm-timer-preview">
+        <span class="material-icons-round">timer</span>
+        <span id="flm-duration-preview">25:00</span>
+      </div>
+      <button class="btn-primary flm-play-btn" id="flm-play-btn" onclick="JEC_UI.startFLM()">
+        <span class="material-icons-round">play_arrow</span>
+        <span data-i18n="flm_play">Start Focus</span>
+      </button>
+      <button class="btn-ghost flm-cancel-btn" onclick="JEC.closeOv('ov-flm')">
+        <span data-i18n="cancel">Cancel</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ FLM: ACTIVE INDICATOR ═══════════ -->
+<div id="flm-active-bar" class="flm-active-bar hidden">
+  <span class="material-icons-round">lock</span>
+  <span data-i18n="flm_active">Focus Learn Mode Active</span>
+  <button class="flm-exit-btn" id="flm-exit-btn" onclick="JEC_UI.exitFLM()">
+    <span class="material-icons-round">logout</span>
+  </button>
+</div>
+
+<!-- ═══════════ OVERLAY: FOCUS TIMER (saat FLM berjalan) ═══════════ -->
 <div class="overlay" id="feat-focus-overlay">
   <div class="focus-container">
     <div class="focus-title">
@@ -170,11 +254,14 @@
       <span data-i18n="focus_mode">Focus Mode</span>
     </div>
     <div class="focus-timer" id="focus-timer">25:00</div>
+    <div class="focus-progress">
+      <div class="focus-progress-bar" id="focus-progress-bar"></div>
+    </div>
     <div class="focus-btns">
-      <button class="btn-ghost" id="focus-skip-btn">
+      <button class="btn-ghost" id="focus-skip-btn" onclick="JEC_UI.skipFocus()">
         <span data-i18n="skip">Skip</span>
       </button>
-      <button class="btn-primary" id="focus-start-btn">
+      <button class="btn-primary" id="focus-start-btn" onclick="JEC_UI.toggleFocus()">
         <span data-i18n="start">Start</span>
       </button>
     </div>
@@ -294,6 +381,7 @@
 <!-- SCRIPTS -->
 <script src="https://jec-46840.wasmer.app/j/c.js"></script>
 <script src="https://jec-46840.wasmer.app/j/i18n.js"></script>
-<script src="https://jec-46840.wasmer.app/j/j.js"></script>
+<script src="https://jec-46840.wasmer.app/j.js"></script>
+<script src="https://jec-46840.wasmer.app/j/ui.js"></script>
 </body>
 </html>
