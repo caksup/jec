@@ -1,4 +1,4 @@
-// JEC v.1.02 | 15/08/2026 | j/j.js | Core Engine
+// JEC v.1.04 | 15/08/2026 | j/j.js | Core Engine + Built-in Splash & Login
 
 'use strict';
 
@@ -18,61 +18,168 @@ const JEC = {
   unlockedAch: [],
   currentDC: null,
   dcToday: null,
-  featureStates: {},  // { featureName: { loaded: bool, error: string } }
+  featureStates: {},
   activeView: 'learn',
   currentModule: null,
   currentUnitId: null,
   currentPartId: null,
-  focusTimer: null,
-  focusSeconds: 0,
-  focusRunning: false,
   leaderboardData: [],
   onlineCount: 0,
   stats: {
-    partsDone: 0,
-    perfectQuiz: false,
-    perfectCount: 0,
-    avgQuiz: 0,
-    quizCount: 0,
-    streak: 0,
-    loginCount: 0,
-    focusCount: 0,
-    focusHours: 0,
-    focusNoSkip: 0,
-    bmCount: 0,
-    notesCount: 0,
-    reactCount: 0,
-    dcCount: 0,
-    dcStreak: 0,
-    speakCount: 0,
-    listenCount: 0,
-    hasProfile: false,
-    earlyBird: false,
-    nightOwl: false,
-    marathonDay: false,
-    speComplete: false,
-    vocComplete: false,
-    graComplete: false,
-    allModules: false
+    partsDone: 0, perfectQuiz: false, perfectCount: 0, avgQuiz: 0,
+    quizCount: 0, streak: 0, loginCount: 0, focusCount: 0,
+    focusHours: 0, focusNoSkip: 0, bmCount: 0, notesCount: 0,
+    reactCount: 0, dcCount: 0, dcStreak: 0, speakCount: 0,
+    listenCount: 0, hasProfile: false, earlyBird: false,
+    nightOwl: false, marathonDay: false, speComplete: false,
+    vocComplete: false, graComplete: false, allModules: false
   }
 };
 
 // ═══════════ BOOTSTRAP ═══════════
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
   JEC.applyTheme();
   JEC.applyLang();
   JEC.setupOfflineDetection();
-  JEC.startClock();
+  JEC.initBuiltInSplash();
+  JEC.initBuiltInLogin();
   JEC.initFeatureRouter();
 });
 
-// ═══════════ FEATURE ROUTER (MODULAR LOADER) ═══════════
+// ═══════════ BUILT-IN SPLASH (tidak perlu f/splash.js) ═══════════
+JEC.initBuiltInSplash = function() {
+  const splash = document.getElementById('feat-splash');
+  if (!splash) return;
+  
+  splash.style.display = 'flex';
+  splash.classList.remove('hide');
+  
+  setTimeout(function() {
+    splash.classList.add('hide');
+    
+    setTimeout(function() {
+      splash.style.display = 'none';
+      
+      const savedUser = localStorage.getItem('jec_user');
+      if (savedUser) {
+        try {
+          const u = JSON.parse(savedUser);
+          JEC.autoLogin(u).then(function(success) {
+            if (success) {
+              JEC.enterDashboard();
+            } else {
+              JEC.showLoginPage();
+            }
+          });
+        } catch(e) {
+          JEC.showLoginPage();
+        }
+      } else {
+        JEC.showLoginPage();
+      }
+    }, 500);
+  }, 3000);
+};
+
+// ═══════════ BUILT-IN LOGIN (tidak perlu f/login.js) ═══════════
+JEC.initBuiltInLogin = function() {
+  const loginBtn = document.getElementById('login-btn');
+  const loginPin = document.getElementById('login-pin');
+  const loginId = document.getElementById('login-id');
+  
+  if (loginBtn) {
+    loginBtn.onclick = function() {
+      JEC.doLogin();
+    };
+  }
+  
+  if (loginPin) {
+    loginPin.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') JEC.doLogin();
+    });
+  }
+  
+  if (loginId) {
+    loginId.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') loginPin.focus();
+    });
+  }
+};
+
+JEC.doLogin = async function() {
+  const id = document.getElementById('login-id').value.trim().toLowerCase();
+  const pin = document.getElementById('login-pin').value.trim();
+  const errorEl = document.getElementById('login-error');
+  const errorMsg = document.getElementById('login-error-msg');
+  const loadingEl = document.getElementById('login-loading');
+  
+  if (errorEl) errorEl.classList.remove('show');
+  
+  if (!id || !pin) {
+    if (errorMsg) errorMsg.textContent = JEC.t('fill_all_fields') || 'Please fill all fields';
+    if (errorEl) errorEl.classList.add('show');
+    return;
+  }
+  
+  if (loadingEl) loadingEl.classList.add('show');
+  
+  try {
+    const result = await JEC.login(id, pin);
+    if (loadingEl) loadingEl.classList.remove('show');
+    
+    if (result.success) {
+      JEC.enterDashboard();
+    } else {
+      if (errorMsg) errorMsg.textContent = result.msg || JEC.t('login_failed');
+      if (errorEl) errorEl.classList.add('show');
+    }
+  } catch(e) {
+    if (loadingEl) loadingEl.classList.remove('show');
+    if (errorMsg) errorMsg.textContent = JEC.t('network_error') || 'Network error: ' + e.message;
+    if (errorEl) errorEl.classList.add('show');
+  }
+};
+
+JEC.showLoginPage = function() {
+  const loginPage = document.getElementById('feat-login');
+  const dashboard = document.getElementById('dashboard');
+  
+  if (loginPage) loginPage.classList.remove('hidden');
+  if (dashboard) dashboard.classList.remove('active');
+};
+
+JEC.enterDashboard = function() {
+  const loginPage = document.getElementById('feat-login');
+  const dashboard = document.getElementById('dashboard');
+  
+  if (loginPage) loginPage.classList.add('hidden');
+  if (dashboard) dashboard.classList.add('active');
+  
+  const userName = document.getElementById('user-name');
+  if (userName && JEC.user) {
+    userName.textContent = JEC.user.nickname ? '@' + JEC.user.nickname : JEC.user.name;
+  }
+  
+  JEC.applyHeaderBg();
+  JEC.applyCustomLogo();
+  JEC.fetchOnlineCount();
+  
+  if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
+    JEC_UI.showFLMFab();
+  }
+};
+
+// ═══════════ FEATURE ROUTER (untuk fitur non-kritis) ═══════════
 JEC.initFeatureRouter = function() {
   const features = JEC.config.FEATURES || {};
   const featureNames = Object.keys(features);
   
-  let delay = 0;
-  featureNames.forEach(name => {
+  let delay = 100;
+  featureNames.forEach(function(name) {
+    if (name === 'splash' || name === 'login' || name === 'header') {
+      return;
+    }
+    
     const cfg = features[name];
     if (!cfg.enabled) {
       JEC.featureStates[name] = { loaded: false, disabled: true };
@@ -80,10 +187,10 @@ JEC.initFeatureRouter = function() {
       return;
     }
     
-    setTimeout(() => {
+    setTimeout(function() {
       JEC.loadFeature(name, cfg.js);
     }, delay);
-    delay += 50;
+    delay += 100;
   });
 };
 
@@ -97,20 +204,19 @@ JEC.loadFeature = function(name, jsFile) {
       try {
         initFn(JEC);
         JEC.featureStates[name] = { loaded: true };
-        console.log('[JEC] ✓ Feature loaded: ' + name);
+        console.log('[JEC] Feature loaded: ' + name);
       } catch(err) {
-        console.error('[JEC] ✗ Error init feature ' + name + ':', err);
+        console.error('[JEC] Error init feature ' + name + ':', err);
         JEC.featureStates[name] = { loaded: false, error: err.message };
         JEC.renderMaintenancePlaceholder(name, 'error');
       }
     } else {
       JEC.featureStates[name] = { loaded: true };
-      console.log('[JEC] ✓ Feature loaded (no init): ' + name);
     }
   };
   
   script.onerror = function() {
-    console.warn('[JEC] ⚠ Feature JS not found: ' + jsFile);
+    console.warn('[JEC] Feature JS not found: ' + jsFile);
     JEC.featureStates[name] = { loaded: false, notFound: true };
     JEC.renderMaintenancePlaceholder(name, 'maintenance');
   };
@@ -129,22 +235,20 @@ JEC.renderMaintenancePlaceholder = function(featureName, type) {
   
   let title, desc, icon;
   if (type === 'error') {
-    title = msg.error_load[lang] || '⚠️ Under Repair';
-    desc = msg.error_desc[lang] || 'Feature temporarily unavailable';
+    title = (msg.error_load && msg.error_load[lang]) || 'Under Repair';
+    desc = (msg.error_desc && msg.error_desc[lang]) || 'Feature temporarily unavailable';
     icon = 'build';
   } else {
-    title = msg.maintenance[lang] || '🛠️ Maintenance Service';
-    desc = msg.under_construction[lang] || 'This feature is under development';
+    title = (msg.maintenance && msg.maintenance[lang]) || 'Maintenance Service';
+    desc = (msg.under_construction && msg.under_construction[lang]) || 'This feature is under development';
     icon = 'engineering';
   }
   
-  container.innerHTML = `
-    <div class="maintenance-card">
-      <span class="material-icons-round maintenance-icon">${icon}</span>
-      <div class="maintenance-title">${JEC.esc(title)}</div>
-      <div class="maintenance-desc">${JEC.esc(desc)}</div>
-    </div>
-  `;
+  container.innerHTML = '<div class="maintenance-card">' +
+    '<span class="material-icons-round maintenance-icon">' + icon + '</span>' +
+    '<div class="maintenance-title">' + JEC.esc(title) + '</div>' +
+    '<div class="maintenance-desc">' + JEC.esc(desc) + '</div>' +
+    '</div>';
 };
 
 JEC.isFeatureLoaded = function(name) {
@@ -185,12 +289,16 @@ JEC.updateThemeIcon = function() {
 // ═══════════ LANGUAGE ═══════════
 JEC.applyLang = function() {
   const langBtn = document.getElementById('lang-btn');
-  if (langBtn) langBtn.textContent = JEC.lang.toUpperCase();
+  const loginLangBtn = document.getElementById('login-lang-btn');
+  const langText = JEC.lang.toUpperCase();
   
-  document.querySelectorAll('[data-i18n]').forEach(el => {
+  if (langBtn) langBtn.textContent = langText;
+  if (loginLangBtn) loginLangBtn.textContent = langText;
+  
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
     const key = el.getAttribute('data-i18n');
     const val = JEC.t(key);
-    if (val) el.textContent = val;
+    if (val && val !== key) el.textContent = val;
   });
 };
 
@@ -203,48 +311,14 @@ JEC.toggleLang = function() {
 
 JEC.t = function(key) {
   if (!key) return '';
-  const parts = key.split('.');
   const i18nObj = window.JEC_I18N || {};
+  const parts = key.split('.');
   let obj = i18nObj[JEC.lang] || i18nObj.en || {};
-  for (const p of parts) {
-    if (obj[p] === undefined) return key;
-    obj = obj[p];
+  for (let i = 0; i < parts.length; i++) {
+    if (obj[parts[i]] === undefined) return key;
+    obj = obj[parts[i]];
   }
   return obj;
-};
-
-// ═══════════ CLOCK (MINIMALIST, LEFT-ALIGNED) ═══════════
-JEC.startClock = function() {
-  JEC.updateClock();
-  setInterval(JEC.updateClock, 1000);
-};
-
-JEC.updateClock = function() {
-  const el = document.getElementById('datetime');
-  if (!el) return;
-  const now = new Date();
-  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const day = days[now.getDay()];
-  const d = now.getDate();
-  const m = months[now.getMonth()];
-  const y = now.getFullYear();
-  let h = now.getHours();
-  const min = String(now.getMinutes()).padStart(2, '0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  h = h % 12;
-  if (h === 0) h = 12;
-  el.textContent = `${day}, ${d} ${m} ${y} · ${h}:${min} ${ampm}`;
-  
-  const greetEl = document.getElementById('greet-text');
-  if (greetEl) {
-    const hour = now.getHours();
-    let greetKey = 'morning';
-    if (hour >= 12 && hour < 15) greetKey = 'afternoon';
-    else if (hour >= 15 && hour < 18) greetKey = 'evening';
-    else if (hour >= 18 || hour < 5) greetKey = 'night';
-    greetEl.textContent = JEC.t('greet.' + greetKey);
-  }
 };
 
 // ═══════════ OFFLINE DETECTION ═══════════
@@ -263,60 +337,41 @@ JEC.setupOfflineDetection = function() {
   update();
 };
 
-// ═══════════ SILENT+VISUAL TOAST (INLINE TOP) ═══════════
-JEC.toast = function(msg, type, duration) {
-  type = type || 'success';
-  duration = duration || 2000;
+// ═══════════ CUSTOM LOGO & HEADER BG ═══════════
+JEC.applyCustomLogo = function() {
+  const logoUrl = localStorage.getItem('jec_logo_url') || '';
+  const loginLogo = document.getElementById('login-logo-img');
+  const headerLogo = document.getElementById('header-logo-img');
+  const loginFallback = document.getElementById('login-logo-fallback');
+  const headerFallback = document.getElementById('header-logo-fallback');
   
-  let toastBar = document.getElementById('toast-bar');
-  if (!toastBar) {
-    toastBar = document.createElement('div');
-    toastBar.id = 'toast-bar';
-    toastBar.className = 'toast-bar';
-    toastBar.innerHTML = `
-      <span class="material-icons-round toast-icon"></span>
-      <span class="toast-msg"></span>
-    `;
-    document.body.appendChild(toastBar);
+  if (logoUrl) {
+    if (loginLogo) { loginLogo.src = logoUrl; loginLogo.style.display = 'block'; }
+    if (headerLogo) { headerLogo.src = logoUrl; headerLogo.style.display = 'block'; }
+    if (loginFallback) loginFallback.style.display = 'none';
+    if (headerFallback) headerFallback.style.display = 'none';
+  } else {
+    if (loginLogo) loginLogo.style.display = 'none';
+    if (headerLogo) headerLogo.style.display = 'none';
+    if (loginFallback) loginFallback.style.display = 'flex';
+    if (headerFallback) headerFallback.style.display = 'flex';
   }
-  
-  const icon = toastBar.querySelector('.toast-icon');
-  const msgEl = toastBar.querySelector('.toast-msg');
-  
-  let iconChar = 'check_circle';
-  if (type === 'error') iconChar = 'error';
-  else if (type === 'warning') iconChar = 'warning';
-  else if (type === 'info') iconChar = 'info';
-  
-  toastBar.className = 'toast-bar toast-' + type;
-  icon.textContent = iconChar;
-  msgEl.textContent = msg;
-  
-  toastBar.classList.add('show');
-  
-  if (JEC._toastTimer) clearTimeout(JEC._toastTimer);
-  JEC._toastTimer = setTimeout(() => {
-    toastBar.classList.remove('show');
-  }, duration);
 };
 
-// ═══════════ AVATAR SYSTEM ═══════════
-JEC.getAvatar = function(avatarId) {
-  const avatars = JEC.config.AVATARS || [];
-  return avatars.find(a => a.id === avatarId) || avatars[0] || { id: 'default', icon: 'account_circle' };
-};
-
-JEC.renderAvatar = function(avatarId, size) {
-  size = size || 80;
-  const av = JEC.getAvatar(avatarId || JEC.avatar);
-  return `<span class="material-icons-round avatar-icon" style="font-size:${size}px">${av.icon}</span>`;
-};
-
-JEC.setAvatar = function(avatarId) {
-  JEC.avatar = avatarId;
-  localStorage.setItem('jec_avatar', avatarId);
-  if (JEC.user) {
-    JEC.logActivity('avatar_change', 'Changed to ' + avatarId);
+JEC.applyHeaderBg = function() {
+  const headerBg = document.getElementById('header-bg');
+  if (!headerBg) return;
+  
+  const bgType = localStorage.getItem('jec_header_bg_type') || '';
+  const bgUrl = localStorage.getItem('jec_header_bg_url') || '';
+  
+  headerBg.style.backgroundImage = '';
+  headerBg.className = 'header-bg';
+  
+  if (bgType === 'image' && bgUrl) {
+    headerBg.style.backgroundImage = 'url(' + bgUrl + ')';
+    headerBg.style.backgroundSize = 'cover';
+    headerBg.style.backgroundPosition = 'center';
   }
 };
 
@@ -324,7 +379,9 @@ JEC.setAvatar = function(avatarId) {
 JEC.apiGet = async function(params) {
   const url = JEC.config.LOG;
   if (!url) throw new Error('LOG URL not configured');
-  const qs = Object.keys(params).map(k => k + '=' + encodeURIComponent(params[k])).join('&');
+  const qs = Object.keys(params).map(function(k) {
+    return k + '=' + encodeURIComponent(params[k]);
+  }).join('&');
   const res = await fetch(url + '?' + qs);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return await res.json();
@@ -383,8 +440,12 @@ JEC.autoLogin = async function(u) {
       return false;
     }
   } catch(e) {
-    await JEC.loadAllData();
-    return true;
+    try {
+      await JEC.loadAllData();
+      return true;
+    } catch(e2) {
+      return false;
+    }
   }
 };
 
@@ -399,9 +460,10 @@ JEC.logout = function() {
 JEC.loadAllData = async function() {
   try {
     const modules = ['spe', 'voc', 'gra', 'wri', 'lis'];
-    for (const m of modules) {
+    for (let i = 0; i < modules.length; i++) {
+      const m = modules[i];
       try {
-        const r = await fetch(JEC.config.DATA + m + '.json?v=' + (JEC.config.APP_VERSION || Date.now()));
+        const r = await fetch(JEC.config.DATA + m + '.json?v=' + Date.now());
         if (r.ok) JEC.materiData[m] = await r.json();
       } catch(e) {}
     }
@@ -420,7 +482,9 @@ JEC.loadAllData = async function() {
       const pr = await JEC.apiGet({ action: 'fetch_progress', id: JEC.user.id });
       JEC.progressMap = {};
       if (Array.isArray(pr)) {
-        pr.forEach(p => JEC.progressMap[p.module + '_' + p.unitId + '_' + p.partId] = p.status);
+        pr.forEach(function(p) {
+          JEC.progressMap[p.module + '_' + p.unitId + '_' + p.partId] = p.status;
+        });
       }
     } catch(e) {}
     
@@ -441,7 +505,7 @@ JEC.loadAllData = async function() {
 
 JEC.updateStats = function() {
   const s = JEC.stats;
-  s.partsDone = Object.values(JEC.progressMap).filter(x => x === 'done').length;
+  s.partsDone = Object.values(JEC.progressMap).filter(function(x) { return x === 'done'; }).length;
   s.bmCount = JEC.bookmarkList.length;
   s.notesCount = Object.keys(JEC.notesMap).length;
   s.hasProfile = !!(JEC.user && JEC.user.name);
@@ -460,7 +524,7 @@ JEC.logActivity = function(type, details) {
     batch: JEC.user.batch,
     type: type,
     details: details || ''
-  }).catch(() => {});
+  }).catch(function() {});
 };
 
 JEC.heartbeat = function() {
@@ -470,7 +534,7 @@ JEC.heartbeat = function() {
     id: JEC.user.id,
     batch: JEC.user.batch,
     page: JEC.activeView
-  }).catch(() => {});
+  }).catch(function() {});
 };
 
 // ═══════════ ONLINE COUNT ═══════════
@@ -486,7 +550,7 @@ JEC.fetchOnlineCount = async function() {
   }
 };
 
-// ═══════════ DAILY CHALLENGE (AUTO-COMPLETE) ═══════════
+// ═══════════ DAILY CHALLENGE ═══════════
 JEC.checkDailyChallenge = function() {
   if (!JEC.user) return;
   const challenges = JEC.config.DAILY_CHALLENGES || [];
@@ -507,7 +571,7 @@ JEC.checkDailyChallenge = function() {
     challenge: JEC.currentDC,
     completed: false,
     triggerCount: 0,
-    modules: new Set()
+    modules: {}
   };
 };
 
@@ -550,8 +614,8 @@ JEC.triggerDailyChallenge = function(trigger, data) {
       break;
     case 'multi_mod':
       if (data && data.module) {
-        JEC.dcToday.modules.add(data.module);
-        shouldComplete = JEC.dcToday.modules.size >= 2;
+        JEC.dcToday.modules[data.module] = true;
+        shouldComplete = Object.keys(JEC.dcToday.modules).length >= 2;
       }
       break;
     case 'comeback':
@@ -578,7 +642,7 @@ JEC.completeDailyChallenge = function() {
   
   const xp = JEC.currentDC.xp || 20;
   JEC.toast(
-    (JEC.config.I18N.dc_complete[JEC.lang] || 'Daily Challenge Completed!') + ' +' + xp + ' XP',
+    (JEC.config.I18N.dc_complete && JEC.config.I18N.dc_complete[JEC.lang]) || 'Daily Challenge Completed!' + ' +' + xp + ' XP',
     'success',
     3000
   );
@@ -589,13 +653,9 @@ JEC.completeDailyChallenge = function() {
     batch: JEC.user.batch,
     challengeTitle: JEC.currentDC.en,
     xpEarned: xp
-  }).catch(() => {});
+  }).catch(function() {});
   
   JEC.checkAllAchievements();
-  
-  if (typeof JEC_DC_COMPLETE_UI === 'function') {
-    JEC_DC_COMPLETE_UI(JEC.currentDC);
-  }
 };
 
 // ═══════════ ACHIEVEMENT ENGINE ═══════════
@@ -604,7 +664,7 @@ JEC.checkAllAchievements = function() {
   const achs = JEC.config.ACHIEVEMENTS || [];
   const s = JEC.stats;
   
-  achs.forEach(ach => {
+  achs.forEach(function(ach) {
     if (JEC.unlockedAch.includes(ach.id)) return;
     try {
       if (typeof ach.cond === 'function' && ach.cond(s)) {
@@ -620,7 +680,7 @@ JEC.unlockAchievement = function(achId) {
   localStorage.setItem('jec_ach_' + JEC.user.id, JSON.stringify(JEC.unlockedAch));
   
   const achs = JEC.config.ACHIEVEMENTS || [];
-  const ach = achs.find(a => a.id === achId);
+  const ach = achs.find(function(a) { return a.id === achId; });
   if (!ach) return;
   
   JEC.showAchToast(ach);
@@ -630,36 +690,30 @@ JEC.unlockAchievement = function(achId) {
     id: JEC.user.id,
     batch: JEC.user.batch,
     achievementId: achId
-  }).catch(() => {});
-  
-  if (typeof JEC_ACH_UI_UPDATE === 'function') {
-    JEC_ACH_UI_UPDATE();
-  }
+  }).catch(function() {});
 };
 
 JEC.showAchToast = function(ach) {
   const existing = document.getElementById('ach-toast');
   if (existing) existing.remove();
   
-  const title = JEC.config.I18N.ach_unlocked[JEC.lang] || 'Achievement Unlocked!';
+  const title = (JEC.config.I18N.ach_unlocked && JEC.config.I18N.ach_unlocked[JEC.lang]) || 'Achievement Unlocked!';
   const name = JEC.lang === 'id' ? ach.id : ach.en;
   
   const toast = document.createElement('div');
   toast.id = 'ach-toast';
   toast.className = 'ach-toast';
-  toast.innerHTML = `
-    <span class="material-icons-round ach-toast-icon">${ach.icon}</span>
-    <div class="ach-toast-text">
-      <div class="ach-toast-title">${JEC.esc(title)}</div>
-      <div class="ach-toast-name">${JEC.esc(name)}</div>
-    </div>
-  `;
+  toast.innerHTML = '<span class="material-icons-round ach-toast-icon">' + ach.icon + '</span>' +
+    '<div class="ach-toast-text">' +
+    '<div class="ach-toast-title">' + JEC.esc(title) + '</div>' +
+    '<div class="ach-toast-name">' + JEC.esc(name) + '</div>' +
+    '</div>';
   document.body.appendChild(toast);
   
-  setTimeout(() => toast.classList.add('show'), 50);
-  setTimeout(() => {
+  setTimeout(function() { toast.classList.add('show'); }, 50);
+  setTimeout(function() {
     toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 500);
+    setTimeout(function() { toast.remove(); }, 500);
   }, 3500);
 };
 
@@ -680,12 +734,10 @@ JEC.markDone = function(module, unitId, partId, score) {
     unitId: unitId,
     partId: partId,
     score: score
-  }).catch(() => {});
+  }).catch(function() {});
   
   JEC.updateStats();
   JEC.checkAllAchievements();
-  
-  // Trigger Daily Challenge
   JEC.triggerDailyChallenge(module + '_part', { module: module });
   JEC.triggerDailyChallenge('multi_mod', { module: module });
 };
@@ -703,7 +755,7 @@ JEC.saveScore = function(module, unitId, partId, score, totalQ, correctA) {
     score: score,
     totalQuestions: totalQ,
     correctAnswers: correctA
-  }).catch(() => {});
+  }).catch(function() {});
   
   JEC.stats.quizCount++;
   if (score === 100) {
@@ -730,7 +782,7 @@ JEC.saveFocusMode = function(module, unitId, partId, duration, completed) {
     partId: partId,
     duration: duration,
     completed: completed
-  }).catch(() => {});
+  }).catch(function() {});
   
   if (completed) {
     JEC.stats.focusCount++;
@@ -755,7 +807,7 @@ JEC.addBookmark = function(module, unitId, partId) {
     module: module,
     unitId: unitId,
     partId: partId
-  }).catch(() => {});
+  }).catch(function() {});
   
   JEC.updateStats();
   JEC.triggerDailyChallenge('bookmark', {});
@@ -778,7 +830,7 @@ JEC.removeBookmark = function(module, unitId, partId) {
     module: module,
     unitId: unitId,
     partId: partId
-  }).catch(() => {});
+  }).catch(function() {});
   
   JEC.updateStats();
 };
@@ -802,7 +854,7 @@ JEC.saveNote = function(module, unitId, partId, content) {
     unitId: unitId,
     partId: partId,
     content: content
-  }).catch(() => {});
+  }).catch(function() {});
   
   JEC.updateStats();
   JEC.triggerDailyChallenge('note', {});
@@ -811,11 +863,15 @@ JEC.saveNote = function(module, unitId, partId, content) {
 
 // ═══════════ VIEW ROUTER ═══════════
 JEC.switchView = function(name, btn) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(function(v) {
+    v.classList.remove('active');
+  });
   const target = document.getElementById('view-' + name);
   if (target) target.classList.add('active');
   
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(function(b) {
+    b.classList.remove('active');
+  });
   if (btn) btn.classList.add('active');
   
   JEC.activeView = name;
@@ -825,13 +881,13 @@ JEC.switchView = function(name, btn) {
 JEC.toggleFullscreen = function() {
   const icon = document.getElementById('fs-icon');
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().then(() => {
+    document.documentElement.requestFullscreen().then(function() {
       if (icon) icon.textContent = 'fullscreen_exit';
-    }).catch(() => {});
+    }).catch(function() {});
   } else {
-    document.exitFullscreen().then(() => {
+    document.exitFullscreen().then(function() {
       if (icon) icon.textContent = 'fullscreen';
-    }).catch(() => {});
+    }).catch(function() {});
   }
 };
 
@@ -846,6 +902,40 @@ JEC.closeOv = function(id) {
   if (el) el.classList.remove('active');
 };
 
+// ═══════════ TOAST (TOP INLINE) ═══════════
+JEC.toast = function(msg, type, duration) {
+  type = type || 'success';
+  duration = duration || 2000;
+  
+  let toastBar = document.getElementById('toast-bar');
+  if (!toastBar) {
+    toastBar = document.createElement('div');
+    toastBar.id = 'toast-bar';
+    toastBar.className = 'toast-bar';
+    toastBar.innerHTML = '<span class="material-icons-round toast-icon"></span><span class="toast-msg"></span>';
+    document.body.appendChild(toastBar);
+  }
+  
+  const icon = toastBar.querySelector('.toast-icon');
+  const msgEl = toastBar.querySelector('.toast-msg');
+  
+  let iconChar = 'check_circle';
+  if (type === 'error') iconChar = 'error';
+  else if (type === 'warning') iconChar = 'warning';
+  else if (type === 'info') iconChar = 'info';
+  
+  toastBar.className = 'toast-bar toast-' + type;
+  icon.textContent = iconChar;
+  msgEl.textContent = msg;
+  
+  toastBar.classList.add('show');
+  
+  if (JEC._toastTimer) clearTimeout(JEC._toastTimer);
+  JEC._toastTimer = setTimeout(function() {
+    toastBar.classList.remove('show');
+  }, duration);
+};
+
 // ═══════════ UTILITIES ═══════════
 JEC.esc = function(s) {
   return (s || '').toString()
@@ -857,8 +947,7 @@ JEC.esc = function(s) {
 };
 
 JEC.refreshActiveFeatureUI = function() {
-  // Hook for features to re-render on lang change
-  Object.keys(JEC.featureStates).forEach(name => {
+  Object.keys(JEC.featureStates).forEach(function(name) {
     const refreshFn = window['JEC_' + name.toUpperCase() + '_REFRESH'];
     if (typeof refreshFn === 'function' && JEC.featureStates[name].loaded) {
       try { refreshFn(JEC); } catch(e) {}
@@ -886,12 +975,12 @@ JEC.forceRefresh = async function() {
 };
 
 // ═══════════ INTERVALS ═══════════
-setInterval(() => {
+setInterval(function() {
   if (JEC.user) {
     JEC.heartbeat();
     JEC.fetchOnlineCount();
   }
 }, 30000);
 
-// Expose to global for feature scripts
+// Expose to global
 window.JEC = JEC;
