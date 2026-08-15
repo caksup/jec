@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://jec-46840.wasmer.app/s/s.css">
+<link rel="stylesheet" href="https://jagatec.wasmer.app/s/s.css">
 </head>
 <body>
 
@@ -377,11 +377,23 @@
   </div>
   <iframe id="gm-frame" src="about:blank"></iframe>
 </div>
-
+<!-- ═══════════ OVERLAY: AVATAR SELECTOR ═══════════ -->
+<div class="overlay" id="ov-avatar">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">face</span>
+      <span data-i18n="choose_avatar">Choose Avatar</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-avatar')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div id="feat-avatar-content"></div>
+  </div>
+</div>
 <!-- SCRIPTS -->
-<script src="https://jec-46840.wasmer.app/j/c.js"></script>
-<script src="https://jec-46840.wasmer.app/j/i18n.js"></script>
-<script src="https://jec-46840.wasmer.app/j/j.js"></script>
-<script src="https://jec-46840.wasmer.app/j/ui.js"></script>
+<script src="https://jagatec.wasmer.app/j/c.js"></script>
+<script src="https://jagatec.wasmer.app/j/i18n.js"></script>
+<script src="https://jagatec.wasmer.app/j/j.js"></script>
+<script src="https://jagatec.wasmer.app/j/ui.js"></script>
 </body>
 </html>
