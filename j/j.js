@@ -1,6 +1,6 @@
 // JEC v.6.00 FINAL SYNC | 16/08/2026 | j/j.js
 // Compatible dengan sv1.html v1.03
-// Full Sync: GitHub (data) + Apps Script (backend)
+// Full Sync: GitHub (data) + Apps Script (backend) + Firebase (Ujian)
 
 'use strict';
 
@@ -44,6 +44,11 @@ const JEC = {
     vocComplete: false, graComplete: false, allModules: false
   }
 };
+
+// ═══════════ FIREBASE CONFIG ═══════════
+if (!JEC.config.FIREBASE_URL) {
+  JEC.config.FIREBASE_URL = "https://[PROJECT-FIREBASE-ANDA]-default-rtdb.firebaseio.com";
+}
 
 // ═══════════ MODULE PRIORITIES ═══════════
 JEC.PRIORITY_1 = ['learn']; // Blocking - harus load sebelum dashboard
@@ -630,33 +635,87 @@ JEC.apiPost = async function(data) {
   });
 };
 
-// ═══════════ LOGIN & SESSION ═══════════
+// ═══════════ LOGIN & SESSION (DUA GERBANG) ═══════════
 JEC.login = async function(id, pin) {
   try {
-    const data = await JEC.apiGet({ action: 'login', id: id, pin: pin });
-    if (data.success) {
-      JEC.user = {
-        id: String(data.user.id),
-        name: data.user.name,
-        nickname: data.user.nickname || '',
-        class: data.user.class,
-        batch: String(data.user.batch),
-        startDate: data.user.startDate,
-        sessionDuration: data.user.sessionDuration,
-        daysLeft: data.session.daysLeft
-      };
-      localStorage.setItem('jec_user', JSON.stringify(JEC.user));
-      await JEC.loadAllData();
-      JEC.checkDailyChallenge();
-      JEC.checkAllAchievements();
-      JEC.logActivity('login', 'Login successful');
-      localStorage.setItem('jec_last_login_' + JEC.user.id, Date.now());
-      return { success: true };
-    } else {
-      return { success: false, msg: data.msg };
+    // 1. CEK STATUS GERBANG DARI FIREBASE
+    let loginMode = 'github';
+    try {
+      const statusRes = await fetch(JEC.config.FIREBASE_URL + '/server_status.json');
+      loginMode = await statusRes.json() || 'github';
+    } catch (err) {
+      console.warn('[JEC] Gagal cek status gerbang, fallback ke github', err);
     }
+    
+    // Simpan mode ke memori lokal
+    localStorage.setItem('jec_login_mode', loginMode);
+    
+    let userData = null;
+
+    if (loginMode === 'firebase') {
+      // ==========================================
+      // GERBANG B: MODE UJIAN (FIREBASE)
+      // ==========================================
+      const fbRes = await fetch(`${JEC.config.FIREBASE_URL}/students/${id}.json`);
+      const fbData = await fbRes.json();
+      
+      if (!fbData) return { success: false, msg: 'ID tidak ditemukan di server ujian.' };
+      if (String(fbData.pin) !== String(pin)) return { success: false, msg: 'PIN salah.' };
+      if (fbData.active === false) return { success: false, msg: 'Akun tidak aktif.' };
+      
+      userData = {
+        id: String(id),
+        name: fbData.name,
+        nickname: fbData.nickname || '',
+        class: fbData.class,
+        batch: String(fbData.batch),
+        startDate: fbData.startDate,
+        sessionDuration: fbData.sessionDuration,
+        daysLeft: 30
+      };
+      console.log("[JEC] Login via Firebase (Mode Ujian) Sukses");
+
+    } else {
+      // ==========================================
+      // GERBANG A: MODE NORMAL (GITHUB u.json)
+      // ==========================================
+      const ghRes = await fetch(JEC.config.DATA + 'u.json?v=' + Date.now());
+      const ghData = await ghRes.json();
+      
+      const student = ghData.students.find(s => String(s.id) === String(id));
+      
+      if (!student) return { success: false, msg: 'ID tidak ditemukan.' };
+      if (String(student.pin) !== String(pin)) return { success: false, msg: 'PIN salah.' };
+      if (student.active === false) return { success: false, msg: 'Akun tidak aktif.' };
+      
+      userData = {
+        id: String(student.id),
+        name: student.name,
+        nickname: student.nickname || '',
+        class: student.class,
+        batch: String(student.batch),
+        startDate: student.startDate,
+        sessionDuration: student.sessionDuration,
+        daysLeft: 30 
+      };
+      console.log("[JEC] Login via GitHub (Mode Normal) Sukses");
+    }
+
+    // 2. LANJUTKAN PROSES JIKA LOGIN BERHASIL
+    JEC.user = userData;
+    localStorage.setItem('jec_user', JSON.stringify(JEC.user));
+    
+    await JEC.loadAllData();
+    JEC.checkDailyChallenge();
+    JEC.checkAllAchievements();
+    JEC.logActivity('login', `Login successful via ${loginMode}`);
+    localStorage.setItem('jec_last_login_' + JEC.user.id, Date.now());
+    
+    return { success: true };
+
   } catch(e) {
-    return { success: false, msg: e.message };
+    console.error("[JEC] Login Error:", e);
+    return { success: false, msg: 'Kesalahan jaringan: ' + e.message };
   }
 };
 
@@ -937,7 +996,7 @@ JEC.showAchToast = function(ach) {
   }, 3500);
 };
 
-// ═══════════ PROGRESS & ACTIVITY ═══════════
+// ═══════════ PROGRESS & ACTIVITY (DUA GERBANG) ═══════════
 JEC.markDone = function(module, unitId, partId, score) {
   if (!JEC.user) return;
   const key = module + '_' + unitId + '_' + partId;
@@ -960,14 +1019,47 @@ JEC.markDone = function(module, unitId, partId, score) {
 
 JEC.saveScore = function(module, unitId, partId, score, totalQ, correctA) {
   if (!JEC.user) return;
-  
-  JEC.apiPost({
-    action: 'save_score',
-    id: JEC.user.id, batch: JEC.user.batch,
-    module: module, unitId: unitId, partId: partId,
-    score: score, totalQuestions: totalQ, correctAnswers: correctA
-  }).catch(function() {});
-  
+
+  // Baca memori: Sedang di gerbang mana kita sekarang?
+  const currentMode = localStorage.getItem('jec_login_mode') || 'github';
+
+  if (currentMode === 'firebase') {
+    // ==========================================
+    // MODE UJIAN: Kirim nilai langsung ke Firebase
+    // ==========================================
+    const testRecord = {
+      timestamp: new Date().toISOString(),
+      id: JEC.user.id,
+      name: JEC.user.name,
+      batch: JEC.user.batch,
+      testId: module + '_' + unitId + '_' + partId,
+      score: score,
+      totalQuestions: totalQ,
+      correctAnswers: correctA
+    };
+
+    // Gunakan POST agar Firebase membuatkan ID unik (firebaseKey)
+    fetch(JEC.config.FIREBASE_URL + '/test_results.json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(testRecord)
+    }).catch(function(e) {
+      console.error("[JEC] Gagal mengirim nilai ke Firebase:", e);
+    });
+
+  } else {
+    // ==========================================
+    // MODE NORMAL: Kirim nilai ke Google Apps Script
+    // ==========================================
+    JEC.apiPost({
+      action: 'save_score',
+      id: JEC.user.id, batch: JEC.user.batch,
+      module: module, unitId: unitId, partId: partId,
+      score: score, totalQuestions: totalQ, correctAnswers: correctA
+    }).catch(function() {});
+  }
+
+  // Lanjutkan memproses gamifikasi & statistik siswa di lokal
   JEC.stats.quizCount++;
   if (score === 100) {
     JEC.stats.perfectQuiz = true;
