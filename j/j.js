@@ -1,9 +1,4 @@
-// =====================================================
-// JAGAT E COURSE (JEC) - MAIN LOGIC
-// Version: 1.0.0
-// =====================================================
-
-// I18N Dictionary
+/*15*/
 const I18N = {
   en: {
     login_subtitle:"Student Portal",student_id:"Student ID",login_btn:"SIGN IN",
@@ -39,7 +34,6 @@ const I18N = {
   }
 };
 
-// Global state
 let CFG = window.JEC_CONFIG || {};
 let currentUser = null;
 let currentLang = localStorage.getItem('jec_lang') || CFG.DEFAULT_LANG || 'en';
@@ -49,10 +43,6 @@ let progressMap = {};
 let extData = {tabs:[]};
 let focusTimer = null, focusSeconds = 0, focusRunning = false;
 let leaderboardData = [];
-
-// =====================================================
-// INITIALIZATION
-// =====================================================
 
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme();
@@ -86,10 +76,6 @@ function showDashboard() {
   renderAll();
   heartbeat();
 }
-
-// =====================================================
-// LOGIN & SESSION
-// =====================================================
 
 async function doLogin() {
   const id = document.getElementById('login-id').value.trim().toLowerCase();
@@ -158,10 +144,6 @@ function doLogout() {
   document.getElementById('login-pin').value = '';
 }
 
-// =====================================================
-// DATA LOADING
-// =====================================================
-
 async function loadAllData() {
   try {
     const modules = ['spe','voc','gra','wri','lis'];
@@ -171,14 +153,12 @@ async function loadAllData() {
     }
     const er = await fetch(CFG.DATA + 'ext.json?v=' + (CFG.APP_VERSION || Date.now()));
     if (er.ok) extData = await er.json();
-    // Load progress
     const pr = await fetch(CFG.LOG + '?action=fetch_progress&id=' + encodeURIComponent(currentUser.id));
     if (pr.ok) {
       const arr = await pr.json();
       progressMap = {};
       arr.forEach(p => progressMap[p.module + '_' + p.unitId + '_' + p.partId] = p.status);
     }
-    // Load leaderboard
     const lr = await fetch(CFG.LOG + '?action=fetch_leaderboard&batch=' + encodeURIComponent(currentUser.batch));
     if (lr.ok) {
       leaderboardData = await lr.json();
@@ -194,10 +174,6 @@ async function forceRefresh() {
   renderAll();
   showToast('Data refreshed!', 'success');
 }
-
-// =====================================================
-// RENDER
-// =====================================================
 
 function renderAll() {
   document.getElementById('course-name').textContent = CFG.COURSE_SHORT || 'JEC';
@@ -525,10 +501,6 @@ function updateStats() {
   document.getElementById('stat-streak').textContent = 1;
 }
 
-// =====================================================
-// UTILITIES
-// =====================================================
-
 function switchView(name, btn) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
@@ -552,7 +524,7 @@ function toggleTheme() {
 
 function applyTheme() {
   const saved = localStorage.getItem('jec_theme');
-  const t = saved || 'light'; // Default ke light (lebih vibrant)
+  const t = saved || 'light';
   if (t === 'dark') {
     document.documentElement.setAttribute('data-theme', 'dark');
     document.getElementById('theme-icon').textContent = 'light_mode';
