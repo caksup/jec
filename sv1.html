@@ -237,10 +237,11 @@
   </div>
 </div>
 
-<!-- ═══════════ FLM: ACTIVE INDICATOR ═══════════ -->
+<!-- ═══════════ FLM: ACTIVE INDICATOR + TIMER ═══════════ -->
 <div id="flm-active-bar" class="flm-active-bar hidden">
-  <span class="material-icons-round">lock</span>
-  <span data-i18n="flm_active">Focus Learn Mode Active</span>
+  <span class="material-icons-round flm-bar-icon">lock</span>
+  <span class="flm-bar-text" data-i18n="flm_active">Focus Learn Mode Active</span>
+  <span class="flm-bar-timer" id="flm-header-timer">00:00</span>
   <button class="flm-exit-btn" id="flm-exit-btn" onclick="JEC_UI.exitFLM()">
     <span class="material-icons-round">logout</span>
   </button>
