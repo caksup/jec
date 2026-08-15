@@ -677,6 +677,19 @@ body.flm-active .view-header { display: none; }
 }
 
 /* FLM Active Bar (Indicator saat FLM aktif) */
+.flm-bar-icon { font-size: 18px; }
+.flm-bar-text { font-weight: 700; }
+.flm-bar-timer {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 1.1rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.3rem 0.8rem;
+  border-radius: 8px;
+  margin-left: auto;
+  margin-right: 0.5rem;
+}
+
 .flm-active-bar {
   position: fixed;
   top: 0;
