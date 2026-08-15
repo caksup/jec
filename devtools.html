@@ -1,39 +1,51 @@
-<!-- JEC DevTools v.1.06 | 15/08/2026 | devtools.html -->
+<!-- JEC DevTools v.2.00 | 15/08/2026 | devtools.html | Pro Edition -->
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#833AB4">
-<title>JEC DevTools - Diagnostic Tool</title>
+<title>JEC DevTools Pro - Advanced Diagnostic</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://jagatec.wasmer.app/s/devtools.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/caksup/jec@main/s/devtools.css?v=2.00">
 </head>
 <body>
 
 <div class="app">
+  <!-- HEADER -->
   <header class="header">
     <div class="brand">
       <span class="material-icons-round brand-icon">build</span>
       <div>
-        <div class="brand-name">JEC DevTools</div>
-        <div class="brand-sub">Diagnostic & Auto-Fix Tool · v1.06</div>
+        <div class="brand-name">JEC DevTools <span class="badge-pro">PRO</span></div>
+        <div class="brand-sub">Advanced Diagnostic · v2.00</div>
       </div>
     </div>
-    <button class="icon-btn" id="btn-theme" title="Toggle theme">
-      <span class="material-icons-round" id="theme-icon">dark_mode</span>
-    </button>
+    <div class="header-actions">
+      <button class="icon-btn" id="btn-shortcuts" title="Keyboard Shortcuts (?)">
+        <span class="material-icons-round">keyboard</span>
+      </button>
+      <button class="icon-btn" id="btn-theme" title="Toggle Theme">
+        <span class="material-icons-round" id="theme-icon">dark_mode</span>
+      </button>
+      <button class="icon-btn" id="btn-fullscreen" title="Fullscreen (F11)">
+        <span class="material-icons-round">fullscreen</span>
+      </button>
+    </div>
   </header>
 
+  <!-- MAIN -->
   <main class="main">
+    
+    <!-- INPUT SECTION -->
     <section class="input-section">
       <div class="input-card">
         <label class="input-label">
           <span class="material-icons-round">link</span>
-          Target URL JEC
+          Target URL
         </label>
         <div class="input-row">
           <input type="text" id="target-url" 
@@ -41,25 +53,52 @@
             value="https://caksup.github.io/jec/sv1.html">
           <button class="btn-primary" id="btn-scan">
             <span class="material-icons-round">search</span>
-            <span>Periksa</span>
+            <span>Scan (F5)</span>
+          </button>
+          <button class="btn-ghost" id="btn-stop" disabled>
+            <span class="material-icons-round">stop</span>
           </button>
         </div>
-        <div class="input-hint">
-          <span class="material-icons-round">info</span>
-          <span>DevTools akan scan file JS, CSS, HTML, Apps Script, dan data JSON</span>
+        <div class="input-options">
+          <label class="checkbox-option">
+            <input type="checkbox" id="opt-screenshot" checked>
+            <span class="material-icons-round">photo_camera</span>
+            <span>Screenshot</span>
+          </label>
+          <label class="checkbox-option">
+            <input type="checkbox" id="opt-console" checked>
+            <span class="material-icons-round">terminal</span>
+            <span>Console Capture</span>
+          </label>
+          <label class="checkbox-option">
+            <input type="checkbox" id="opt-perf" checked>
+            <span class="material-icons-round">speed</span>
+            <span>Performance</span>
+          </label>
+          <label class="checkbox-option">
+            <input type="checkbox" id="opt-dom" checked>
+            <span class="material-icons-round">code</span>
+            <span>DOM Inspector</span>
+          </label>
         </div>
       </div>
     </section>
 
+    <!-- PROGRESS -->
     <section class="progress-section hidden" id="progress-section">
       <div class="progress-card">
         <div class="progress-bar">
           <div class="progress-fill" id="progress-fill"></div>
         </div>
-        <div class="progress-text" id="progress-text">Memulai scan...</div>
+        <div class="progress-row">
+          <div class="progress-text" id="progress-text">Memulai scan...</div>
+          <div class="progress-percent" id="progress-percent">0%</div>
+        </div>
+        <div class="progress-steps" id="progress-steps"></div>
       </div>
     </section>
 
+    <!-- SUMMARY DASHBOARD -->
     <section class="summary-section hidden" id="summary-section">
       <div class="summary-grid">
         <div class="summary-card score-card">
@@ -70,89 +109,350 @@
           <div class="score-label">Health Score</div>
           <div class="score-status" id="score-status">—</div>
         </div>
-        <div class="summary-card stat-card">
-          <div class="stat-icon critical">
+        <div class="summary-card stat-card critical">
+          <div class="stat-icon">
             <span class="material-icons-round">error</span>
           </div>
           <div class="stat-count" id="critical-count">0</div>
           <div class="stat-label">Critical</div>
         </div>
-        <div class="summary-card stat-card">
-          <div class="stat-icon warning">
+        <div class="summary-card stat-card warning">
+          <div class="stat-icon">
             <span class="material-icons-round">warning</span>
           </div>
           <div class="stat-count" id="warning-count">0</div>
           <div class="stat-label">Warning</div>
         </div>
-        <div class="summary-card stat-card">
-          <div class="stat-icon success">
+        <div class="summary-card stat-card success">
+          <div class="stat-icon">
             <span class="material-icons-round">check_circle</span>
           </div>
           <div class="stat-count" id="success-count">0</div>
           <div class="stat-label">Passed</div>
         </div>
       </div>
+      
+      <!-- Statistics -->
+      <div class="stats-row">
+        <div class="mini-stat">
+          <span class="material-icons-round">timer</span>
+          <span id="stat-scan-time">0s</span>
+        </div>
+        <div class="mini-stat">
+          <span class="material-icons-round">data_usage</span>
+          <span id="stat-data-size">0 KB</span>
+        </div>
+        <div class="mini-stat">
+          <span class="material-icons-round">http</span>
+          <span id="stat-requests">0 requests</span>
+        </div>
+        <div class="mini-stat">
+          <span class="material-icons-round">speed</span>
+          <span id="stat-load-time">0ms</span>
+        </div>
+      </div>
     </section>
 
-    <section class="results-section hidden" id="results-section">
-      <div class="results-toolbar">
-        <div class="filter-tabs">
-          <button class="filter-tab active" data-filter="all">
-            <span class="material-icons-round">list</span>
-            Semua
-          </button>
-          <button class="filter-tab" data-filter="critical">
-            <span class="material-icons-round">error</span>
-            Critical
-          </button>
-          <button class="filter-tab" data-filter="warning">
-            <span class="material-icons-round">warning</span>
-            Warning
-          </button>
-          <button class="filter-tab" data-filter="success">
-            <span class="material-icons-round">check_circle</span>
-            Passed
-          </button>
-        </div>
-        <button class="btn-ghost" id="btn-export">
-          <span class="material-icons-round">download</span>
-          Export Report
+    <!-- TABS NAVIGATION -->
+    <section class="tabs-section hidden" id="tabs-section">
+      <div class="tabs-nav">
+        <button class="tab-btn active" data-tab="results">
+          <span class="material-icons-round">list</span>
+          <span>Results</span>
+          <span class="tab-badge" id="badge-results">0</span>
+        </button>
+        <button class="tab-btn" data-tab="files">
+          <span class="material-icons-round">folder</span>
+          <span>Files</span>
+          <span class="tab-badge" id="badge-files">0</span>
+        </button>
+        <button class="tab-btn" data-tab="console">
+          <span class="material-icons-round">terminal</span>
+          <span>Console</span>
+          <span class="tab-badge" id="badge-console">0</span>
+        </button>
+        <button class="tab-btn" data-tab="network">
+          <span class="material-icons-round">wifi</span>
+          <span>Network</span>
+          <span class="tab-badge" id="badge-network">0</span>
+        </button>
+        <button class="tab-btn" data-tab="preview">
+          <span class="material-icons-round">visibility</span>
+          <span>Preview</span>
+        </button>
+        <button class="tab-btn" data-tab="history">
+          <span class="material-icons-round">history</span>
+          <span>History</span>
+        </button>
+        <button class="tab-btn" data-tab="patches">
+          <span class="material-icons-round">auto_fix_high</span>
+          <span>Patches</span>
+          <span class="tab-badge warning" id="badge-patches">0</span>
         </button>
       </div>
 
-      <div class="results-list" id="results-list"></div>
-    </section>
-
-    <section class="fixes-section hidden" id="fixes-section">
-      <div class="fixes-header">
-        <span class="material-icons-round">auto_fix_high</span>
-        <span>Auto-Fix Commands</span>
+      <!-- TAB: RESULTS -->
+      <div class="tab-content active" id="tab-results">
+        <div class="results-toolbar">
+          <div class="search-box">
+            <span class="material-icons-round">search</span>
+            <input type="text" id="search-results" placeholder="Search results... (Ctrl+F)">
+          </div>
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">All</button>
+            <button class="filter-tab critical" data-filter="critical">Critical</button>
+            <button class="filter-tab warning" data-filter="warning">Warning</button>
+            <button class="filter-tab success" data-filter="success">Passed</button>
+          </div>
+          <div class="export-buttons">
+            <button class="btn-icon" id="btn-export-json" title="Export JSON">
+              <span class="material-icons-round">data_object</span>
+            </button>
+            <button class="btn-icon" id="btn-export-md" title="Export Markdown">
+              <span class="material-icons-round">description</span>
+            </button>
+            <button class="btn-icon" id="btn-export-html" title="Export HTML">
+              <span class="material-icons-round">code</span>
+            </button>
+          </div>
+        </div>
+        <div class="results-list" id="results-list"></div>
       </div>
-      <div class="fixes-list" id="fixes-list"></div>
-    </section>
 
-    <section class="file-tree-section hidden" id="file-tree-section">
-      <div class="file-tree-header">
-        <span class="material-icons-round">folder</span>
-        <span>Struktur File</span>
+      <!-- TAB: FILES -->
+      <div class="tab-content" id="tab-files">
+        <div class="files-toolbar">
+          <div class="search-box">
+            <span class="material-icons-round">search</span>
+            <input type="text" id="search-files" placeholder="Search files...">
+          </div>
+          <div class="view-toggle">
+            <button class="btn-icon active" data-view="tree" title="Tree View">
+              <span class="material-icons-round">account_tree</span>
+            </button>
+            <button class="btn-icon" data-view="list" title="List View">
+              <span class="material-icons-round">view_list</span>
+            </button>
+            <button class="btn-icon" data-view="grid" title="Grid View">
+              <span class="material-icons-round">grid_view</span>
+            </button>
+          </div>
+        </div>
+        <div class="files-view" id="files-view"></div>
       </div>
-      <div class="file-tree" id="file-tree"></div>
+
+      <!-- TAB: CONSOLE -->
+      <div class="tab-content" id="tab-console">
+        <div class="console-toolbar">
+          <div class="console-filters">
+            <button class="filter-btn active" data-level="all">All</button>
+            <button class="filter-btn error" data-level="error">
+              <span class="material-icons-round">error</span> Error
+            </button>
+            <button class="filter-btn warn" data-level="warn">
+              <span class="material-icons-round">warning</span> Warn
+            </button>
+            <button class="filter-btn info" data-level="info">
+              <span class="material-icons-round">info</span> Info
+            </button>
+            <button class="filter-btn log" data-level="log">
+              <span class="material-icons-round">notes</span> Log
+            </button>
+          </div>
+          <button class="btn-ghost" id="btn-clear-console">
+            <span class="material-icons-round">delete_sweep</span>
+            Clear
+          </button>
+        </div>
+        <div class="console-output" id="console-output">
+          <div class="console-empty">
+            <span class="material-icons-round">terminal</span>
+            <div>No console output yet. Start a scan to capture logs.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: NETWORK -->
+      <div class="tab-content" id="tab-network">
+        <div class="network-toolbar">
+          <div class="network-summary">
+            <span><strong id="net-total">0</strong> requests</span>
+            <span><strong id="net-size">0 KB</strong> transferred</span>
+            <span><strong id="net-time">0ms</strong> total</span>
+          </div>
+        </div>
+        <div class="network-waterfall" id="network-waterfall">
+          <div class="waterfall-header">
+            <div class="wf-name">Name</div>
+            <div class="wf-type">Type</div>
+            <div class="wf-size">Size</div>
+            <div class="wf-status">Status</div>
+            <div class="wf-time">Time</div>
+            <div class="wf-bar">Timeline</div>
+          </div>
+          <div class="waterfall-body" id="waterfall-body"></div>
+        </div>
+      </div>
+
+      <!-- TAB: PREVIEW -->
+      <div class="tab-content" id="tab-preview">
+        <div class="preview-toolbar">
+          <div class="preview-device-toggle">
+            <button class="device-btn active" data-device="mobile">
+              <span class="material-icons-round">smartphone</span>
+            </button>
+            <button class="device-btn" data-device="tablet">
+              <span class="material-icons-round">tablet</span>
+            </button>
+            <button class="device-btn" data-device="desktop">
+              <span class="material-icons-round">computer</span>
+            </button>
+          </div>
+          <button class="btn-ghost" id="btn-screenshot-now">
+            <span class="material-icons-round">photo_camera</span>
+            Take Screenshot
+          </button>
+          <button class="btn-ghost" id="btn-refresh-preview">
+            <span class="material-icons-round">refresh</span>
+            Refresh
+          </button>
+        </div>
+        <div class="preview-container" id="preview-container">
+          <div class="preview-frame-wrap mobile">
+            <div class="preview-frame-header">
+              <div class="preview-url-bar" id="preview-url-bar">
+                <span class="material-icons-round">lock</span>
+                <span id="preview-url-text">—</span>
+              </div>
+            </div>
+            <iframe id="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+          </div>
+        </div>
+        <div class="screenshot-section hidden" id="screenshot-section">
+          <div class="screenshot-header">
+            <span class="material-icons-round">photo_camera</span>
+            <span>Captured Screenshots</span>
+          </div>
+          <div class="screenshot-grid" id="screenshot-grid"></div>
+        </div>
+      </div>
+
+      <!-- TAB: HISTORY -->
+      <div class="tab-content" id="tab-history">
+        <div class="history-toolbar">
+          <span class="history-info" id="history-info">0 scans saved</span>
+          <button class="btn-ghost" id="btn-clear-history">
+            <span class="material-icons-round">delete_forever</span>
+            Clear All
+          </button>
+        </div>
+        <div class="history-list" id="history-list">
+          <div class="empty-state">
+            <span class="material-icons-round">history</span>
+            <div>No scan history yet</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: PATCHES -->
+      <div class="tab-content" id="tab-patches">
+        <div class="patches-toolbar">
+          <div class="patches-summary">
+            <span><strong id="patch-count">0</strong> patches available</span>
+          </div>
+          <button class="btn-primary" id="btn-apply-all" disabled>
+            <span class="material-icons-round">download</span>
+            Download All Patches
+          </button>
+        </div>
+        <div class="patches-list" id="patches-list">
+          <div class="empty-state">
+            <span class="material-icons-round">auto_fix_high</span>
+            <div>No patches needed. All systems healthy! 🎉</div>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
+  <!-- FOOTER -->
   <footer class="footer">
     <div class="footer-text">
-      JEC DevTools · Built for Jagat E Course · 
-      <span id="scan-time">Belum ada scan</span>
+      <span>JEC DevTools Pro v2.00</span>
+      <span class="footer-sep">·</span>
+      <span id="scan-time">Ready to scan</span>
+      <span class="footer-sep">·</span>
+      <span>Built for Jagat E Course</span>
     </div>
   </footer>
 </div>
 
+<!-- MODAL: KEYBOARD SHORTCUTS -->
+<div class="modal-overlay hidden" id="modal-shortcuts">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round">keyboard</span>
+      <span>Keyboard Shortcuts</span>
+      <button class="icon-btn modal-close" onclick="DT.closeModal('shortcuts')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="shortcuts-list">
+      <div class="shortcut-item">
+        <kbd>F5</kbd>
+        <span>Start new scan</span>
+      </div>
+      <div class="shortcut-item">
+        <kbd>Ctrl</kbd> + <kbd>E</kbd>
+        <span>Export current report</span>
+      </div>
+      <div class="shortcut-item">
+        <kbd>Ctrl</kbd> + <kbd>F</kbd>
+        <span>Search in results</span>
+      </div>
+      <div class="shortcut-item">
+        <kbd>Ctrl</kbd> + <kbd>S</kbd>
+        <span>Take screenshot</span>
+      </div>
+      <div class="shortcut-item">
+        <kbd>1-7</kbd>
+        <span>Switch tabs</span>
+      </div>
+      <div class="shortcut-item">
+        <kbd>?</kbd>
+        <span>Show this help</span>
+      </div>
+      <div class="shortcut-item">
+        <kbd>Esc</kbd>
+        <span>Close modal</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DIFF VIEWER -->
+<div class="modal-overlay hidden" id="modal-diff">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <span class="material-icons-round">compare</span>
+      <span>Diff Viewer</span>
+      <button class="icon-btn modal-close" onclick="DT.closeModal('diff')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="diff-container" id="diff-container"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
 <div class="toast" id="toast">
   <span class="material-icons-round" id="toast-icon">check_circle</span>
   <span id="toast-msg">OK</span>
 </div>
 
-<script src="https://cdn.jsdelivr.net/gh/caksup/jec@main/j/devtools.js"></script>
+<!-- HIDDEN IFRAME FOR CONSOLE CAPTURE -->
+<iframe id="capture-frame" style="display:none" sandbox="allow-scripts allow-same-origin"></iframe>
+
+<script src="https://cdn.jsdelivr.net/gh/caksup/jec@main/j/devtools.js?v=2.00"></script>
 </body>
 </html>
