@@ -1,4 +1,5 @@
-/*15*/
+//new 15.24 // 
+
 const I18N = {
   en: {
     login_subtitle:"Student Portal",student_id:"Student ID",login_btn:"SIGN IN",
@@ -8,13 +9,20 @@ const I18N = {
     start:"Start",pause:"Pause",parts_done:"Parts Done",day_streak:"Day Streak",
     days_left:"Days Left",account:"Account",class:"Class",batch:"Batch",
     expires:"Expires",logout:"Logout",menu:"Menu",refresh_data:"Refresh Data",
-    leaderboard:"Leaderboard",
+    leaderboard:"Leaderboard",online:"online",achievements:"Achievements",
+    daily_challenge:"Daily Challenge",mark_done:"Mark as Done",
+    feedback:"Feedback",how_was_lesson:"How was this lesson?",
+    thanks_feedback:"Thanks for your feedback! 🎉",continue:"Continue",
+    achievement_unlocked:"Achievement Unlocked!",
     morning:"Good morning",afternoon:"Good afternoon",evening:"Good evening",night:"Good night",
     modules:{spe:"Speaking",voc:"Vocabulary",gra:"Grammar",wri:"Writing",lis:"Listening"},
     no_parts:"No parts available",no_extra:"No extra features available",
     correct_answer:"Correct! 🎉",wrong_answer:"Wrong. The correct answer is highlighted.",
     session_expired:"Session expired. Please contact admin.",
-    login_failed:"Invalid ID or PIN",network_error:"Network error"
+    login_failed:"Invalid ID or PIN",network_error:"Network error",
+    bookmark_added:"Added to bookmarks! 🔖",
+    bookmark_removed:"Removed from bookmarks",
+    dc_done:"Daily Challenge completed! +20 XP 🎉"
   },
   id: {
     login_subtitle:"Portal Siswa",student_id:"ID Siswa",login_btn:"MASUK",
@@ -24,15 +32,44 @@ const I18N = {
     start:"Mulai",pause:"Jeda",parts_done:"Bagian Selesai",day_streak:"Hari Berturut",
     days_left:"Hari Tersisa",account:"Akun",class:"Kelas",batch:"Angkatan",
     expires:"Berakhir",logout:"Keluar",menu:"Menu",refresh_data:"Muat Ulang Data",
-    leaderboard:"Papan Peringkat",
+    leaderboard:"Papan Peringkat",online:"online",achievements:"Pencapaian",
+    daily_challenge:"Tantangan Harian",mark_done:"Tandai Selesai",
+    feedback:"Umpan Balik",how_was_lesson:"Bagaimana pelajaran ini?",
+    thanks_feedback:"Terima kasih atas umpan baliknya! 🎉",continue:"Lanjutkan",
+    achievement_unlocked:"Pencapaian Terbuka!",
     morning:"Selamat pagi",afternoon:"Selamat siang",evening:"Selamat sore",night:"Selamat malam",
     modules:{spe:"Speaking",voc:"Kosakata",gra:"Tata Bahasa",wri:"Menulis",lis:"Mendengarkan"},
     no_parts:"Tidak ada bagian tersedia",no_extra:"Tidak ada fitur tambahan",
     correct_answer:"Benar! 🎉",wrong_answer:"Salah. Jawaban benar ditandai.",
     session_expired:"Sesi berakhir. Hubungi admin.",
-    login_failed:"ID atau PIN salah",network_error:"Kesalahan jaringan"
+    login_failed:"ID atau PIN salah",network_error:"Kesalahan jaringan",
+    bookmark_added:"Ditambahkan ke bookmark! 🔖",
+    bookmark_removed:"Dihapus dari bookmark",
+    dc_done:"Tantangan Harian selesai! +20 XP 🎉"
   }
 };
+
+// ACHIEVEMENTS DEFINITION
+const ACHIEVEMENTS = [
+  {id:'first_login', icon:'🚀', name:'First Steps', desc:'Login for the first time', condition:(s)=>s.partsDone>=0},
+  {id:'first_part', icon:'📖', name:'Bookworm', desc:'Complete 1 part', condition:(s)=>s.partsDone>=1},
+  {id:'five_parts', icon:'⭐', name:'Rising Star', desc:'Complete 5 parts', condition:(s)=>s.partsDone>=5},
+  {id:'ten_parts', icon:'🔥', name:'On Fire', desc:'Complete 10 parts', condition:(s)=>s.partsDone>=10},
+  {id:'quiz_master', icon:'🧠', name:'Quiz Master', desc:'Get 100% in a quiz', condition:(s)=>s.perfectQuiz||false},
+  {id:'dc_complete', icon:'🎯', name:'Challenger', desc:'Complete Daily Challenge', condition:(s)=>s.dcDone||false},
+  {id:'bookworm', icon:'🔖', name:'Collector', desc:'Bookmark 3 materials', condition:(s)=>s.bookmarkCount>=3},
+  {id:'streak_3', icon:'💪', name:'Consistent', desc:'3 day streak', condition:(s)=>s.streak>=3}
+];
+
+// DAILY CHALLENGES
+const DAILY_CHALLENGES = [
+  {emoji:'🗣️', title:'Speak It Out', desc:'Read 3 English sentences aloud'},
+  {emoji:'📚', title:'Word Hunter', desc:'Learn 5 new vocabulary words'},
+  {emoji:'✍️', title:'Write It Down', desc:'Write 1 paragraph in English'},
+  {emoji:'👂', title:'Listen Up', desc:'Listen to 1 English audio'},
+  {emoji:'🎯', title:'Quiz Champion', desc:'Complete 1 quiz with score 80+'},
+  {emoji:'🔁', title:'Review Master', desc:'Review yesterday\'s material'}
+];
 
 let CFG = window.JEC_CONFIG || {};
 let currentUser = null;
@@ -43,6 +80,9 @@ let progressMap = {};
 let extData = {tabs:[]};
 let focusTimer = null, focusSeconds = 0, focusRunning = false;
 let leaderboardData = [];
+let bookmarkList = [];
+let unlockedAch = [];
+let currentDC = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme();
@@ -64,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 3000);
   setInterval(updateDateTime, 1000);
   setInterval(heartbeat, 30000);
+  setInterval(fetchOnlineCount, 30000);
 });
 
 function showLogin() {
@@ -75,6 +116,9 @@ function showDashboard() {
   document.getElementById('dashboard').classList.add('active');
   renderAll();
   heartbeat();
+  fetchOnlineCount();
+  checkDailyChallenge();
+  checkAchievements();
 }
 
 async function doLogin() {
@@ -104,6 +148,8 @@ async function doLogin() {
       await loadAllData();
       showDashboard();
       showToast('Welcome, ' + currentUser.name + '!', 'success');
+      // Unlock first_login achievement
+      unlockAchievement('first_login');
     } else {
       errEl.textContent = data.msg || t('login_failed');
       errEl.classList.add('show');
@@ -163,6 +209,10 @@ async function loadAllData() {
     if (lr.ok) {
       leaderboardData = await lr.json();
     }
+    // Load unlocked achievements from localStorage
+    unlockedAch = JSON.parse(localStorage.getItem('jec_ach_' + currentUser.id) || '[]');
+    // Load bookmarks
+    bookmarkList = JSON.parse(localStorage.getItem('jec_bm_' + currentUser.id) || '[]');
   } catch(e) {
     console.warn('Data load failed:', e);
   }
@@ -174,6 +224,208 @@ async function forceRefresh() {
   renderAll();
   showToast('Data refreshed!', 'success');
 }
+
+// =====================================================
+// ONLINE COUNT
+// =====================================================
+
+async function fetchOnlineCount() {
+  if (!currentUser) return;
+  try {
+    const res = await fetch(CFG.LOG + '?action=fetch_online&batch=' + encodeURIComponent(currentUser.batch));
+    const data = await res.json();
+    document.getElementById('online-num').textContent = Array.isArray(data) ? data.length : 0;
+  } catch(e) {
+    document.getElementById('online-num').textContent = 0;
+  }
+}
+
+// =====================================================
+// DAILY CHALLENGE
+// =====================================================
+
+function checkDailyChallenge() {
+  const today = new Date().toISOString().split('T')[0];
+  const lastDone = localStorage.getItem('jec_dc_' + currentUser.id);
+  if (lastDone === today) {
+    document.getElementById('dc-balloon').classList.remove('on');
+    return;
+  }
+  // Pick random challenge based on date (same challenge all day)
+  const dateSeed = new Date().getDate() + new Date().getMonth();
+  currentDC = DAILY_CHALLENGES[dateSeed % DAILY_CHALLENGES.length];
+  setTimeout(() => {
+    document.getElementById('dc-balloon').classList.add('on');
+  }, 2000);
+}
+
+function openDailyChallenge() {
+  if (!currentDC) {
+    const dateSeed = new Date().getDate() + new Date().getMonth();
+    currentDC = DAILY_CHALLENGES[dateSeed % DAILY_CHALLENGES.length];
+  }
+  document.getElementById('dc-emoji').textContent = currentDC.emoji;
+  document.getElementById('dc-title').textContent = currentDC.title;
+  document.getElementById('dc-desc').textContent = currentDC.desc;
+  document.getElementById('ov-dc').classList.add('active');
+}
+
+function completeDailyChallenge() {
+  const today = new Date().toISOString().split('T')[0];
+  localStorage.setItem('jec_dc_' + currentUser.id, today);
+  document.getElementById('ov-dc').classList.remove('active');
+  document.getElementById('dc-balloon').classList.remove('on');
+  showToast(t('dc_done'), 'success');
+  // Log to Apps Script
+  fetch(CFG.LOG, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({
+      action: 'log',
+      id: currentUser.id,
+      batch: currentUser.batch,
+      type: 'daily_challenge',
+      details: currentDC ? currentDC.title : 'completed'
+    })
+  }).catch(() => {});
+  unlockAchievement('dc_complete');
+}
+
+// =====================================================
+// ACHIEVEMENTS
+// =====================================================
+
+function checkAchievements() {
+  const partsDone = Object.values(progressMap).filter(s => s === 'done').length;
+  const stats = {
+    partsDone: partsDone,
+    perfectQuiz: JSON.parse(localStorage.getItem('jec_pq_' + currentUser.id) || 'false'),
+    dcDone: !!localStorage.getItem('jec_dc_' + currentUser.id),
+    bookmarkCount: bookmarkList.length,
+    streak: parseInt(localStorage.getItem('jec_streak_' + currentUser.id) || '1')
+  };
+  ACHIEVEMENTS.forEach(ach => {
+    if (!unlockedAch.includes(ach.id) && ach.condition(stats)) {
+      unlockAchievement(ach.id);
+    }
+  });
+}
+
+function unlockAchievement(achId) {
+  if (unlockedAch.includes(achId)) return;
+  unlockedAch.push(achId);
+  localStorage.setItem('jec_ach_' + currentUser.id, JSON.stringify(unlockedAch));
+  const ach = ACHIEVEMENTS.find(a => a.id === achId);
+  if (ach) {
+    // Show achievement toast
+    document.getElementById('ach-toast-icon').textContent = ach.icon;
+    document.getElementById('ach-toast-name').textContent = ach.name;
+    const toast = document.getElementById('ach-toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3500);
+    // Log to Apps Script
+    fetch(CFG.LOG, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({
+        action: 'earn_achievement',
+        id: currentUser.id,
+        batch: currentUser.batch,
+        achievementId: achId
+      })
+    }).catch(() => {});
+  }
+  renderAchievements();
+}
+
+function renderAchievements() {
+  const grid = document.getElementById('ach-grid');
+  grid.innerHTML = ACHIEVEMENTS.map(ach => {
+    const unlocked = unlockedAch.includes(ach.id);
+    return `<div class="ach-item ${unlocked?'unlocked':'locked'}" title="${ach.desc}">
+      <div class="ach-icon">${unlocked?ach.icon:'🔒'}</div>
+      <div class="ach-name">${ach.name}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('ach-count').textContent = unlockedAch.length + '/' + ACHIEVEMENTS.length;
+}
+
+// =====================================================
+// BOOKMARKS
+// =====================================================
+
+function toggleBookmark() {
+  if (!currentUser || !currentModule || !currentUnitId || !currentPartId) return;
+  const key = currentModule + '_' + currentUnitId + '_' + currentPartId;
+  const idx = bookmarkList.indexOf(key);
+  if (idx === -1) {
+    bookmarkList.push(key);
+    showToast(t('bookmark_added'), 'success');
+    // Log to Apps Script
+    fetch(CFG.LOG, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({
+        action: 'add_bookmark',
+        id: currentUser.id,
+        batch: currentUser.batch,
+        module: currentModule,
+        unitId: currentUnitId,
+        partId: currentPartId
+      })
+    }).catch(() => {});
+  } else {
+    bookmarkList.splice(idx, 1);
+    showToast(t('bookmark_removed'), 'warning');
+  }
+  localStorage.setItem('jec_bm_' + currentUser.id, JSON.stringify(bookmarkList));
+  updateBookmarkBtn();
+  checkAchievements();
+}
+
+function updateBookmarkBtn() {
+  const btn = document.getElementById('bookmark-btn');
+  const icon = document.getElementById('bookmark-icon');
+  if (!btn || !currentModule || !currentUnitId || !currentPartId) return;
+  const key = currentModule + '_' + currentUnitId + '_' + currentPartId;
+  const isBookmarked = bookmarkList.includes(key);
+  btn.classList.toggle('bookmarked', isBookmarked);
+  icon.textContent = isBookmarked ? 'bookmark' : 'bookmark_border';
+}
+
+// =====================================================
+// REACT/FEEDBACK
+// =====================================================
+
+function showReactOverlay() {
+  document.getElementById('react-step1').classList.remove('hidden');
+  document.getElementById('react-step2').classList.add('hidden');
+  document.getElementById('ov-react').classList.add('active');
+}
+
+function sendReact(type) {
+  document.getElementById('react-step1').classList.add('hidden');
+  document.getElementById('react-step2').classList.remove('hidden');
+  fetch(CFG.LOG, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({
+      action: 'log',
+      id: currentUser.id,
+      batch: currentUser.batch,
+      type: 'react',
+      details: type
+    })
+  }).catch(() => {});
+}
+
+// =====================================================
+// RENDER
+// =====================================================
 
 function renderAll() {
   document.getElementById('course-name').textContent = CFG.COURSE_SHORT || 'JEC';
@@ -190,6 +442,7 @@ function renderAll() {
   renderPractice();
   renderExtra();
   renderLeaderboard();
+  renderAchievements();
   updateStats();
 }
 
@@ -365,6 +618,7 @@ function renderMateri(module, unitId, partId) {
   } else {
     quizSection.classList.add('hidden');
   }
+  updateBookmarkBtn();
   markDone(module, unitId, partId);
 }
 
@@ -390,6 +644,15 @@ function answerQuiz(el, qIdx, optIdx, correctIdx) {
     el.classList.add('wrong');
     options[correctIdx].classList.add('correct');
     showToast(t('wrong_answer'), 'error', 2000);
+  }
+  // Check if all questions answered
+  const allAnswered = [...document.querySelectorAll('.quiz-question')].every(q => {
+    const opts = q.parentElement.querySelectorAll('.quiz-option');
+    return [...opts].some(o => o.classList.contains('correct') || o.classList.contains('wrong'));
+  });
+  if (allAnswered) {
+    // Show react overlay after quiz
+    setTimeout(() => showReactOverlay(), 1000);
   }
 }
 
@@ -419,6 +682,12 @@ function markDone(module, unitId, partId) {
     })
   }).catch(e => console.warn('mark_done failed:', e));
   updateStats();
+  checkAchievements();
+  // Show react overlay after finishing material (only if no quiz)
+  const part = materiData[module]?.materials?.[unitId]?.parts?.[partId];
+  if (!part || !part.quiz || !part.quiz.length) {
+    setTimeout(() => showReactOverlay(), 500);
+  }
 }
 
 function renderPractice() {
