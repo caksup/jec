@@ -1,513 +1,289 @@
-<!--15/08/2026 | 15.35.00 WIB v.1.0.1 -->
+<!-- JEC v.1.02 | 15/08/2026 | sv1.html | Final Shell -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#833AB4">
+<meta name="description" content="Jagat E Course - English Learning Platform">
 <title>JEC - Jagat E Course</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://jec-46840.wasmer.app/s/s.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/caksup/jec@main/s/s.css?v=1.02">
 </head>
 <body>
 
-<!-- SPLASH SCREEN -->
-<div id="splash">
-  <div class="logo">JEC</div>
-  <div class="name">JAGAT E COURSE</div>
-  <div class="loader"></div>
+<!-- ═══════════ SPLASH SCREEN ═══════════ -->
+<div id="feat-splash" class="splash">
+  <div class="splash-logo">JEC</div>
+  <div class="splash-name">JAGAT E COURSE</div>
+  <div class="splash-loader"></div>
 </div>
 
-<!-- OFFLINE INDICATOR -->
+<!-- ═══════════ OFFLINE BAR ═══════════ -->
 <div id="offline-bar">
   <span class="material-icons-round">wifi_off</span>
   <span data-i18n="offline">You're offline</span>
 </div>
 
-<!-- DAILY CHALLENGE BALLOON -->
-<div id="dc-balloon" onclick="openDailyChallenge();this.classList.remove('on')">
-  <span class="material-icons-round">emoji_events</span>
-  <span class="dc-text" data-i18n="daily_challenge">Daily Challenge!</span>
-</div>
-
-<!-- LOGIN SCREEN -->
-<div id="login">
+<!-- ═══════════ LOGIN PAGE ═══════════ -->
+<div id="feat-login" class="login-page">
   <div class="login-card">
     <div class="login-logo">
-      <div class="big">JEC</div>
-      <div class="sub" data-i18n="login_subtitle">Student Portal</div>
+      <span class="material-icons-round login-logo-icon">school</span>
+      <div class="login-title">JEC</div>
+      <div class="login-subtitle" data-i18n="login_subtitle">Student Portal</div>
     </div>
-    <div class="form-group">
-      <label><span class="material-icons-round" style="font-size:12px;vertical-align:middle">badge</span> <span data-i18n="student_id">Student ID</span></label>
-      <input type="text" id="login-id" placeholder="260101" autocomplete="username">
+    <div class="login-form">
+      <div class="login-field">
+        <label data-i18n="student_id">Student ID</label>
+        <input type="text" id="login-id" placeholder="260101" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label>PIN</label>
+        <input type="password" id="login-pin" placeholder="••••" autocomplete="current-password">
+      </div>
+      <div class="login-error" id="login-error">
+        <span class="material-icons-round">error</span>
+        <span id="login-error-msg"></span>
+      </div>
+      <button class="btn-primary" id="login-btn">
+        <span class="material-icons-round">login</span>
+        <span data-i18n="login_btn">SIGN IN</span>
+      </button>
+      <div class="login-footer" data-i18n="login_footer">Forgot PIN? Contact admin.</div>
     </div>
-    <div class="form-group">
-      <label><span class="material-icons-round" style="font-size:12px;vertical-align:middle">lock</span> PIN</label>
-      <input type="password" id="login-pin" placeholder="••••" autocomplete="current-password">
-    </div>
-    <div class="error-msg" id="login-error"></div>
-    <button class="btn" onclick="doLogin()">
-      <span class="material-icons-round">login</span>
-      <span data-i18n="login_btn">SIGN IN</span>
-    </button>
-    <div class="login-footer" data-i18n="login_footer">Forgot PIN? Contact admin.</div>
   </div>
 </div>
 
-<!-- DASHBOARD -->
-<div id="dashboard">
-  <header class="header">
+<!-- ═══════════ DASHBOARD ═══════════ -->
+<div id="dashboard" class="dashboard">
+
+  <!-- HEADER -->
+  <header class="header" id="feat-header">
     <div class="header-top">
-      <div class="course-name">
-        <span class="material-icons-round" style="font-size:20px">school</span>
-        <span id="course-name">JEC</span>
+      <div class="header-brand">
+        <span class="material-icons-round header-brand-icon">school</span>
+        <span class="header-brand-name" id="course-name">JEC</span>
       </div>
       <div class="header-actions">
-        <button class="icon-btn" onclick="toggleFullscreen()" title="Fullscreen">
+        <button class="icon-btn" id="btn-fullscreen" onclick="JEC.toggleFullscreen()" title="Fullscreen">
           <span class="material-icons-round" id="fs-icon">fullscreen</span>
         </button>
-        <button class="icon-btn" onclick="toggleTheme()" title="Theme">
-          <span class="material-icons-round" id="theme-icon">dark_mode</span>
+        <button class="icon-btn" id="btn-theme" onclick="JEC.toggleTheme()" title="Theme">
+          <span class="material-icons-round" id="theme-icon">light_mode</span>
         </button>
-        <button class="icon-btn lang-toggle" onclick="toggleLang()" id="lang-btn">EN</button>
-        <button class="icon-btn" onclick="openMenu()" title="Menu">
+        <button class="icon-btn lang-btn" id="lang-btn" onclick="JEC.toggleLang()" title="Language">EN</button>
+        <button class="icon-btn" id="btn-menu" onclick="JEC.openOv('ov-menu')" title="Menu">
           <span class="material-icons-round">more_vert</span>
         </button>
       </div>
     </div>
-    <div class="datetime-row">
-      <span class="datetime" id="datetime">—</span>
-      <span class="online-sep">|</span>
-      <span class="online-count">
-        <span class="online-dot"></span>
-        <span id="online-num">0</span>
-        <span data-i18n="online">online</span>
-      </span>
-    </div>
-    <div class="greeting">
-      <span id="greet-text" data-i18n="hello">Hello</span>, 
-      <span class="name" id="user-name">—</span> 👋
+    <div class="header-info">
+      <div class="header-datetime-row">
+        <span class="header-datetime" id="datetime">—</span>
+        <span class="header-sep">•</span>
+        <span class="header-online">
+          <span class="online-dot"></span>
+          <span id="online-num">0</span>
+          <span data-i18n="online">online</span>
+        </span>
+      </div>
+      <div class="header-greeting">
+        <span id="greet-text" data-i18n="greet.morning">Good morning</span>,
+        <span class="header-username" id="user-name">—</span>
+        <span class="header-wave">👋</span>
+      </div>
     </div>
   </header>
 
+  <!-- CONTENT -->
   <div class="content">
-    <!-- LEARN VIEW -->
+
+    <!-- VIEW: LEARN -->
     <div class="view active" id="view-learn">
-      <div class="section-title">
-        <span class="material-icons-round">school</span>
+      <div class="view-header">
+        <span class="material-icons-round view-icon">school</span>
         <span data-i18n="learn">Learn</span>
       </div>
-      <div class="card-grid" id="learn-cards"></div>
-      
-      <div class="hidden" id="unit-list-wrap">
-        <button class="back-btn" onclick="showLearnCards()">
-          <span class="material-icons-round" style="font-size:16px">arrow_back</span>
-          <span data-i18n="back">Back</span>
-        </button>
-        <div class="section-title" id="unit-list-title">—</div>
-        <div class="unit-list" id="unit-list"></div>
-      </div>
-      
-      <div class="hidden" id="part-list-wrap">
-        <button class="back-btn" onclick="showUnits(currentModule)">
-          <span class="material-icons-round" style="font-size:16px">arrow_back</span>
-          <span data-i18n="back">Back</span>
-        </button>
-        <div class="section-title" id="part-list-title">—</div>
-        <div class="part-list" id="part-list"></div>
-      </div>
-      
-      <div class="hidden" id="materi-wrap">
-        <div class="materi-top-bar">
-          <button class="back-btn" onclick="showParts(currentModule,currentUnitId)" style="margin-bottom:0">
-            <span class="material-icons-round" style="font-size:16px">arrow_back</span>
-            <span data-i18n="back">Back</span>
-          </button>
-          <button class="bookmark-btn" id="bookmark-btn" onclick="toggleBookmark()">
-            <span class="material-icons-round" id="bookmark-icon">bookmark_border</span>
-          </button>
-        </div>
-        <div class="materi-header">
-          <div class="materi-title" id="materi-title">—</div>
-          <div class="materi-actions">
-            <button class="audio-btn" onclick="playAudio()" id="audio-btn">
-              <span class="material-icons-round" style="font-size:16px">volume_up</span>
-              <span data-i18n="listen">Listen</span>
-            </button>
-            <button class="exercise-btn" onclick="openExercise()" id="exercise-btn">
-              <span class="material-icons-round" style="font-size:16px">quiz</span>
-              <span data-i18n="exercise">Exercise</span>
-            </button>
-          </div>
-        </div>
-        <div class="materi-content" id="materi-content"></div>
-        
-        <div class="quiz-section hidden" id="quiz-section">
-          <div class="section-title" style="margin-bottom:.6rem">
-            <span class="material-icons-round" style="font-size:18px">quiz</span>
-            <span data-i18n="quiz">Quiz</span>
-          </div>
-          <div id="quiz-body"></div>
-        </div>
-        
-        <!-- NOTES -->
-        <div class="notes-section">
-          <div class="section-title" style="margin-bottom:.6rem">
-            <span class="material-icons-round" style="font-size:18px">edit_note</span>
-            <span data-i18n="my_notes">My Notes</span>
-          </div>
-          <textarea id="notes-ta" placeholder="Write your notes here..." oninput="saveNote()"></textarea>
-        </div>
-      </div>
+      <div id="feat-learn"></div>
     </div>
 
-    <!-- PRACTICE VIEW -->
+    <!-- VIEW: PRACTICE -->
     <div class="view" id="view-practice">
-      <div class="section-title">
-        <span class="material-icons-round">fitness_center</span>
+      <div class="view-header">
+        <span class="material-icons-round view-icon">fitness_center</span>
         <span data-i18n="practice">Practice</span>
       </div>
-      <div id="practice-list"></div>
-      <div style="margin-top:1.2rem">
-        <div class="section-title">
-          <span class="material-icons-round">leaderboard</span>
-          <span data-i18n="leaderboard">Leaderboard</span>
-        </div>
-        <div id="leaderboard-box"></div>
-      </div>
+      <div id="feat-practice"></div>
     </div>
 
-    <!-- EXTRA VIEW -->
+    <!-- VIEW: EXTRA -->
     <div class="view" id="view-extra">
-      <div class="section-title">
-        <span class="material-icons-round">more_horiz</span>
+      <div class="view-header">
+        <span class="material-icons-round view-icon">more_horiz</span>
         <span data-i18n="extra">Extra</span>
       </div>
-      <div class="subtab" id="extra-tabs">
-        <button class="active" onclick="extraTab('tools',this)">
-          <span class="material-icons-round" style="font-size:16px">language</span>
-          <span data-i18n="tools">Tools</span>
-        </button>
-        <button onclick="extraTab('logbook',this)">
-          <span class="material-icons-round" style="font-size:16px">menu_book</span>
-          <span data-i18n="logbook">Logbook</span>
-        </button>
-        <button onclick="extraTab('games',this)">
-          <span class="material-icons-round" style="font-size:16px">sports_esports</span>
-          <span data-i18n="games">Games</span>
-        </button>
-      </div>
-      <div id="extra-tools">
-        <div id="extra-list"></div>
-      </div>
-      <div id="extra-logbook" class="hidden">
-        <div class="logbook-info" data-i18n="logbook_desc">Your offline meeting notes will appear here.</div>
-        <div id="logbook-list"></div>
-      </div>
-      <div id="extra-games" class="hidden">
-        <div class="card-grid" id="games-grid"></div>
-      </div>
+      <div id="feat-extra"></div>
     </div>
 
-    <!-- PROFILE VIEW -->
+    <!-- VIEW: PROFILE -->
     <div class="view" id="view-profile">
-      <div class="section-title">
-        <span class="material-icons-round">person</span>
+      <div class="view-header">
+        <span class="material-icons-round view-icon">person</span>
         <span data-i18n="profile">Profile</span>
       </div>
-      <div class="profile-card">
-        <div class="profile-avatar" id="profile-avatar">?</div>
-        <div class="profile-name" id="profile-name">—</div>
-        <div class="profile-id" id="profile-id">—</div>
-        <div class="stats-row">
-          <div class="stat-box">
-            <div class="stat-val" id="stat-parts">0</div>
-            <div class="stat-lbl" data-i18n="parts_done">Parts Done</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val" id="stat-streak">0</div>
-            <div class="stat-lbl" data-i18n="day_streak">Day Streak</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val" id="stat-xp">0</div>
-            <div class="stat-lbl">XP</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val" id="stat-days">0</div>
-            <div class="stat-lbl" data-i18n="days_left">Days Left</div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- PROFILE TABS -->
-      <div class="profile-card">
-        <div class="ptabs">
-          <button class="active" onclick="profTab('data',this)">
-            <span class="material-icons-round" style="font-size:16px">person</span>
-            <span data-i18n="data">Data</span>
-          </button>
-          <button onclick="profTab('ach',this)">
-            <span class="material-icons-round" style="font-size:16px">emoji_events</span>
-            <span data-i18n="achievements">Achievements</span>
-          </button>
-          <button onclick="profTab('bm',this)">
-            <span class="material-icons-round" style="font-size:16px">bookmark</span>
-            <span data-i18n="bookmarks">Bookmarks</span>
-          </button>
-          <button onclick="profTab('notes',this)">
-            <span class="material-icons-round" style="font-size:16px">edit_note</span>
-            <span data-i18n="notes">Notes</span>
-          </button>
-        </div>
-        
-        <div id="pf-data">
-          <div class="info-row">
-            <strong data-i18n="class">Class:</strong>
-            <span id="profile-class">—</span>
-          </div>
-          <div class="info-row">
-            <strong data-i18n="batch">Batch:</strong>
-            <span id="profile-batch">—</span>
-          </div>
-          <div class="info-row">
-            <strong data-i18n="expires">Expires:</strong>
-            <span id="profile-expires">—</span>
-          </div>
-          <div class="info-row">
-            <strong data-i18n="joined">Joined:</strong>
-            <span id="profile-joined">—</span>
-          </div>
-        </div>
-        
-        <div id="pf-ach" class="hidden">
-          <div class="ach-count-display">
-            <span class="material-icons-round">emoji_events</span>
-            <span id="ach-count">0/8</span>
-            <span data-i18n="unlocked">unlocked</span>
-          </div>
-          <div class="ach-grid" id="ach-grid"></div>
-        </div>
-        
-        <div id="pf-bm" class="hidden">
-          <div class="empty-state" id="bm-empty" data-i18n="no_bookmarks">No bookmarks yet. Tap 🔖 on any material to save it.</div>
-          <div id="bm-list"></div>
-        </div>
-        
-        <div id="pf-notes" class="hidden">
-          <div class="empty-state" id="notes-empty" data-i18n="no_notes">No notes yet. Write notes while studying.</div>
-          <div id="notes-list"></div>
-        </div>
-      </div>
-      
-      <button class="btn btn-ghost" onclick="doLogout()" style="color:#ed4956;border-color:#ed4956">
+      <div id="feat-profile"></div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="JEC.switchView('learn', this)">
+      <span class="material-icons-round">school</span>
+      <span class="nav-label" data-i18n="learn">Learn</span>
+    </button>
+    <button class="nav-btn" onclick="JEC.switchView('practice', this)">
+      <span class="material-icons-round">fitness_center</span>
+      <span class="nav-label" data-i18n="practice">Practice</span>
+    </button>
+    <button class="nav-btn" onclick="JEC.switchView('extra', this)">
+      <span class="material-icons-round">more_horiz</span>
+      <span class="nav-label" data-i18n="extra">Extra</span>
+    </button>
+    <button class="nav-btn" onclick="JEC.switchView('profile', this)">
+      <span class="material-icons-round">person</span>
+      <span class="nav-label" data-i18n="profile">Profile</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- ═══════════ OVERLAY: FOCUS MODE ═══════════ -->
+<div class="overlay" id="feat-focus-overlay">
+  <div class="focus-container">
+    <div class="focus-title">
+      <span class="material-icons-round">timer</span>
+      <span data-i18n="focus_mode">Focus Mode</span>
+    </div>
+    <div class="focus-timer" id="focus-timer">25:00</div>
+    <div class="focus-btns">
+      <button class="btn-ghost" id="focus-skip-btn">
+        <span data-i18n="skip">Skip</span>
+      </button>
+      <button class="btn-primary" id="focus-start-btn">
+        <span data-i18n="start">Start</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ OVERLAY: DAILY CHALLENGE BALLOON ═══════════ -->
+<div id="feat-dc-balloon" class="dc-balloon">
+  <span class="material-icons-round dc-balloon-icon">emoji_events</span>
+  <span class="dc-balloon-text" data-i18n="daily_challenge">Daily Challenge</span>
+</div>
+
+<!-- ═══════════ OVERLAY: DAILY CHALLENGE MODAL ═══════════ -->
+<div class="overlay" id="ov-dc">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">emoji_events</span>
+      <span data-i18n="daily_challenge">Daily Challenge</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-dc')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div id="feat-dc-content"></div>
+  </div>
+</div>
+
+<!-- ═══════════ OVERLAY: REACT/FEEDBACK ═══════════ -->
+<div class="overlay" id="ov-react">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">thumb_up</span>
+      <span data-i18n="feedback">Feedback</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-react')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div id="feat-react-content"></div>
+  </div>
+</div>
+
+<!-- ═══════════ OVERLAY: MENU ═══════════ -->
+<div class="overlay" id="ov-menu">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">menu</span>
+      <span data-i18n="menu">Menu</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-menu')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div id="feat-menu-content">
+      <button class="menu-item" onclick="JEC.closeOv('ov-menu'); JEC.openOv('ov-guide')">
+        <span class="material-icons-round">menu_book</span>
+        <span data-i18n="guide">Guide</span>
+      </button>
+      <button class="menu-item" onclick="JEC.closeOv('ov-menu'); JEC.openOv('ov-report')">
+        <span class="material-icons-round">report_problem</span>
+        <span data-i18n="report">Report Issue</span>
+      </button>
+      <button class="menu-item" onclick="JEC.closeOv('ov-menu'); JEC.forceRefresh()">
+        <span class="material-icons-round">refresh</span>
+        <span data-i18n="refresh_data">Refresh Data</span>
+      </button>
+      <button class="menu-item menu-danger" onclick="JEC.logout()">
         <span class="material-icons-round">logout</span>
         <span data-i18n="logout">Logout</span>
       </button>
     </div>
   </div>
-
-  <nav class="bottom-nav">
-    <button class="nav-btn active" onclick="switchView('learn',this)">
-      <span class="material-icons-round">school</span>
-      <span class="nav-label" data-i18n="learn">Learn</span>
-    </button>
-    <button class="nav-btn" onclick="switchView('practice',this)">
-      <span class="material-icons-round">fitness_center</span>
-      <span class="nav-label" data-i18n="practice">Practice</span>
-    </button>
-    <button class="nav-btn" onclick="switchView('extra',this)">
-      <span class="material-icons-round">more_horiz</span>
-      <span class="nav-label" data-i18n="extra">Extra</span>
-    </button>
-    <button class="nav-btn" onclick="switchView('profile',this)">
-      <span class="material-icons-round">person</span>
-      <span class="nav-label" data-i18n="profile">Profile</span>
-    </button>
-  </nav>
 </div>
 
-<!-- FOCUS MODE OVERLAY -->
-<div class="focus-overlay" id="focus-overlay">
-  <div class="focus-title">
-    <span class="material-icons-round">timer</span>
-    <span data-i18n="focus_mode">Focus Mode</span>
-  </div>
-  <div class="focus-timer" id="focus-timer">25:00</div>
-  <div class="focus-btns">
-    <button class="btn btn-ghost" onclick="skipFocus()" style="padding:.7rem 1.2rem;background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.4)">
-      <span data-i18n="skip">Skip</span>
-    </button>
-    <button class="btn" id="focus-start-btn" onclick="toggleFocus()" style="padding:.7rem 1.5rem;background:#fff;color:var(--purple)">
-      <span data-i18n="start">Start</span>
-    </button>
-  </div>
-</div>
-
-<!-- DAILY CHALLENGE OVERLAY -->
-<div class="overlay" id="ov-dc">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="material-icons-round">emoji_events</span>
-      <span data-i18n="daily_challenge">Daily Challenge</span>
-      <button class="icon-btn" onclick="closeOv('ov-dc')">
-        <span class="material-icons-round">close</span>
-      </button>
-    </div>
-    <div class="dc-content">
-      <div class="dc-emoji" id="dc-emoji">🎯</div>
-      <div class="dc-title" id="dc-title">—</div>
-      <div class="dc-desc" id="dc-desc">—</div>
-      <div class="dc-reward">
-        <span class="material-icons-round">stars</span>
-        <span>+20 XP</span>
-      </div>
-      <button class="btn" id="dc-action-btn" onclick="completeDailyChallenge()">
-        <span class="material-icons-round">check_circle</span>
-        <span data-i18n="mark_done">Mark as Done</span>
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- REACT/FEEDBACK OVERLAY -->
-<div class="overlay" id="ov-react">
-  <div class="modal" style="text-align:center">
-    <div class="modal-header">
-      <span class="material-icons-round">thumb_up</span>
-      <span data-i18n="feedback">Feedback</span>
-      <button class="icon-btn" onclick="closeOv('ov-react')">
-        <span class="material-icons-round">close</span>
-      </button>
-    </div>
-    <div id="react-step1">
-      <div class="react-question" data-i18n="how_was_lesson">How was this lesson?</div>
-      <div class="react-row">
-        <button class="react-btn" onclick="sendReact('happy')">😄</button>
-        <button class="react-btn" onclick="sendReact('mid')">😐</button>
-        <button class="react-btn" onclick="sendReact('sad')">😞</button>
-      </div>
-    </div>
-    <div id="react-step2" class="hidden">
-      <div class="react-thanks" data-i18n="thanks_feedback">Thanks for your feedback! 🎉</div>
-      <div class="react-next-btns">
-        <button class="btn" onclick="closeOv('ov-react');openExercise()">
-          <span class="material-icons-round">quiz</span>
-          <span data-i18n="exercise">Exercise</span>
-        </button>
-        <button class="btn" onclick="closeOv('ov-react');openMinigames()" style="background:linear-gradient(45deg,#405DE6,#5851D8);margin-top:.5rem">
-          <span class="material-icons-round">sports_esports</span>
-          <span data-i18n="minigames">Minigames</span>
-        </button>
-        <button class="btn btn-ghost" onclick="closeOv('ov-react')" style="margin-top:.5rem">
-          <span data-i18n="continue_learning">Continue Learning</span>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ACHIEVEMENT UNLOCKED TOAST -->
-<div class="ach-toast" id="ach-toast">
-  <div class="ach-toast-icon" id="ach-toast-icon">🏆</div>
-  <div class="ach-toast-text">
-    <div class="ach-toast-title" data-i18n="achievement_unlocked">Achievement Unlocked!</div>
-    <div class="ach-toast-name" id="ach-toast-name">—</div>
-  </div>
-</div>
-
-<!-- MENU OVERLAY -->
-<div class="overlay" id="ov-menu">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="material-icons-round">menu</span>
-      <span data-i18n="menu">Menu</span>
-      <button class="icon-btn" onclick="closeOv('ov-menu')">
-        <span class="material-icons-round">close</span>
-      </button>
-    </div>
-    <button class="menu-item" onclick="closeOv('ov-menu');openGuide()">
-      <span class="material-icons-round">menu_book</span>
-      <span data-i18n="guide">Guide</span>
-    </button>
-    <button class="menu-item" onclick="closeOv('ov-menu');openReport()">
-      <span class="material-icons-round">report_problem</span>
-      <span data-i18n="report">Report Issue</span>
-    </button>
-    <button class="menu-item" onclick="closeOv('ov-menu');forceRefresh()">
-      <span class="material-icons-round">refresh</span>
-      <span data-i18n="refresh_data">Refresh Data</span>
-    </button>
-    <button class="menu-item" onclick="closeOv('ov-menu');openDailyChallenge()">
-      <span class="material-icons-round">emoji_events</span>
-      <span data-i18n="daily_challenge">Daily Challenge</span>
-    </button>
-    <button class="menu-item danger" onclick="closeOv('ov-menu');doLogout()">
-      <span class="material-icons-round">logout</span>
-      <span data-i18n="logout">Logout</span>
-    </button>
-  </div>
-</div>
-
-<!-- GUIDE OVERLAY -->
+<!-- ═══════════ OVERLAY: GUIDE ═══════════ -->
 <div class="overlay" id="ov-guide">
   <div class="modal">
     <div class="modal-header">
-      <span class="material-icons-round">menu_book</span>
+      <span class="material-icons-round modal-icon">menu_book</span>
       <span data-i18n="guide">Guide</span>
-      <button class="icon-btn" onclick="closeOv('ov-guide')">
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-guide')">
         <span class="material-icons-round">close</span>
       </button>
     </div>
-    <div class="guide-list">
-      <div class="guide-item">
-        <span class="guide-icon">📚</span>
-        <div class="guide-text" data-i18n="guide_learn">Choose a module in Learn tab, then select unit and part to study.</div>
-      </div>
-      <div class="guide-item">
-        <span class="guide-icon">🎯</span>
-        <div class="guide-text" data-i18n="guide_focus">Focus Mode helps you concentrate for 25 minutes before studying.</div>
-      </div>
-      <div class="guide-item">
-        <span class="guide-icon">📝</span>
-        <div class="guide-text" data-i18n="guide_exercise">After studying, tap Exercise to test your understanding.</div>
-      </div>
-      <div class="guide-item">
-        <span class="guide-icon">🔖</span>
-        <div class="guide-text" data-i18n="guide_bookmark">Tap bookmark icon to save materials for later.</div>
-      </div>
-      <div class="guide-item">
-        <span class="guide-icon">🏆</span>
-        <div class="guide-text" data-i18n="guide_ach">Complete challenges to unlock achievements!</div>
-      </div>
-    </div>
+    <div id="feat-guide-content"></div>
   </div>
 </div>
 
-<!-- REPORT OVERLAY -->
+<!-- ═══════════ OVERLAY: REPORT ═══════════ -->
 <div class="overlay" id="ov-report">
   <div class="modal">
     <div class="modal-header">
-      <span class="material-icons-round">report_problem</span>
+      <span class="material-icons-round modal-icon">report_problem</span>
       <span data-i18n="report">Report Issue</span>
-      <button class="icon-btn" onclick="closeOv('ov-report')">
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-report')">
         <span class="material-icons-round">close</span>
       </button>
     </div>
-    <textarea id="report-ta" rows="4" placeholder="Describe the problem..." data-i18n-placeholder="report_placeholder"></textarea>
-    <button class="btn" onclick="sendReport()" style="background:#25D366;margin-top:.7rem">
-      <span class="material-icons-round">chat</span>
-      <span data-i18n="send_wa">Send via WhatsApp</span>
-    </button>
+    <div id="feat-report-content">
+      <textarea id="report-text" rows="4" data-i18n-placeholder="report_placeholder" placeholder="Describe the problem..."></textarea>
+      <button class="btn-primary btn-wa" onclick="JEC.reportIssue(document.getElementById('report-text').value)">
+        <span class="material-icons-round">chat</span>
+        <span data-i18n="send_wa">Send via WhatsApp</span>
+      </button>
+    </div>
   </div>
 </div>
 
-<!-- EXERCISE/MINIGAMES IFRAME -->
-<div id="gm-overlay">
+<!-- ═══════════ OVERLAY: EXERCISE/MINIGAMES IFRAME ═══════════ -->
+<div id="gm-overlay" class="gm-overlay">
   <div class="gm-header">
-    <button class="icon-btn" onclick="closeGM()">
+    <button class="icon-btn gm-close" onclick="JEC.closeGM()">
       <span class="material-icons-round">close</span>
     </button>
     <span class="gm-title" id="gm-title">Exercise</span>
@@ -515,13 +291,9 @@
   <iframe id="gm-frame" src="about:blank"></iframe>
 </div>
 
-<!-- TOAST -->
-<div class="toast" id="toast">
-  <span class="material-icons-round" id="toast-icon">check_circle</span>
-  <span id="toast-message">OK</span>
-</div>
-
-<script src="https://jec-46840.wasmer.app/j/c.js"></script>
-<script src="https://jec-46840.wasmer.app/j/j.js"></script>
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/gh/caksup/jec@main/j/c.js?v=1.02"></script>
+<script src="https://cdn.jsdelivr.net/gh/caksup/jec@main/j/i18n.js?v=1.02"></script>
+<script src="https://cdn.jsdelivr.net/gh/caksup/jec@main/j/j.js?v=1.02"></script>
 </body>
 </html>
