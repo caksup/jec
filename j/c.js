@@ -1,19 +1,26 @@
-// JEC v.1.07 | 15/08/2026 | j/c.js | Config + Registry (HOTFIX - Raw GitHub URLs)
+// JEC v.7.00 MODULAR | 16/08/2026 | j/c.js | Config + Registry
+// Arsitektur: 1 fitur = 1 file JS di folder j/f/
+// Sinkron: GitHub (data) + Apps Script (backend)
 
 window.JEC_CONFIG = {
   // ═══════════ META ═══════════
   APP_NAME: 'Jagat E Course',
   APP_SHORT: 'JEC',
-  APP_VERSION: '1.07',
+  APP_VERSION: '7.00',
+  APP_TAGLINE: 'Belajar bahasa Inggris itu mudah, seru, menyenangkan!',
 
-  // ═══════════ GITHUB PATHS (RAW GITHUB - NO CDN) ═══════════
+  // ═══════════ URL PATHS ═══════════
+  // Base URL Wasmer (untuk CSS + JS utama)
+  BASE_URL: 'https://jagatec.wasmer.app/',
+  
+  // Data JSON di GitHub (materi, vocab, dll)
   BASE_GH: 'https://raw.githubusercontent.com/caksup/jec/main/',
-  DATA: 'https://jagatec.wasmer.app/d/',
+  DATA: 'https://raw.githubusercontent.com/caksup/jec/main/d/',
   ASSETS: 'https://raw.githubusercontent.com/caksup/jec/main/a/',
-  JS: 'https://jagatec.wasmer.app/j/',
-  FEATURES_JS: 'https://jagatec.wasmer.app/j/f/',
+  JS: 'https://raw.githubusercontent.com/caksup/jec/main/j/',
+  FEATURES_JS: 'https://raw.githubusercontent.com/caksup/jec/main/j/f/',
 
-  // ═══════════ APPS SCRIPT ═══════════
+  // ═══════════ BACKEND: APPS SCRIPT ═══════════
   LOG: 'https://script.google.com/macros/s/AKfycbyX0L09UNGjNrlfuhcGsubD0HwkAv9NPwpnLCA4lBFE_9Z7BFR8_fGwDBwT-f7DtSc/exec',
 
   // ═══════════ PAGES ═══════════
@@ -21,35 +28,58 @@ window.JEC_CONFIG = {
   MINIGAMES: 'https://caksup.github.io/jec/p/minigames.html',
 
   // ═══════════ SETTINGS ═══════════
-  MFL_DEFAULT: 25,
+  MFL_DEFAULT: 25,              // Focus Learn Mode default duration (menit)
   DEFAULT_LANG: 'en',
-  DEFAULT_AVATAR: 'account_circle',
-  WA_ADMIN: '6285335913758',
-  DEBUG_MODE: true,  // Aktifkan untuk troubleshooting
+  DEFAULT_AVATAR: '🧑‍🎓',
+  WA_ADMIN: '6285335913758',    // WhatsApp admin untuk report
+  DEBUG_MODE: true,             // Aktifkan untuk troubleshooting
 
   // ═══════════ AVATAR OPTIONS ═══════════
   AVATARS: [
-    { id: 'default', icon: 'account_circle', en: 'Default',   id_label: 'Default' },
-    { id: 'boy',     icon: 'boy',            en: 'Boy',       id_label: 'Cowok' },
-    { id: 'girl',    icon: 'girl',           en: 'Girl',      id_label: 'Cewek' }
+    { id: 'default',  icon: '🧑‍🎓', en: 'Student',    id_label: 'Siswa' },
+    { id: 'boy',      icon: '👨‍🎓', en: 'Boy',        id_label: 'Cowok' },
+    { id: 'girl',     icon: '👩‍🎓', en: 'Girl',       id_label: 'Cewek' },
+    { id: 'teacher',  icon: '🧑‍🏫', en: 'Teacher',    id_label: 'Guru' },
+    { id: 'man',      icon: '👨‍💼', en: 'Business',   id_label: 'Pria Bisnis' },
+    { id: 'woman',    icon: '👩‍💼', en: 'Business',   id_label: 'Wanita Bisnis' },
+    { id: 'doctor',   icon: '👨‍⚕️', en: 'Doctor',     id_label: 'Dokter' },
+    { id: 'nurse',    icon: '👩‍⚕️', en: 'Nurse',      id_label: 'Perawat' },
+    { id: 'astronaut',icon: '👨‍🚀', en: 'Astronaut',  id_label: 'Astronot' },
+    { id: 'singer',   icon: '👨‍🎤', en: 'Singer',     id_label: 'Penyanyi' },
+    { id: 'lion',     icon: '🦁',  en: 'Lion',       id_label: 'Singa' },
+    { id: 'tiger',    icon: '🐯',  en: 'Tiger',      id_label: 'Harimau' },
+    { id: 'fox',      icon: '🦊',  en: 'Fox',        id_label: 'Rubah' },
+    { id: 'panda',    icon: '🐼',  en: 'Panda',      id_label: 'Panda' },
+    { id: 'bear',     icon: '🐻',  en: 'Bear',       id_label: 'Beruang' },
+    { id: 'unicorn',  icon: '🦄',  en: 'Unicorn',    id_label: 'Unicorn' }
   ],
 
   // ═══════════ REGISTRY FITUR MODULAR ═══════════
+  // 1 fitur = 1 file JS di folder j/f/
   FEATURES: {
-    splash:   { js: 'splash.js',   enabled: true,  en: 'Splash Screen',   id: 'Layar Pembuka' },
-    login:    { js: 'login.js',    enabled: true,  en: 'Login Page',      id: 'Halaman Login' },
-    header:   { js: 'header.js',   enabled: true,  en: 'Header & Clock',  id: 'Header & Jam' },
-    learn:    { js: 'learn.js',    enabled: true,  en: 'Learn Module',    id: 'Modul Belajar' },
-    practice: { js: 'practice.js', enabled: true,  en: 'Practice',        id: 'Latihan' },
-    extra:    { js: 'extra.js',    enabled: true,  en: 'Extra Tools',     id: 'Alat Tambahan' },
-    profile:  { js: 'profile.js',  enabled: true,  en: 'Profile',         id: 'Profil' },
-    focus:    { js: 'focus.js',    enabled: true,  en: 'Focus Mode',      id: 'Mode Fokus' },
-    dc:       { js: 'dc.js',       enabled: true,  en: 'Daily Challenge', id: 'Tantangan Harian' },
-    ach:      { js: 'ach.js',      enabled: true,  en: 'Achievements',    id: 'Pencapaian' },
-    bm:       { js: 'bm.js',       enabled: true,  en: 'Bookmarks',       id: 'Bookmark' },
-    notes:    { js: 'notes.js',    enabled: true,  en: 'Notes',           id: 'Catatan' },
-    logbook:  { js: 'logbook.js',  enabled: true,  en: 'Logbook',         id: 'Buku Catatan' },
-    react:    { js: 'react.js',    enabled: true,  en: 'Feedback',        id: 'Umpan Balik' },
+    // ── Built-in (di-handle oleh j.js, skip load external) ──
+    splash:   { js: 'splash.js',   enabled: true,  builtin: true, en: 'Splash Screen',    id: 'Layar Pembuka' },
+    login:    { js: 'login.js',    enabled: true,  builtin: true, en: 'Login Page',       id: 'Halaman Login' },
+    header:   { js: 'header.js',   enabled: true,  builtin: true, en: 'Header & Clock',   id: 'Header & Jam' },
+
+    // ── Priority 1: Load sebelum dashboard ──
+    learn:    { js: 'learn.js',    enabled: true,  priority: 1, en: 'Learn Module',     id: 'Modul Belajar' },
+
+    // ── Priority 2: Load setelah dashboard tampil ──
+    profile:  { js: 'profile.js',  enabled: true,  priority: 2, en: 'Profile',          id: 'Profil' },
+    focus:    { js: 'focus.js',    enabled: true,  priority: 2, en: 'Focus Mode',       id: 'Mode Fokus' },
+    dc:       { js: 'dc.js',       enabled: true,  priority: 2, en: 'Daily Challenge',  id: 'Tantangan Harian' },
+    ach:      { js: 'ach.js',      enabled: true,  priority: 2, en: 'Achievements',     id: 'Pencapaian' },
+
+    // ── Priority 3: Lazy load (on-demand) ──
+    practice: { js: 'practice.js', enabled: true,  priority: 3, en: 'Practice',         id: 'Latihan' },
+    extra:    { js: 'extra.js',    enabled: true,  priority: 3, en: 'Extra Tools',      id: 'Alat Tambahan' },
+    bm:       { js: 'bm.js',       enabled: true,  priority: 3, en: 'Bookmarks',        id: 'Bookmark' },
+    notes:    { js: 'notes.js',    enabled: true,  priority: 3, en: 'Notes',            id: 'Catatan' },
+    logbook:  { js: 'logbook.js',  enabled: true,  priority: 3, en: 'Logbook',          id: 'Buku Catatan' },
+    react:    { js: 'react.js',    enabled: true,  priority: 3, en: 'Feedback',         id: 'Umpan Balik' },
+
+    // ── Disabled (Maintenance Mode) ──
     tts:      { js: 'tts.js',      enabled: false, en: 'Text-to-Speech',  id: 'Text-to-Speech' },
     exercise: { js: 'exercise.js', enabled: false, en: 'Exercise',        id: 'Latihan Soal' },
     games:    { js: 'games.js',    enabled: false, en: 'Minigames',       id: 'Minigames' }
@@ -57,23 +87,25 @@ window.JEC_CONFIG = {
 
   // ═══════════ BILINGUAL MESSAGES ═══════════
   I18N: {
-    maintenance:    { en: '🛠️ Maintenance Service', id: '🛠️ Dalam Perbaikan' },
-    under_construction: { en: 'This feature is currently being developed. Please check back later.', id: 'Fitur ini sedang dalam pengembangan. Silakan kembali lagi nanti.' },
-    error_load:     { en: '⚠️ Under Repair', id: '⚠️ Sedang Diperbaiki' },
-    error_desc:     { en: 'This feature encountered an error and is temporarily unavailable.', id: 'Fitur ini mengalami kesalahan dan sementara tidak tersedia.' },
-    coming_soon:    { en: 'Coming Soon', id: 'Segera Hadir' },
-    ach_unlocked:   { en: 'Achievement Unlocked!', id: 'Pencapaian Terbuka!' },
-    dc_complete:    { en: 'Daily Challenge Completed!', id: 'Tantangan Harian Selesai!' },
-    xp_earned:      { en: 'XP Earned', id: 'XP Didapat' }
+    maintenance:        { en: '🛠️ Maintenance Service',  id: '🛠️ Dalam Perbaikan' },
+    under_construction: { en: 'This feature is currently being developed.', id: 'Fitur ini sedang dalam pengembangan.' },
+    error_load:         { en: '⚠️ Under Repair',         id: '⚠️ Sedang Diperbaiki' },
+    error_desc:         { en: 'This feature encountered an error.', id: 'Fitur ini mengalami kesalahan.' },
+    coming_soon:        { en: 'Coming Soon',             id: 'Segera Hadir' },
+    ach_unlocked:       { en: 'Achievement Unlocked!',   id: 'Pencapaian Terbuka!' },
+    dc_complete:        { en: 'Daily Challenge Completed!', id: 'Tantangan Harian Selesai!' },
+    xp_earned:          { en: 'XP Earned',               id: 'XP Didapat' },
+    flm_complete:       { en: 'Focus session completed!', id: 'Sesi fokus selesai!' },
+    flm_exit_confirm:   { en: 'Exit Focus Learn Mode?',  id: 'Keluar Mode Fokus?' }
   },
 
-  // ═══════════ MODULE ICONS ═══════════
+  // ═══════════ MODULE ICONS (5 modul JEC) ═══════════
   MODULES: {
-    spe: { icon: 'record_voice_over', en: 'Speaking',   id: 'Speaking' },
-    voc: { icon: 'translate',         en: 'Vocabulary', id: 'Kosakata' },
-    gra: { icon: 'edit_note',         en: 'Grammar',    id: 'Tata Bahasa' },
-    wri: { icon: 'draw',              en: 'Writing',    id: 'Menulis' },
-    lis: { icon: 'hearing',           en: 'Listening',  id: 'Mendengarkan' }
+    spe: { icon: 'record_voice_over', en: 'Speaking',    id: 'Speaking' },
+    voc: { icon: 'translate',          en: 'Vocabulary',  id: 'Kosakata' },
+    gra: { icon: 'edit_note',          en: 'Grammar',     id: 'Tata Bahasa' },
+    wri: { icon: 'draw',               en: 'Writing',     id: 'Menulis' },
+    lis: { icon: 'hearing',            en: 'Listening',   id: 'Mendengarkan' }
   },
 
   // ═══════════ ACHIEVEMENTS (44 BADGES) ═══════════
@@ -136,29 +168,24 @@ window.JEC_CONFIG = {
     // ─── CATEGORY 8: SPEAKING & LISTENING (3) ───
     { id:'speak_10',      icon:'graphic_eq',        en:'Speaker',          id:'Pembicara',         en_d:'Record 10 speaking clips',          id_d:'Rekam 10 klip berbicara',             cond:function(s){return s.speakCount>=10}, xp:75 },
     { id:'speak_50',      icon:'surround_sound',    en:'Chatterbox',       id:'Periang',           en_d:'Record 50 speaking clips',          id_d:'Rekam 50 klip berbicara',             cond:function(s){return s.speakCount>=50}, xp:200 },
-    { id:'listen_20',     icon:'headphones',        en:'Active Listener',  id:'Pendengar Aktif',   en_d:'Listen to 20 audio materials',      id_d:'Dengarkan 20 materi audio',           cond:function(s){return s.listenCount>=20}, xp:50 },
-
-    // ─── CATEGORY 9: SPECIAL/RARE (3) ───
-    { id:'early_bird',    icon:'wb_sunny',          en:'Early Bird',       id:'Bangun Pagi',       en_d:'Study before 6 AM',                 id_d:'Belajar sebelum jam 6 pagi',          cond:function(s){return s.earlyBird}, xp:25 },
-    { id:'night_owl',     icon:'dark_mode',         en:'Night Owl',        id:'Begadang',          en_d:'Study after 10 PM',                 id_d:'Belajar setelah jam 10 malam',        cond:function(s){return s.nightOwl}, xp:25 },
-    { id:'marathon',      icon:'directions_run',    en:'Marathon Learner', id:'Pelajar Maraton',   en_d:'Study 3+ hours in one day',         id_d:'Belajar 3+ jam dalam satu hari',      cond:function(s){return s.marathonDay}, xp:100 }
+    { id:'listen_20',     icon:'headphones',        en:'Active Listener',  id:'Pendengar Aktif',   en_d:'Listen to 20 audio materials',      id_d:'Dengarkan 20 materi audio',           cond:function(s){return s.listenCount>=20}, xp:50 }
   ],
 
-  // ═══════════ DAILY CHALLENGES (AUTO-COMPLETE) ═══════════
+  // ═══════════ DAILY CHALLENGES (14 TIPE) ═══════════
   DAILY_CHALLENGES: [
-    { icon:'graphic_eq',     en:'Speak It Out',    id:'Bicara Keras',       en_d:'Record 1 speaking clip today',         id_d:'Rekam 1 klip speaking hari ini',         trigger:'speak',    xp:20 },
-    { icon:'translate',      en:'Word Hunter',     id:'Pemburu Kata',       en_d:'Complete 1 Vocabulary part',             id_d:'Selesaikan 1 bagian Kosakata',           trigger:'voc_part', xp:20 },
-    { icon:'draw',           en:'Write It Down',   id:'Tulislah',           en_d:'Submit 1 writing essay',                 id_d:'Kirim 1 esai writing',                   trigger:'writing',  xp:25 },
-    { icon:'hearing',        en:'Listen Up',       id:'Dengarkan',          en_d:'Listen to 1 Listening audio',            id_d:'Dengarkan 1 audio Listening',            trigger:'lis_part', xp:20 },
-    { icon:'quiz',           en:'Quiz Champion',   id:'Juara Kuis',         en_d:'Score 80+ in any quiz',                  id_d:'Skor 80+ di kuis mana pun',              trigger:'quiz_80',  xp:25 },
-    { icon:'autorenew',      en:'Review Master',   id:'Master Review',      en_d:'Re-open a completed material',           id_d:'Buka kembali materi yang sudah selesai', trigger:'review',   xp:15 },
-    { icon:'sticky_note_2',  en:'Note Taker',      id:'Pencatat',           en_d:'Write 1 note on any material',           id_d:'Tulis 1 catatan di materi mana pun',     trigger:'note',     xp:15 },
-    { icon:'timer',          en:'Focus Hero',      id:'Pahlawan Fokus',     en_d:'Complete 1 focus mode session',          id_d:'Selesaikan 1 sesi mode fokus',           trigger:'focus',    xp:20 },
-    { icon:'record_voice_over', en:'Say It Loud',  id:'Katakan Keras',      en_d:'Use TTS 3 times today',                  id_d:'Gunakan TTS 3 kali hari ini',            trigger:'tts_3',    xp:15 },
-    { icon:'bookmark_add',   en:'Save for Later',  id:'Simpan Nanti',       en_d:'Bookmark 1 new material today',          id_d:'Bookmark 1 materi baru hari ini',        trigger:'bookmark', xp:15 },
-    { icon:'emoji_events',   en:'Perfect Shot',    id:'Tembakan Sempurna',  en_d:'Get 100% on any quiz today',             id_d:'Dapatkan 100% di kuis mana pun',         trigger:'quiz_100', xp:30 },
-    { icon:'school',         en:'Multi-Module',    id:'Multi-Modul',        en_d:'Study 2 different modules today',        id_d:'Belajar 2 modul berbeda hari ini',       trigger:'multi_mod',xp:25 },
-    { icon:'local_fire_department', en:'Streak Keeper', id:'Penjaga Streak', en_d:'Maintain your login streak today',     id_d:'Pertahankan streak login hari ini',      trigger:'login',    xp:10 },
-    { icon:'update',         en:'Comeback Kid',    id:'Si Comeback',        en_d:'Login after 2+ days away',               id_d:'Login setelah 2+ hari absen',            trigger:'comeback', xp:20 }
+    { icon:'graphic_eq',        en:'Speak It Out',    id:'Bicara Keras',       en_d:'Record 1 speaking clip today',         id_d:'Rekam 1 klip speaking hari ini',         trigger:'speak',    xp:20 },
+    { icon:'translate',         en:'Word Hunter',     id:'Pemburu Kata',       en_d:'Complete 1 Vocabulary part',             id_d:'Selesaikan 1 bagian Kosakata',           trigger:'voc_part', xp:20 },
+    { icon:'draw',              en:'Write It Down',   id:'Tulislah',           en_d:'Submit 1 writing essay',                 id_d:'Kirim 1 esai writing',                   trigger:'writing',  xp:25 },
+    { icon:'hearing',           en:'Listen Up',       id:'Dengarkan',          en_d:'Listen to 1 Listening audio',            id_d:'Dengarkan 1 audio Listening',            trigger:'lis_part', xp:20 },
+    { icon:'quiz',              en:'Quiz Champion',   id:'Juara Kuis',         en_d:'Score 80+ in any quiz',                  id_d:'Skor 80+ di kuis mana pun',              trigger:'quiz_80',  xp:25 },
+    { icon:'autorenew',         en:'Review Master',   id:'Master Review',      en_d:'Re-open a completed material',           id_d:'Buka kembali materi yang sudah selesai', trigger:'review',   xp:15 },
+    { icon:'sticky_note_2',     en:'Note Taker',      id:'Pencatat',           en_d:'Write 1 note on any material',           id_d:'Tulis 1 catatan di materi mana pun',     trigger:'note',     xp:15 },
+    { icon:'timer',             en:'Focus Hero',      id:'Pahlawan Fokus',     en_d:'Complete 1 focus mode session',          id_d:'Selesaikan 1 sesi mode fokus',           trigger:'focus',    xp:20 },
+    { icon:'record_voice_over', en:'Say It Loud',     id:'Katakan Keras',      en_d:'Use TTS 3 times today',                  id_d:'Gunakan TTS 3 kali hari ini',            trigger:'tts_3',    xp:15 },
+    { icon:'bookmark_add',      en:'Save for Later',  id:'Simpan Nanti',       en_d:'Bookmark 1 new material today',          id_d:'Bookmark 1 materi baru hari ini',        trigger:'bookmark', xp:15 },
+    { icon:'emoji_events',      en:'Perfect Shot',    id:'Tembakan Sempurna',  en_d:'Get 100% on any quiz today',             id_d:'Dapatkan 100% di kuis mana pun',         trigger:'quiz_100', xp:30 },
+    { icon:'school',            en:'Multi-Module',    id:'Multi-Modul',        en_d:'Study 2 different modules today',        id_d:'Belajar 2 modul berbeda hari ini',       trigger:'multi_mod',xp:25 },
+    { icon:'local_fire_department', en:'Streak Keeper', id:'Penjaga Streak',  en_d:'Maintain your login streak today',     id_d:'Pertahankan streak login hari ini',      trigger:'login',    xp:10 },
+    { icon:'update',            en:'Comeback Kid',    id:'Si Comeback',        en_d:'Login after 2+ days away',               id_d:'Login setelah 2+ hari absen',            trigger:'comeback', xp:20 }
   ]
 };
