@@ -3,6 +3,13 @@
 window.JEC_I18N = {
   en: {
     // Tambahan di bagian 'en':
+units: 'units',
+parts: 'parts',
+locked: 'Locked',
+perfect_score: 'Perfect Score!',
+your_score: 'Your score',
+audio_error: 'Failed to play audio',
+    // Tambahan di bagian 'en':
 invalid_module: 'Invalid module',
 invalid_unit: 'Invalid unit',
 invalid_part: 'Invalid part',
@@ -89,6 +96,13 @@ fill_all_fields: 'Please fill all fields',
     }
   },
   id: {
+    // Tambahan di bagian 'id':
+units: 'unit',
+parts: 'bagian',
+locked: 'Terkunci',
+perfect_score: 'Skor Sempurna!',
+your_score: 'Skor Anda',
+audio_error: 'Gagal memutar audio',
     // Tambahan di bagian 'id':
 invalid_module: 'Modul tidak valid',
 invalid_unit: 'Unit tidak valid',
