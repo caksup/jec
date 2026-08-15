@@ -1,4 +1,4 @@
-<!--15-06-->
+<!--15-22-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/caksup/jec@main/s/s.css?v=2.0">
+<link rel="stylesheet" href="https://jec-46840.wasmer.app/s/s.css">
 </head>
 <body>
 
@@ -19,6 +19,12 @@
   <div class="logo">JEC</div>
   <div class="name">JAGAT E COURSE</div>
   <div class="loader"></div>
+</div>
+
+<!-- DAILY CHALLENGE BALLOON -->
+<div id="dc-balloon" onclick="openDailyChallenge();this.classList.remove('on')">
+  <span class="material-icons-round">emoji_events</span>
+  <span class="dc-text">Daily Challenge!</span>
 </div>
 
 <!-- LOGIN SCREEN -->
@@ -63,7 +69,15 @@
         </button>
       </div>
     </div>
-    <div class="datetime" id="datetime">—</div>
+    <div class="datetime-row">
+      <span class="datetime" id="datetime">—</span>
+      <span class="online-sep">|</span>
+      <span class="online-count">
+        <span class="online-dot"></span>
+        <span id="online-num">0</span>
+        <span data-i18n="online">online</span>
+      </span>
+    </div>
     <div class="greeting">
       <span id="greet-text" data-i18n="hello">Hello</span>, 
       <span class="name" id="user-name">—</span> 👋
@@ -98,10 +112,15 @@
       </div>
       
       <div class="hidden" id="materi-wrap">
-        <button class="back-btn" onclick="showParts(currentModule,currentUnitId)">
-          <span class="material-icons-round" style="font-size:16px">arrow_back</span>
-          <span data-i18n="back">Back</span>
-        </button>
+        <div class="materi-top-bar">
+          <button class="back-btn" onclick="showParts(currentModule,currentUnitId)" style="margin-bottom:0">
+            <span class="material-icons-round" style="font-size:16px">arrow_back</span>
+            <span data-i18n="back">Back</span>
+          </button>
+          <button class="bookmark-btn" id="bookmark-btn" onclick="toggleBookmark()">
+            <span class="material-icons-round" id="bookmark-icon">bookmark_border</span>
+          </button>
+        </div>
         <div class="materi-header">
           <div class="materi-title" id="materi-title">—</div>
           <button class="audio-btn" onclick="playAudio()" id="audio-btn">
@@ -175,6 +194,17 @@
           </div>
         </div>
       </div>
+      
+      <!-- ACHIEVEMENTS -->
+      <div class="profile-card">
+        <div class="section-title" style="margin-bottom:.7rem">
+          <span class="material-icons-round" style="font-size:18px">emoji_events</span>
+          <span data-i18n="achievements">Achievements</span>
+          <span class="ach-count" id="ach-count">0/8</span>
+        </div>
+        <div class="ach-grid" id="ach-grid"></div>
+      </div>
+      
       <div class="profile-card">
         <div class="section-title" style="margin-bottom:.7rem">
           <span class="material-icons-round" style="font-size:18px">info</span>
@@ -237,6 +267,68 @@
   </div>
 </div>
 
+<!-- DAILY CHALLENGE OVERLAY -->
+<div class="overlay" id="ov-dc">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round">emoji_events</span>
+      <span data-i18n="daily_challenge">Daily Challenge</span>
+      <button class="icon-btn" onclick="closeOv('ov-dc')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="dc-content">
+      <div class="dc-emoji" id="dc-emoji">🎯</div>
+      <div class="dc-title" id="dc-title">—</div>
+      <div class="dc-desc" id="dc-desc">—</div>
+      <div class="dc-reward">
+        <span class="material-icons-round">stars</span>
+        <span>+20 XP</span>
+      </div>
+      <button class="btn" id="dc-action-btn" onclick="completeDailyChallenge()">
+        <span class="material-icons-round">check_circle</span>
+        <span data-i18n="mark_done">Mark as Done</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- REACT/FEEDBACK OVERLAY -->
+<div class="overlay" id="ov-react">
+  <div class="modal" style="text-align:center">
+    <div class="modal-header">
+      <span class="material-icons-round">thumb_up</span>
+      <span data-i18n="feedback">Feedback</span>
+      <button class="icon-btn" onclick="closeOv('ov-react')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div id="react-step1">
+      <div class="react-question" data-i18n="how_was_lesson">How was this lesson?</div>
+      <div class="react-row">
+        <button class="react-btn" onclick="sendReact('happy')">😄</button>
+        <button class="react-btn" onclick="sendReact('mid')">😐</button>
+        <button class="react-btn" onclick="sendReact('sad')">😞</button>
+      </div>
+    </div>
+    <div id="react-step2" class="hidden">
+      <div class="react-thanks" data-i18n="thanks_feedback">Thanks for your feedback! 🎉</div>
+      <button class="btn" onclick="closeOv('ov-react')" style="margin-top:1rem">
+        <span data-i18n="continue">Continue</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ACHIEVEMENT UNLOCKED TOAST -->
+<div class="ach-toast" id="ach-toast">
+  <div class="ach-toast-icon" id="ach-toast-icon">🏆</div>
+  <div class="ach-toast-text">
+    <div class="ach-toast-title" data-i18n="achievement_unlocked">Achievement Unlocked!</div>
+    <div class="ach-toast-name" id="ach-toast-name">—</div>
+  </div>
+</div>
+
 <!-- MENU OVERLAY -->
 <div class="overlay" id="ov-menu">
   <div class="modal">
@@ -251,6 +343,10 @@
       <span class="material-icons-round">refresh</span>
       <span data-i18n="refresh_data">Refresh Data</span>
     </button>
+    <button class="menu-item" onclick="closeOv('ov-menu');openDailyChallenge()">
+      <span class="material-icons-round">emoji_events</span>
+      <span data-i18n="daily_challenge">Daily Challenge</span>
+    </button>
     <button class="menu-item danger" onclick="closeOv('ov-menu');doLogout()">
       <span class="material-icons-round">logout</span>
       <span data-i18n="logout">Logout</span>
@@ -264,7 +360,7 @@
   <span id="toast-message">OK</span>
 </div>
 
-<script src="https://cdn.jsdelivr.net/gh/caksup/jec@main/j/c.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/caksup/jec@main/j/j.js?v=2.0"></script>
+<script src="https://jec-46840.wasmer.app/j/j/c.js"></script>
+<script src="https://jec-46840.wasmer.app/j/j.js"></script>
 </body>
 </html>
