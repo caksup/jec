@@ -304,3 +304,11 @@ JEC_UI.canNavigate = function(target) {
   const allowed = ['learn-unit', 'learn-part', 'learn-materi'];
   return allowed.includes(target);
 };
+// ═══════════ SHOW LOGIN PAGE ═══════════
+JEC_UI.showLoginPage = function() {
+  const loginPage = document.getElementById('feat-login');
+  const dashboard = document.getElementById('dashboard');
+  
+  if (loginPage) loginPage.classList.remove('hidden');
+  if (dashboard) dashboard.classList.remove('active');
+};
