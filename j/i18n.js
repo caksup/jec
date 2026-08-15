@@ -3,6 +3,10 @@
 window.JEC_I18N = {
   en: {
     // Tambahan di bagian 'en':
+no_units: 'No units available',
+write_notes: 'Write your notes here...',
+flm_locked_nav: 'Navigation locked during Focus Mode',
+    // Tambahan di bagian 'en':
 loading: 'Signing in...',
 loading_sub: 'Please wait a moment',
 motivation: 'Learning English is easy and fun!',
@@ -67,6 +71,10 @@ fill_all_fields: 'Please fill all fields',
     }
   },
   id: {
+    // Tambahan di bagian 'id':
+no_units: 'Tidak ada unit tersedia',
+write_notes: 'Tulis catatan Anda di sini...',
+flm_locked_nav: 'Navigasi dikunci selama Mode Fokus',
     // Tambahan di bagian 'id':
 loading: 'Sedang masuk...',
 loading_sub: 'Mohon tunggu sebentar',
