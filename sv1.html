@@ -1,167 +1,27 @@
+<!--15-06-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#833AB4">
 <title>JEC - Jagat E Course</title>
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<script src="https://jec-46840.wasmer.app/j/c.js"></script>
-  <link rel="stylesheet" href="https://jec-46840.wasmer.app/s/s.css">
-<style>
-:root{--neon:#00e676;--neon2:#00ff88;--danger:#ff5252;--warn:#ffb300;--blue:#40c4ff;--purple:#e040fb;--bg1:#02120a;--bg2:#042417;--glass:rgba(0,230,118,.06);--glass2:rgba(0,230,118,.10);--brd:rgba(0,230,118,.25);--text:#d8ffe9;--muted:#7fbf9f;--shadow:0 8px 32px rgba(0,0,0,.35);}
-[data-theme="light"]{--bg1:#eef7f0;--bg2:#e0f2e7;--glass:rgba(255,255,255,.6);--glass2:rgba(255,255,255,.8);--brd:rgba(0,150,80,.25);--text:#0c3b24;--muted:#3f7a5c;--shadow:0 8px 24px rgba(0,80,40,.12);}
-*{margin:0;padding:0;box-sizing:border-box;}
-html,body{height:100%;overflow:hidden;}
-body{font-family:'Inter',sans-serif;color:var(--text);line-height:1.6;background:radial-gradient(1200px 600px at 10% -10%,rgba(0,230,118,.16),transparent 60%),linear-gradient(160deg,var(--bg1),var(--bg2) 45%,var(--bg1));background-attachment:fixed;}
-#app{position:fixed;inset:0;z-index:1;overflow:hidden;}
-
-/* SPLASH */
-#splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg1);gap:1rem;transition:opacity .5s;}
-#splash.hide{opacity:0;pointer-events:none;}
-#splash .logo{font-size:4rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--neon);animation:pulse 1.5s ease-in-out infinite;}
-#splash .name{font-size:1.2rem;color:var(--muted);letter-spacing:.1em;}
-@keyframes pulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.1);opacity:.8;}}
-
-/* LOGIN */
-#login{position:fixed;inset:0;z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:var(--bg1);}
-#login.active{display:flex;}
-.login-card{background:var(--glass);backdrop-filter:blur(14px);border:1px solid var(--brd);border-radius:20px;padding:2rem;max-width:400px;width:100%;box-shadow:var(--shadow);}
-.login-logo{text-align:center;margin-bottom:1.5rem;}
-.login-logo .big{font-size:2.5rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--neon);}
-.login-logo .sub{font-size:.85rem;color:var(--muted);}
-.form-group{margin-bottom:1rem;}
-label{display:block;margin-bottom:.4rem;font-size:.8rem;font-weight:500;color:var(--muted);}
-input{width:100%;padding:.9rem 1rem;border:1px solid var(--brd);border-radius:12px;background:var(--glass2);color:var(--text);font-size:.95rem;font-family:inherit;}
-input:focus{outline:none;border-color:var(--neon);}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.9rem 1.5rem;border:none;border-radius:12px;font-size:.9rem;font-weight:600;cursor:pointer;color:#02120a;background:linear-gradient(135deg,var(--neon),var(--neon2));transition:transform .15s;width:100%;}
-.btn:active{transform:scale(.97);}
-.btn-ghost{background:var(--glass2);color:var(--text);border:1px solid var(--brd);}
-.error-msg{color:var(--danger);font-size:.85rem;margin-top:.5rem;display:none;}
-.error-msg.show{display:block;}
-
-/* DASHBOARD */
-#dashboard{position:fixed;inset:0;display:none;flex-direction:column;overflow:hidden;}
-#dashboard.active{display:flex;}
-.header{padding:.8rem 1rem;background:var(--glass);backdrop-filter:blur(14px);border-bottom:1px solid var(--brd);flex-shrink:0;}
-.header-top{display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-bottom:.3rem;}
-.course-name{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--neon);font-size:.95rem;}
-.header-actions{display:flex;gap:.3rem;align-items:center;}
-.icon-btn{background:var(--glass2);border:1px solid var(--brd);color:var(--text);padding:.4rem;border-radius:8px;cursor:pointer;font-size:.75rem;display:inline-flex;align-items:center;gap:.2rem;}
-.icon-btn .material-icons{font-size:16px;}
-.lang-toggle{font-family:'JetBrains Mono',monospace;font-weight:700;}
-.datetime{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);text-align:right;}
-.greeting{font-size:1.05rem;font-weight:600;margin-top:.3rem;}
-.greeting .name{color:var(--neon);}
-
-/* CONTENT AREA */
-.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem;padding-bottom:80px;}
-.view{display:none;}
-.view.active{display:block;}
-
-/* BOTTOM NAV */
-.bottom-nav{position:absolute;bottom:0;left:0;right:0;display:flex;background:var(--glass);backdrop-filter:blur(16px);border-top:1px solid var(--brd);padding:.4rem .2rem calc(.4rem + env(safe-area-inset-bottom));z-index:50;}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--muted);font-size:.65rem;font-weight:600;cursor:pointer;padding:.35rem 0;border-radius:10px;}
-.nav-btn .material-icons{font-size:22px;transition:all .2s;}
-.nav-btn.active{color:var(--neon);}
-.nav-btn.active .material-icons{transform:scale(1.15);}
-.nav-label{display:none;}
-.nav-btn.active .nav-label{display:block;}
-
-/* LEARN CARDS */
-.card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.9rem;}
-.learn-card{background:var(--glass);border:1px solid var(--brd);border-radius:16px;padding:1.2rem;text-align:center;cursor:pointer;transition:transform .15s;}
-.learn-card:active{transform:scale(.97);}
-.learn-card .icon{font-size:2.5rem;margin-bottom:.4rem;}
-.learn-card .title{font-weight:600;margin-bottom:.2rem;}
-.learn-card .count{font-size:.75rem;color:var(--muted);}
-
-/* UNIT LIST */
-.section-title{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;color:var(--neon);margin-bottom:.9rem;display:flex;align-items:center;gap:.4rem;}
-.back-btn{background:var(--glass2);border:1px solid var(--brd);color:var(--text);padding:.4rem .7rem;border-radius:8px;cursor:pointer;font-size:.8rem;display:inline-flex;align-items:center;gap:.3rem;margin-bottom:.9rem;}
-.unit-list{display:flex;flex-direction:column;gap:.6rem;}
-.unit-item{background:var(--glass);border:1px solid var(--brd);border-radius:12px;padding:1rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:transform .15s;}
-.unit-item:active{transform:scale(.98);}
-.unit-item.locked{opacity:.6;cursor:not-allowed;}
-.unit-item.locked::after{content:'🔒';}
-.unit-title{font-weight:600;}
-.unit-count{font-size:.75rem;color:var(--muted);}
-
-/* PART LIST */
-.part-list{display:flex;flex-direction:column;gap:.6rem;}
-.part-item{background:var(--glass);border:1px solid var(--brd);border-radius:12px;padding:.9rem 1rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
-.part-item.locked{opacity:.6;cursor:not-allowed;}
-.part-item.done{border-left:3px solid var(--neon);}
-.part-status{font-size:.75rem;color:var(--muted);}
-.part-status.done{color:var(--neon);}
-
-/* MATERI VIEW */
-.materi-header{background:var(--glass);border:1px solid var(--brd);border-radius:14px;padding:1rem;margin-bottom:1rem;}
-.materi-title{font-weight:700;font-size:1.05rem;margin-bottom:.4rem;}
-.materi-content{background:var(--glass2);border:1px solid var(--brd);border-radius:12px;padding:1.2rem;font-size:.95rem;line-height:1.8;white-space:pre-wrap;}
-.vocab-line{display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px dashed var(--brd);}
-.vocab-line:last-child{border:none;}
-.vocab-en{font-weight:600;color:var(--neon);}
-.vocab-id{color:var(--muted);}
-.audio-btn{background:linear-gradient(135deg,var(--blue),#18a9e8);color:#00131c;padding:.5rem .9rem;border-radius:10px;border:none;cursor:pointer;font-size:.8rem;font-weight:600;display:inline-flex;align-items:center;gap:.3rem;margin-top:.6rem;}
-.audio-btn:active{transform:scale(.95);}
-.quiz-section{margin-top:1.2rem;background:var(--glass);border:1px solid var(--brd);border-radius:14px;padding:1rem;}
-.quiz-question{font-weight:600;margin-bottom:.7rem;}
-.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
-.quiz-option{background:var(--glass2);border:1px solid var(--brd);border-radius:10px;padding:.8rem;cursor:pointer;transition:all .15s;}
-.quiz-option:active{transform:scale(.98);}
-.quiz-option.correct{background:rgba(0,230,118,.2);border-color:var(--neon);}
-.quiz-option.wrong{background:rgba(255,82,82,.2);border-color:var(--danger);}
-.quiz-option.selected{border-color:var(--blue);background:rgba(64,196,255,.15);}
-
-/* FOCUS MODE */
-.focus-overlay{position:fixed;inset:0;background:rgba(0,10,5,.85);backdrop-filter:blur(8px);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;}
-.focus-overlay.active{display:flex;}
-.focus-title{font-size:1.1rem;color:var(--neon);font-weight:600;}
-.focus-timer{font-family:'JetBrains Mono',monospace;font-size:4rem;font-weight:700;color:var(--text);}
-.focus-btns{display:flex;gap:.7rem;}
-
-/* PRACTICE */
-.practice-card{background:var(--glass);border:1px solid var(--brd);border-radius:14px;padding:1.2rem;margin-bottom:.8rem;cursor:pointer;}
-.practice-card .icon{font-size:1.8rem;margin-bottom:.3rem;}
-.practice-card .title{font-weight:600;margin-bottom:.2rem;}
-.practice-card .desc{font-size:.8rem;color:var(--muted);}
-
-/* EXTRA */
-.extra-item{background:var(--glass);border:1px solid var(--brd);border-radius:12px;padding:1rem;display:flex;align-items:center;gap:.8rem;cursor:pointer;margin-bottom:.6rem;}
-.extra-item .icon{font-size:1.8rem;}
-.extra-item .info{flex:1;}
-.extra-item .title{font-weight:600;}
-.extra-item .desc{font-size:.78rem;color:var(--muted);}
-
-/* PROFILE */
-.profile-card{background:var(--glass);border:1px solid var(--brd);border-radius:16px;padding:1.3rem;margin-bottom:.9rem;}
-.profile-avatar{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--neon),var(--neon2));display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#02120a;margin:0 auto .7rem;}
-.profile-name{text-align:center;font-weight:700;font-size:1.1rem;}
-.profile-id{text-align:center;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--muted);margin-bottom:1rem;}
-.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.9rem;}
-.stat-box{background:var(--glass2);border:1px solid var(--brd);border-radius:10px;padding:.8rem;text-align:center;}
-.stat-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.3rem;color:var(--neon);}
-.stat-lbl{font-size:.72rem;color:var(--muted);}
-
-/* TOAST */
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--glass);backdrop-filter:blur(14px);border:1px solid var(--brd);color:var(--text);padding:.8rem 1.2rem;border-radius:12px;display:flex;align-items:center;gap:.5rem;z-index:300;transition:transform .3s;max-width:90%;}
-.toast.show{transform:translateX(-50%) translateY(0);}
-.toast.success{border-left:4px solid var(--neon);}
-.toast.error{border-left:4px solid var(--danger);}
-
-.hidden{display:none!important;}
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/caksup/jec@main/s/s.css?v=2.0">
 </head>
 <body>
 
-<!-- SPLASH -->
+<!-- SPLASH SCREEN -->
 <div id="splash">
   <div class="logo">JEC</div>
   <div class="name">JAGAT E COURSE</div>
+  <div class="loader"></div>
 </div>
 
-<!-- LOGIN -->
+<!-- LOGIN SCREEN -->
 <div id="login">
   <div class="login-card">
     <div class="login-logo">
@@ -169,18 +29,19 @@ input:focus{outline:none;border-color:var(--neon);}
       <div class="sub" data-i18n="login_subtitle">Student Portal</div>
     </div>
     <div class="form-group">
-      <label data-i18n="student_id">Student ID</label>
-      <input type="text" id="login-id" placeholder="260101" autocomplete="off">
+      <label><span class="material-icons-round" style="font-size:12px;vertical-align:middle">badge</span> <span data-i18n="student_id">Student ID</span></label>
+      <input type="text" id="login-id" placeholder="260101" autocomplete="username">
     </div>
     <div class="form-group">
-      <label>PIN</label>
-      <input type="password" id="login-pin" placeholder="••••" autocomplete="off">
+      <label><span class="material-icons-round" style="font-size:12px;vertical-align:middle">lock</span> PIN</label>
+      <input type="password" id="login-pin" placeholder="••••" autocomplete="current-password">
     </div>
     <div class="error-msg" id="login-error"></div>
-    <button class="btn" onclick="doLogin()" data-i18n="login_btn">Login</button>
-    <div style="text-align:center;margin-top:1rem;font-size:.78rem;color:var(--muted);" data-i18n="login_footer">
-      Forgot PIN? Contact admin.
-    </div>
+    <button class="btn" onclick="doLogin()">
+      <span class="material-icons-round">login</span>
+      <span data-i18n="login_btn">SIGN IN</span>
+    </button>
+    <div class="login-footer" data-i18n="login_footer">Forgot PIN? Contact admin.</div>
   </div>
 </div>
 
@@ -188,46 +49,73 @@ input:focus{outline:none;border-color:var(--neon);}
 <div id="dashboard">
   <header class="header">
     <div class="header-top">
-      <div class="course-name" id="course-name">JEC</div>
+      <div class="course-name">
+        <span class="material-icons-round" style="font-size:20px">school</span>
+        <span id="course-name">JEC</span>
+      </div>
       <div class="header-actions">
         <button class="icon-btn" onclick="toggleTheme()" title="Theme">
-          <span class="material-icons" id="theme-icon">light_mode</span>
+          <span class="material-icons-round" id="theme-icon">dark_mode</span>
         </button>
         <button class="icon-btn lang-toggle" onclick="toggleLang()" id="lang-btn">EN</button>
+        <button class="icon-btn" onclick="openMenu()" title="Menu">
+          <span class="material-icons-round">more_vert</span>
+        </button>
       </div>
     </div>
     <div class="datetime" id="datetime">—</div>
-    <div class="greeting"><span data-i18n="hello">Hello</span>, <span class="name" id="user-name">—</span> 👋</div>
+    <div class="greeting">
+      <span id="greet-text" data-i18n="hello">Hello</span>, 
+      <span class="name" id="user-name">—</span> 👋
+    </div>
   </header>
 
   <div class="content">
     <!-- LEARN VIEW -->
     <div class="view active" id="view-learn">
-      <div class="section-title"><span class="material-icons">school</span> <span data-i18n="learn">Learn</span></div>
+      <div class="section-title">
+        <span class="material-icons-round">school</span>
+        <span data-i18n="learn">Learn</span>
+      </div>
       <div class="card-grid" id="learn-cards"></div>
       
       <div class="hidden" id="unit-list-wrap">
-        <button class="back-btn" onclick="showLearnCards()"><span class="material-icons" style="font-size:16px;">arrow_back</span> <span data-i18n="back">Back</span></button>
+        <button class="back-btn" onclick="showLearnCards()">
+          <span class="material-icons-round" style="font-size:16px">arrow_back</span>
+          <span data-i18n="back">Back</span>
+        </button>
         <div class="section-title" id="unit-list-title">—</div>
         <div class="unit-list" id="unit-list"></div>
       </div>
       
       <div class="hidden" id="part-list-wrap">
-        <button class="back-btn" onclick="showUnits(currentModule)"><span class="material-icons" style="font-size:16px;">arrow_back</span> <span data-i18n="back">Back</span></button>
+        <button class="back-btn" onclick="showUnits(currentModule)">
+          <span class="material-icons-round" style="font-size:16px">arrow_back</span>
+          <span data-i18n="back">Back</span>
+        </button>
         <div class="section-title" id="part-list-title">—</div>
         <div class="part-list" id="part-list"></div>
       </div>
       
       <div class="hidden" id="materi-wrap">
-        <button class="back-btn" onclick="showParts(currentModule,currentUnitId)"><span class="material-icons" style="font-size:16px;">arrow_back</span> <span data-i18n="back">Back</span></button>
+        <button class="back-btn" onclick="showParts(currentModule,currentUnitId)">
+          <span class="material-icons-round" style="font-size:16px">arrow_back</span>
+          <span data-i18n="back">Back</span>
+        </button>
         <div class="materi-header">
           <div class="materi-title" id="materi-title">—</div>
-          <button class="audio-btn" onclick="playAudio()" id="audio-btn"><span class="material-icons" style="font-size:16px;">volume_up</span> <span data-i18n="listen">Listen</span></button>
+          <button class="audio-btn" onclick="playAudio()" id="audio-btn">
+            <span class="material-icons-round" style="font-size:16px">volume_up</span>
+            <span data-i18n="listen">Listen</span>
+          </button>
         </div>
         <div class="materi-content" id="materi-content"></div>
         
         <div class="quiz-section hidden" id="quiz-section">
-          <div class="section-title" style="margin-bottom:.6rem;"><span class="material-icons" style="font-size:18px;">quiz</span> <span data-i18n="quiz">Quiz</span></div>
+          <div class="section-title" style="margin-bottom:.6rem">
+            <span class="material-icons-round" style="font-size:18px">quiz</span>
+            <span data-i18n="quiz">Quiz</span>
+          </div>
           <div id="quiz-body"></div>
         </div>
       </div>
@@ -235,663 +123,148 @@ input:focus{outline:none;border-color:var(--neon);}
 
     <!-- PRACTICE VIEW -->
     <div class="view" id="view-practice">
-      <div class="section-title"><span class="material-icons">fitness_center</span> <span data-i18n="practice">Practice</span></div>
+      <div class="section-title">
+        <span class="material-icons-round">fitness_center</span>
+        <span data-i18n="practice">Practice</span>
+      </div>
       <div id="practice-list"></div>
+      <div style="margin-top:1.2rem">
+        <div class="section-title">
+          <span class="material-icons-round">leaderboard</span>
+          <span data-i18n="leaderboard">Leaderboard</span>
+        </div>
+        <div id="leaderboard-box"></div>
+      </div>
     </div>
 
     <!-- EXTRA VIEW -->
     <div class="view" id="view-extra">
-      <div class="section-title"><span class="material-icons">more_horiz</span> <span data-i18n="extra">Extra</span></div>
+      <div class="section-title">
+        <span class="material-icons-round">more_horiz</span>
+        <span data-i18n="extra">Extra</span>
+      </div>
       <div id="extra-list"></div>
     </div>
 
     <!-- PROFILE VIEW -->
     <div class="view" id="view-profile">
-      <div class="section-title"><span class="material-icons">person</span> <span data-i18n="profile">Profile</span></div>
+      <div class="section-title">
+        <span class="material-icons-round">person</span>
+        <span data-i18n="profile">Profile</span>
+      </div>
       <div class="profile-card">
         <div class="profile-avatar" id="profile-avatar">?</div>
         <div class="profile-name" id="profile-name">—</div>
         <div class="profile-id" id="profile-id">—</div>
         <div class="stats-row">
-          <div class="stat-box"><div class="stat-val" id="stat-parts">0</div><div class="stat-lbl" data-i18n="parts_done">Parts Done</div></div>
-          <div class="stat-box"><div class="stat-val" id="stat-streak">0</div><div class="stat-lbl" data-i18n="day_streak">Day Streak</div></div>
-          <div class="stat-box"><div class="stat-val" id="stat-xp">0</div><div class="stat-lbl">XP</div></div>
-          <div class="stat-box"><div class="stat-val" id="stat-days">0</div><div class="stat-lbl" data-i18n="days_left">Days Left</div></div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-parts">0</div>
+            <div class="stat-lbl" data-i18n="parts_done">Parts Done</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-streak">0</div>
+            <div class="stat-lbl" data-i18n="day_streak">Day Streak</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-xp">0</div>
+            <div class="stat-lbl">XP</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-days">0</div>
+            <div class="stat-lbl" data-i18n="days_left">Days Left</div>
+          </div>
         </div>
       </div>
       <div class="profile-card">
-        <div class="section-title" style="margin-bottom:.7rem;"><span class="material-icons" style="font-size:18px;">info</span> <span data-i18n="account">Account</span></div>
-        <div style="font-size:.85rem;line-height:1.8;">
-          <div><strong data-i18n="class">Class:</strong> <span id="profile-class">—</span></div>
-          <div><strong data-i18n="batch">Batch:</strong> <span id="profile-batch">—</span></div>
-          <div><strong data-i18n="expires">Expires:</strong> <span id="profile-expires">—</span></div>
+        <div class="section-title" style="margin-bottom:.7rem">
+          <span class="material-icons-round" style="font-size:18px">info</span>
+          <span data-i18n="account">Account</span>
+        </div>
+        <div class="info-row">
+          <strong data-i18n="class">Class:</strong>
+          <span id="profile-class">—</span>
+        </div>
+        <div class="info-row">
+          <strong data-i18n="batch">Batch:</strong>
+          <span id="profile-batch">—</span>
+        </div>
+        <div class="info-row">
+          <strong data-i18n="expires">Expires:</strong>
+          <span id="profile-expires">—</span>
         </div>
       </div>
-      <button class="btn btn-ghost" onclick="doLogout()" style="color:var(--danger);border-color:var(--danger);">
-        <span class="material-icons">logout</span> <span data-i18n="logout">Logout</span>
+      <button class="btn btn-ghost" onclick="doLogout()" style="color:#ed4956;border-color:#ed4956">
+        <span class="material-icons-round">logout</span>
+        <span data-i18n="logout">Logout</span>
       </button>
     </div>
   </div>
 
   <nav class="bottom-nav">
     <button class="nav-btn active" onclick="switchView('learn',this)">
-      <span class="material-icons">school</span>
+      <span class="material-icons-round">school</span>
       <span class="nav-label" data-i18n="learn">Learn</span>
     </button>
     <button class="nav-btn" onclick="switchView('practice',this)">
-      <span class="material-icons">fitness_center</span>
+      <span class="material-icons-round">fitness_center</span>
       <span class="nav-label" data-i18n="practice">Practice</span>
     </button>
     <button class="nav-btn" onclick="switchView('extra',this)">
-      <span class="material-icons">more_horiz</span>
+      <span class="material-icons-round">more_horiz</span>
       <span class="nav-label" data-i18n="extra">Extra</span>
     </button>
     <button class="nav-btn" onclick="switchView('profile',this)">
-      <span class="material-icons">person</span>
+      <span class="material-icons-round">person</span>
       <span class="nav-label" data-i18n="profile">Profile</span>
     </button>
   </nav>
 </div>
 
-<!-- FOCUS MODE -->
+<!-- FOCUS MODE OVERLAY -->
 <div class="focus-overlay" id="focus-overlay">
-  <div class="focus-title">🎯 <span data-i18n="focus_mode">Focus Mode</span></div>
+  <div class="focus-title">
+    <span class="material-icons-round">timer</span>
+    <span data-i18n="focus_mode">Focus Mode</span>
+  </div>
   <div class="focus-timer" id="focus-timer">25:00</div>
   <div class="focus-btns">
-    <button class="btn btn-ghost" onclick="skipFocus()" style="padding:.7rem 1.2rem;"><span data-i18n="skip">Skip</span></button>
-    <button class="btn" id="focus-start-btn" onclick="toggleFocus()" style="padding:.7rem 1.5rem;"><span data-i18n="start">Start</span></button>
+    <button class="btn btn-ghost" onclick="skipFocus()" style="padding:.7rem 1.2rem;background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.4)">
+      <span data-i18n="skip">Skip</span>
+    </button>
+    <button class="btn" id="focus-start-btn" onclick="toggleFocus()" style="padding:.7rem 1.5rem;background:#fff;color:var(--purple)">
+      <span data-i18n="start">Start</span>
+    </button>
   </div>
 </div>
 
-<div class="toast" id="toast"><span class="material-icons">check_circle</span><span id="toast-message">OK</span></div>
+<!-- MENU OVERLAY -->
+<div class="overlay" id="ov-menu">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round">menu</span>
+      <span data-i18n="menu">Menu</span>
+      <button class="icon-btn" onclick="closeOv('ov-menu')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <button class="menu-item" onclick="closeOv('ov-menu');forceRefresh()">
+      <span class="material-icons-round">refresh</span>
+      <span data-i18n="refresh_data">Refresh Data</span>
+    </button>
+    <button class="menu-item danger" onclick="closeOv('ov-menu');doLogout()">
+      <span class="material-icons-round">logout</span>
+      <span data-i18n="logout">Logout</span>
+    </button>
+  </div>
+</div>
 
-<script>
-// ============ I18N ============
-const I18N = {
-  en: {
-    login_subtitle:"Student Portal", student_id:"Student ID", login_btn:"Login",
-    login_footer:"Forgot PIN? Contact admin.", hello:"Hello", learn:"Learn",
-    practice:"Practice", extra:"Extra", profile:"Profile", back:"Back",
-    listen:"Listen", quiz:"Quiz", focus_mode:"Focus Mode", skip:"Skip",
-    start:"Start", pause:"Pause", parts_done:"Parts Done", day_streak:"Day Streak",
-    days_left:"Days Left", account:"Account", class:"Class", batch:"Batch",
-    expires:"Expires", logout:"Logout",
-    morning:"Good morning", afternoon:"Good afternoon", evening:"Good evening", night:"Good night",
-    modules:{spe:"Speaking",voc:"Vocabulary",gra:"Grammar",wri:"Writing",lis:"Listening"},
-    no_parts:"No parts available", no_extra:"No extra features available",
-    correct_answer:"Correct!", wrong_answer:"Wrong. Try again.",
-    session_expired:"Session expired. Please contact admin.",
-    login_failed:"Invalid ID or PIN", network_error:"Network error"
-  },
-  id: {
-    login_subtitle:"Portal Siswa", student_id:"ID Siswa", login_btn:"Masuk",
-    login_footer:"Lupa PIN? Hubungi admin.", hello:"Halo", learn:"Belajar",
-    practice:"Latihan", extra:"Ekstra", profile:"Profil", back:"Kembali",
-    listen:"Dengarkan", quiz:"Kuis", focus_mode:"Mode Fokus", skip:"Lewati",
-    start:"Mulai", pause:"Jeda", parts_done:"Bagian Selesai", day_streak:"Hari Berturut",
-    days_left:"Hari Tersisa", account:"Akun", class:"Kelas", batch:"Angkatan",
-    expires:"Berakhir", logout:"Keluar",
-    morning:"Selamat pagi", afternoon:"Selamat siang", evening:"Selamat sore", night:"Selamat malam",
-    modules:{spe:"Speaking",voc:"Kosakata",gra:"Tata Bahasa",wri:"Menulis",lis:"Mendengarkan"},
-    no_parts:"Tidak ada bagian tersedia", no_extra:"Tidak ada fitur tambahan",
-    correct_answer:"Benar!", wrong_answer:"Salah. Coba lagi.",
-    session_expired:"Sesi berakhir. Hubungi admin.",
-    login_failed:"ID atau PIN salah", network_error:"Kesalahan jaringan"
-  }
-};
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span class="material-icons-round" id="toast-icon">check_circle</span>
+  <span id="toast-message">OK</span>
+</div>
 
-// ============ STATE ============
-let CFG = window.JEC_CONFIG || {};
-let currentUser = null;
-let currentLang = localStorage.getItem('jec_lang') || CFG.DEFAULT_LANG || 'en';
-let currentModule = null, currentUnitId = null, currentPartId = null;
-let materiData = {spe:{},voc:{},gra:{},wri:{},lis:{}};
-let progressMap = {}; // {moduleId_unitId_partId: status}
-let extData = {tabs:[]};
-let focusTimer = null, focusSeconds = 0, focusRunning = false;
-
-// ============ INIT ============
-document.addEventListener('DOMContentLoaded', () => {
-  applyTheme();
-  applyLang();
-  setTimeout(() => {
-    document.getElementById('splash').classList.add('hide');
-    setTimeout(() => {
-      document.getElementById('splash').style.display='none';
-      const saved = localStorage.getItem('jec_user');
-      if (saved) {
-        try {
-          const u = JSON.parse(saved);
-          autoLogin(u);
-        } catch(e) { showLogin(); }
-      } else {
-        showLogin();
-      }
-    }, 500);
-  }, 3000);
-  setInterval(updateDateTime, 1000);
-  setInterval(heartbeat, 30000);
-});
-
-function showLogin() {
-  document.getElementById('login').classList.add('active');
-}
-
-function showDashboard() {
-  document.getElementById('login').classList.remove('active');
-  document.getElementById('dashboard').classList.add('active');
-  renderAll();
-  heartbeat();
-}
-
-// ============ LOGIN ============
-async function doLogin() {
-  const id = document.getElementById('login-id').value.trim().toLowerCase();
-  const pin = document.getElementById('login-pin').value.trim();
-  const errEl = document.getElementById('login-error');
-  errEl.classList.remove('show');
-  if (!id || !pin) {
-    errEl.textContent = 'Please fill all fields';
-    errEl.classList.add('show');
-    return;
-  }
-  try {
-    const res = await fetch(CFG.LOG + '?action=login&id=' + encodeURIComponent(id) + '&pin=' + encodeURIComponent(pin));
-    const data = await res.json();
-    if (data.success) {
-      currentUser = {
-        id: id,
-        name: data.user.name,
-        class: data.user.class,
-        batch: data.user.batch,
-        startDate: data.user.startDate,
-        sessionDuration: data.user.sessionDuration,
-        daysLeft: data.session.daysLeft
-      };
-      localStorage.setItem('jec_user', JSON.stringify(currentUser));
-      await loadAllData();
-      showDashboard();
-    } else {
-      errEl.textContent = data.msg || t('login_failed');
-      errEl.classList.add('show');
-    }
-  } catch(e) {
-    errEl.textContent = t('network_error') + ': ' + e.message;
-    errEl.classList.add('show');
-  }
-}
-
-async function autoLogin(u) {
-  currentUser = u;
-  try {
-    const res = await fetch(CFG.LOG + '?action=check_session&id=' + encodeURIComponent(u.id));
-    const data = await res.json();
-    if (data.active) {
-      currentUser.daysLeft = data.daysLeft;
-      await loadAllData();
-      showDashboard();
-    } else {
-      localStorage.removeItem('jec_user');
-      showToast(t('session_expired'), 'error');
-      showLogin();
-    }
-  } catch(e) {
-    await loadAllData();
-    showDashboard();
-  }
-}
-
-function doLogout() {
-  if (!confirm('Logout?')) return;
-  localStorage.removeItem('jec_user');
-  currentUser = null;
-  document.getElementById('dashboard').classList.remove('active');
-  showLogin();
-  document.getElementById('login-id').value = '';
-  document.getElementById('login-pin').value = '';
-}
-
-// ============ DATA LOADING ============
-async function loadAllData() {
-  try {
-    const modules = ['spe','voc','gra','wri','lis'];
-    for (const m of modules) {
-      const r = await fetch(CFG.DATA + m + '.json?v=' + CFG.APP_VERSION);
-      if (r.ok) materiData[m] = await r.json();
-    }
-    const er = await fetch(CFG.DATA + 'ext.json?v=' + CFG.APP_VERSION);
-    if (er.ok) extData = await er.json();
-    // Load progress
-    const pr = await fetch(CFG.LOG + '?action=fetch_progress&id=' + encodeURIComponent(currentUser.id));
-    if (pr.ok) {
-      const arr = await pr.json();
-      progressMap = {};
-      arr.forEach(p => progressMap[p.module + '_' + p.unitId + '_' + p.partId] = p.status);
-    }
-  } catch(e) {
-    console.warn('Data load failed:', e);
-  }
-}
-
-// ============ RENDER ============
-function renderAll() {
-  document.getElementById('course-name').textContent = CFG.COURSE_SHORT || 'JEC';
-  document.getElementById('user-name').textContent = currentUser.name;
-  document.getElementById('profile-name').textContent = currentUser.name;
-  document.getElementById('profile-id').textContent = '#' + currentUser.id;
-  document.getElementById('profile-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
-  document.getElementById('profile-class').textContent = currentUser.class;
-  document.getElementById('profile-batch').textContent = currentUser.batch;
-  document.getElementById('profile-expires').textContent = currentUser.daysLeft + ' days';
-  document.getElementById('stat-days').textContent = currentUser.daysLeft || 0;
-  updateDateTime();
-  renderLearnCards();
-  renderPractice();
-  renderExtra();
-  updateStats();
-}
-
-function renderLearnCards() {
-  const modules = [
-    {id:'spe', icon:'🗣️'},
-    {id:'voc', icon:'📚'},
-    {id:'gra', icon:'📐'},
-    {id:'wri', icon:'✍️'},
-    {id:'lis', icon:'👂'}
-  ];
-  document.getElementById('learn-cards').innerHTML = modules.map(m => {
-    const count = Object.keys(materiaData[m.id]?.materials || {}).length;
-    return `<div class="learn-card" onclick="showUnits('${m.id}')">
-      <div class="icon">${m.icon}</div>
-      <div class="title">${t('modules.' + m.id)}</div>
-      <div class="count">${count} units</div>
-    </div>`;
-  }).join('');
-}
-
-function showLearnCards() {
-  document.getElementById('unit-list-wrap').classList.add('hidden');
-  document.getElementById('part-list-wrap').classList.add('hidden');
-  document.getElementById('materi-wrap').classList.add('hidden');
-  document.getElementById('learn-cards').classList.remove('hidden');
-}
-
-function showUnits(module) {
-  currentModule = module;
-  document.getElementById('learn-cards').classList.add('hidden');
-  document.getElementById('unit-list-wrap').classList.remove('hidden');
-  document.getElementById('part-list-wrap').classList.add('hidden');
-  document.getElementById('materi-wrap').classList.add('hidden');
-  document.getElementById('unit-list-title').textContent = t('modules.' + module);
-  const materials = materiData[module]?.materials || {};
-  const list = document.getElementById('unit-list');
-  const units = Object.entries(materials);
-  if (!units.length) {
-    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem;">No units</div>';
-    return;
-  }
-  list.innerHTML = units.map(([uid, u]) => {
-    if (u.hidden) return '';
-    const locked = u.locked;
-    const partCount = Object.keys(u.parts || {}).length;
-    return `<div class="unit-item ${locked?'locked':''}" onclick="${locked?'':'openUnit(\''+module+'\',\''+uid+'\')'}">
-      <div>
-        <div class="unit-title">${locked?'🔒 ':''}${esc(u.title||uid)}</div>
-        <div class="unit-count">${partCount} parts</div>
-      </div>
-      <span class="material-icons" style="color:var(--muted);">chevron_right</span>
-    </div>`;
-  }).join('');
-}
-
-function openUnit(module, unitId) {
-  currentUnitId = unitId;
-  showParts(module, unitId);
-}
-
-function showParts(module, unitId) {
-  currentModule = module;
-  currentUnitId = unitId;
-  document.getElementById('unit-list-wrap').classList.add('hidden');
-  document.getElementById('part-list-wrap').classList.remove('hidden');
-  document.getElementById('materi-wrap').classList.add('hidden');
-  const unit = materiData[module]?.materials?.[unitId];
-  document.getElementById('part-list-title').textContent = unit?.title || unitId;
-  const parts = Object.entries(unit?.parts || {});
-  const list = document.getElementById('part-list');
-  if (!parts.length) {
-    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem;">'+t('no_parts')+'</div>';
-    return;
-  }
-  list.innerHTML = parts.map(([pid, p]) => {
-    if (p.hidden) return '';
-    const locked = p.locked;
-    const key = module + '_' + unitId + '_' + pid;
-    const done = progressMap[key] === 'done';
-    return `<div class="part-item ${locked?'locked':''} ${done?'done':''}" onclick="${locked?'':'openPart(\''+module+'\',\''+unitId+'\',\''+pid+'\')'}">
-      <div>
-        <div style="font-weight:600;">${locked?'🔒 ':''}${done?'✅ ':''}${esc(p.title||pid)}</div>
-      </div>
-      <span class="material-icons" style="color:var(--muted);">chevron_right</span>
-    </div>`;
-  }).join('');
-}
-
-function openPart(module, unitId, partId) {
-  currentModule = module;
-  currentUnitId = unitId;
-  currentPartId = partId;
-  startFocusMode();
-}
-
-function startFocusMode() {
-  const duration = CFG.MFL_DEFAULT || 25;
-  focusSeconds = duration * 60;
-  focusRunning = false;
-  updateFocusTimer();
-  document.getElementById('focus-overlay').classList.add('active');
-  document.getElementById('focus-start-btn').innerHTML = '<span data-i18n="start">' + t('start') + '</span>';
-}
-
-function toggleFocus() {
-  if (focusRunning) {
-    clearInterval(focusTimer);
-    focusRunning = false;
-    document.getElementById('focus-start-btn').innerHTML = '<span data-i18n="start">' + t('start') + '</span>';
-  } else {
-    focusRunning = true;
-    document.getElementById('focus-start-btn').innerHTML = '<span data-i18n="pause">' + t('pause') + '</span>';
-    focusTimer = setInterval(() => {
-      focusSeconds--;
-      updateFocusTimer();
-      if (focusSeconds <= 0) {
-        clearInterval(focusTimer);
-        focusRunning = false;
-        document.getElementById('focus-overlay').classList.remove('active');
-        renderMateri(currentModule, currentUnitId, currentPartId);
-      }
-    }, 1000);
-  }
-}
-
-function skipFocus() {
-  clearInterval(focusTimer);
-  focusRunning = false;
-  document.getElementById('focus-overlay').classList.remove('active');
-  renderMateri(currentModule, currentUnitId, currentPartId);
-}
-
-function updateFocusTimer() {
-  const m = Math.floor(focusSeconds / 60);
-  const s = focusSeconds % 60;
-  document.getElementById('focus-timer').textContent = 
-    String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-}
-
-function renderMateri(module, unitId, partId) {
-  document.getElementById('part-list-wrap').classList.add('hidden');
-  document.getElementById('materi-wrap').classList.remove('hidden');
-  const unit = materiData[module]?.materials?.[unitId];
-  const part = unit?.parts?.[partId];
-  if (!part) return;
-  document.getElementById('materi-title').textContent = part.title || partId;
-  const content = part.transcript || '';
-  const contentEl = document.getElementById('materi-content');
-  // Detect vocab lines (EN | ID)
-  if (content.includes('|')) {
-    const lines = content.split('\n').filter(l => l.trim());
-    contentEl.innerHTML = lines.map(line => {
-      const sep = line.indexOf('|');
-      if (sep === -1) return `<div>${esc(line)}</div>`;
-      const en = line.slice(0, sep).trim();
-      const id = line.slice(sep+1).trim();
-      return `<div class="vocab-line"><span class="vocab-en">${esc(en)}</span><span class="vocab-id">${esc(id)}</span></div>`;
-    }).join('');
-  } else {
-    contentEl.textContent = content || '(No content)';
-  }
-  // Audio
-  const audioBtn = document.getElementById('audio-btn');
-  if (part.audioUrl) {
-    audioBtn.classList.remove('hidden');
-    audioBtn.dataset.url = part.audioUrl;
-  } else {
-    audioBtn.classList.add('hidden');
-  }
-  // Quiz
-  const quizSection = document.getElementById('quiz-section');
-  if (part.quiz && part.quiz.length) {
-    quizSection.classList.remove('hidden');
-    renderQuiz(part.quiz);
-  } else {
-    quizSection.classList.add('hidden');
-  }
-  // Mark done
-  markDone(module, unitId, partId);
-}
-
-function renderQuiz(questions) {
-  const body = document.getElementById('quiz-body');
-  body.innerHTML = questions.map((q, i) => {
-    return `<div style="margin-bottom:1rem;">
-      <div class="quiz-question">${i+1}. ${esc(q.q)}</div>
-      <div class="quiz-options">
-        ${q.opts.map((opt, oi) => `<div class="quiz-option" onclick="answerQuiz(this,${i},${oi},${q.a})">${esc(opt)}</div>`).join('')}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function answerQuiz(el, qIdx, optIdx, correctIdx) {
-  const options = el.parentElement.querySelectorAll('.quiz-option');
-  if ([...options].some(o => o.classList.contains('correct') || o.classList.contains('wrong'))) return;
-  if (optIdx === correctIdx) {
-    el.classList.add('correct');
-    showToast(t('correct_answer'), 'success', 1500);
-  } else {
-    el.classList.add('wrong');
-    options[correctIdx].classList.add('correct');
-    showToast(t('wrong_answer'), 'error', 2000);
-  }
-}
-
-function playAudio() {
-  const url = document.getElementById('audio-btn').dataset.url;
-  if (!url) return;
-  const audio = new Audio(url);
-  audio.play().catch(e => console.warn('Audio play failed:', e));
-}
-
-function markDone(module, unitId, partId) {
-  const key = module + '_' + unitId + '_' + partId;
-  if (progressMap[key] === 'done') return;
-  progressMap[key] = 'done';
-  fetch(CFG.LOG, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: {'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({
-      action: 'mark_done',
-      id: currentUser.id,
-      batch: currentUser.batch,
-      module: module,
-      unitId: unitId,
-      partId: partId,
-      score: 100
-    })
-  }).catch(e => console.warn('mark_done failed:', e));
-  updateStats();
-}
-
-function renderPractice() {
-  const items = [
-    {icon:'🔁', title:'Flashcards', desc:'Review vocabulary with SRS'},
-    {icon:'⚔️', title:'Vocab Duel', desc:'Challenge word matching'},
-    {icon:'🎯', title:'Word of Day', desc:'Learn one new word daily'},
-    {icon:'🔤', title:'Word Scramble', desc:'Unscramble letters'}
-  ];
-  document.getElementById('practice-list').innerHTML = items.map(p => 
-    `<div class="practice-card" onclick="showToast('Coming soon','warning')">
-      <div class="icon">${p.icon}</div>
-      <div class="title">${p.title}</div>
-      <div class="desc">${p.desc}</div>
-    </div>`
-  ).join('');
-}
-
-function renderExtra() {
-  const tabs = (extData.tabs || []).filter(t => {
-    if (!t.enabled) return false;
-    if (t.batch && t.batch.length && !t.batch.includes(currentUser.batch)) return false;
-    return true;
-  });
-  const list = document.getElementById('extra-list');
-  if (!tabs.length) {
-    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem;">'+t('no_extra')+'</div>';
-    return;
-  }
-  list.innerHTML = tabs.map(tab => 
-    `<div class="extra-item" onclick="loadExtraTab('${tab.id}','${tab.inject}','${esc(tab.title)}')">
-      <div class="icon">${tab.icon}</div>
-      <div class="info">
-        <div class="title">${esc(tab.title)}</div>
-        <div class="desc">Tap to open</div>
-      </div>
-      <span class="material-icons" style="color:var(--muted);">chevron_right</span>
-    </div>`
-  ).join('');
-}
-
-async function loadExtraTab(id, jsFile, title) {
-  showToast('Loading ' + title + '...', 'success', 1000);
-  try {
-    const script = document.createElement('script');
-    script.src = CFG.JS + jsFile + '?v=' + Date.now();
-    script.onload = () => {
-      if (typeof window.JEC_EXTRA_INIT === 'function') {
-        window.JEC_EXTRA_INIT(id, currentUser);
-      }
-    };
-    document.head.appendChild(script);
-  } catch(e) {
-    showToast('Failed to load: ' + e.message, 'error');
-  }
-}
-
-function updateStats() {
-  const done = Object.values(progressMap).filter(s => s === 'done').length;
-  document.getElementById('stat-parts').textContent = done;
-  document.getElementById('stat-xp').textContent = done * 10;
-  document.getElementById('stat-streak').textContent = 1;
-}
-
-// ============ UTILITIES ============
-function switchView(name, btn) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  if (name === 'learn') showLearnCards();
-}
-
-function toggleTheme() {
-  const cur = document.documentElement.getAttribute('data-theme');
-  if (cur === 'light') {
-    document.documentElement.removeAttribute('data-theme');
-    document.getElementById('theme-icon').textContent = 'light_mode';
-    localStorage.setItem('jec_theme', 'dark');
-  } else {
-    document.documentElement.setAttribute('data-theme', 'light');
-    document.getElementById('theme-icon').textContent = 'dark_mode';
-    localStorage.setItem('jec_theme', 'light');
-  }
-}
-
-function applyTheme() {
-  const t = localStorage.getItem('jec_theme') || 'dark';
-  if (t === 'light') {
-    document.documentElement.setAttribute('data-theme', 'light');
-    document.getElementById('theme-icon').textContent = 'dark_mode';
-  }
-}
-
-function toggleLang() {
-  currentLang = currentLang === 'en' ? 'id' : 'en';
-  localStorage.setItem('jec_lang', currentLang);
-  applyLang();
-}
-
-function applyLang() {
-  document.getElementById('lang-btn').textContent = currentLang.toUpperCase();
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    const val = getI18n(key);
-    if (val) el.textContent = val;
-  });
-}
-
-function getI18n(key) {
-  const parts = key.split('.');
-  let obj = I18N[currentLang] || I18N.en;
-  for (const p of parts) {
-    if (obj[p] === undefined) return key;
-    obj = obj[p];
-  }
-  return obj;
-}
-
-function t(key) { return getI18n(key); }
-
-function updateDateTime() {
-  const now = new Date();
-  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const dayName = days[now.getDay()];
-  const d = now.getDate();
-  const m = months[now.getMonth()];
-  const y = now.getFullYear();
-  let h = now.getHours();
-  const min = String(now.getMinutes()).padStart(2,'0');
-  const sec = String(now.getSeconds()).padStart(2,'0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  h = h % 12; if (h === 0) h = 12;
-  const dt = `${dayName}, ${m} ${d}, ${y} • ${h}:${min}:${sec} ${ampm}`;
-  document.getElementById('datetime').textContent = dt;
-  // Greeting
-  const hour = now.getHours();
-  let greetKey = 'morning';
-  if (hour >= 12 && hour < 15) greetKey = 'afternoon';
-  else if (hour >= 15 && hour < 18) greetKey = 'evening';
-  else if (hour >= 18 || hour < 5) greetKey = 'night';
-  document.querySelector('[data-i18n="hello"]').textContent = t(greetKey);
-}
-
-function heartbeat() {
-  if (!currentUser) return;
-  fetch(CFG.LOG, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: {'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({
-      action: 'heartbeat',
-      id: currentUser.id,
-      batch: currentUser.batch,
-      page: 'sv1'
-    })
-  }).catch(() => {});
-}
-
-function showToast(msg, type='success', duration=3000) {
-  const toast = document.getElementById('toast');
-  toast.className = 'toast ' + type;
-  document.getElementById('toast-message').textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), duration);
-}
-
-function esc(s) {
-  return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-</script>
+<script src="https://cdn.jsdelivr.net/gh/caksup/jec@main/j/c.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/caksup/jec@main/j/j.js?v=2.0"></script>
 </body>
 </html>
