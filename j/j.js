@@ -1,11 +1,13 @@
-// JEC v.6.00 FINAL SYNC | 16/08/2026 | j/j.js
-// Compatible dengan sv1.html v1.03
-// Full Sync: GitHub (data) + Apps Script (backend) + Firebase (Ujian)
+// JEC v.8.00 FINAL | 16/08/2026 | j/j.js | Core Engine
+// Compatible: sv1.html v1.03 + ui.js v7.00 + semua j/f/*.js
+// Fitur: Dual-gate login, auto-login robust, lazy loading modules
 
 'use strict';
 
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
 const JEC = {
-  // ═══════════ STATE ═══════════
   config: window.JEC_CONFIG || {},
   user: null,
   lang: localStorage.getItem('jec_lang') || 'en',
@@ -31,7 +33,7 @@ const JEC = {
   flmSeconds: 0,
   flmTotalSeconds: 0,
   flmActive: false,
-  appState: 'boot', // boot, splash, login, dashboard
+  appState: 'boot',
   featuresLoaded: false,
   dashboardReady: false,
   stats: {
@@ -45,18 +47,24 @@ const JEC = {
   }
 };
 
-// ═══════════ FIREBASE CONFIG ═══════════
+// ═══════════════════════════════════════════════════
+// FIREBASE CONFIG
+// ═══════════════════════════════════════════════════
 if (!JEC.config.FIREBASE_URL) {
-  JEC.config.FIREBASE_URL = "https://[PROJECT-FIREBASE-ANDA]-default-rtdb.firebaseio.com";
+  JEC.config.FIREBASE_URL = 'https://jagatecourse-default-rtdb.firebaseio.com';
 }
 
-// ═══════════ MODULE PRIORITIES ═══════════
-JEC.PRIORITY_1 = ['learn']; // Blocking - harus load sebelum dashboard
-JEC.PRIORITY_2 = ['profile', 'dc', 'ach', 'focus']; // After dashboard
-JEC.PRIORITY_3 = ['practice', 'extra', 'bm', 'notes', 'logbook', 'react']; // Lazy
+// ═══════════════════════════════════════════════════
+// MODULE PRIORITIES
+// ═══════════════════════════════════════════════════
+JEC.PRIORITY_1 = ['learn'];
+JEC.PRIORITY_2 = ['profile', 'dc', 'ach', 'focus'];
+JEC.PRIORITY_3 = ['practice', 'extra', 'bm', 'notes', 'logbook', 'react'];
 JEC.BUILT_IN = ['splash', 'login', 'header'];
 
-// ═══════════ BOOTSTRAP ═══════════
+// ═══════════════════════════════════════════════════
+// BOOTSTRAP
+// ═══════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
   JEC.applyTheme();
   JEC.applyLang();
@@ -69,46 +77,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
 JEC.boot = async function() {
   JEC.appState = 'splash';
-  
+
   const splash = document.getElementById('feat-splash');
   const loginPage = document.getElementById('feat-login');
   const dashboard = document.getElementById('dashboard');
-  
-  // Tampilkan splash
+
   if (splash) {
     splash.style.display = 'flex';
     splash.classList.remove('hide');
   }
-  
-  // Sembunyikan login & dashboard dulu
+
   if (loginPage) loginPage.classList.add('hidden');
   if (dashboard) dashboard.classList.remove('active');
-  
+
   // Load Priority 1 di background
   JEC.loadPriorityModules(JEC.PRIORITY_1);
-  
+
   // Cek saved session
   const savedUser = localStorage.getItem('jec_user');
   let sessionValid = false;
-  
+
   if (savedUser) {
     try {
       const u = JSON.parse(savedUser);
       JEC.user = u;
       sessionValid = await JEC.autoLogin(u);
-    } catch(e) {
+    } catch (e) {
       console.warn('[JEC] Failed to parse saved user:', e);
       localStorage.removeItem('jec_user');
       JEC.user = null;
     }
   }
-  
+
   // Tunggu minimal 3 detik splash
   await new Promise(resolve => setTimeout(resolve, 3000));
-  
+
   // Tunggu Priority 1 selesai (max 3 detik)
   await JEC.waitForModules(JEC.PRIORITY_1, 3000);
-  
+
   // Fade out splash
   if (splash) {
     splash.classList.add('hide');
@@ -116,7 +122,7 @@ JEC.boot = async function() {
       splash.style.display = 'none';
     }, 500);
   }
-  
+
   // Tentukan halaman
   if (sessionValid && JEC.user) {
     JEC.enterDashboard();
@@ -131,16 +137,18 @@ JEC.boot = async function() {
   }
 };
 
-// ═══════════ MODULE LOADING ═══════════
+// ═══════════════════════════════════════════════════
+// MODULE LOADING
+// ═══════════════════════════════════════════════════
 JEC.loadPriorityModules = function(moduleNames) {
   const features = JEC.config.FEATURES || {};
-  
+
   moduleNames.forEach(function(name) {
     if (JEC.BUILT_IN.includes(name)) {
       JEC.featureStates[name] = { loaded: true, builtin: true };
       return;
     }
-    
+
     const cfg = features[name];
     if (!cfg || !cfg.enabled) {
       JEC.featureStates[name] = { loaded: false, disabled: true };
@@ -149,7 +157,7 @@ JEC.loadPriorityModules = function(moduleNames) {
       }, 100);
       return;
     }
-    
+
     if (JEC.featureStates[name] && JEC.featureStates[name].loaded) return;
     JEC.loadFeatureWithTimeout(name, cfg.js);
   });
@@ -163,7 +171,7 @@ JEC.loadFeatureWithTimeout = function(name, jsFile) {
       JEC.renderMaintenancePlaceholder(name, 'error');
     }
   }, 5000);
-  
+
   JEC.loadFeature(name, jsFile, function() {
     clearTimeout(timeout);
   });
@@ -173,7 +181,7 @@ JEC.loadFeature = function(name, jsFile, callback) {
   const baseUrl = JEC.config.FEATURES_JS || (JEC.config.BASE_GH + 'j/f/');
   const url = baseUrl + jsFile + '?v=' + Date.now();
   const script = document.createElement('script');
-  
+
   script.onload = function() {
     const initFn = window['JEC_' + name.toUpperCase() + '_INIT'];
     if (typeof initFn === 'function') {
@@ -181,11 +189,12 @@ JEC.loadFeature = function(name, jsFile, callback) {
         initFn(JEC);
         JEC.featureStates[name] = { loaded: true };
         console.log('[JEC] ✓ Feature loaded: ' + name);
-      } catch(err) {
+      } catch (err) {
         console.error('[JEC] ✗ Error init feature ' + name + ':', err);
         JEC.featureStates[name] = { loaded: false, error: err.message };
         JEC.renderMaintenancePlaceholder(name, 'error');
-        
+
+        // Retry sekali setelah 1 detik
         setTimeout(function() {
           try {
             if (typeof initFn === 'function') {
@@ -193,7 +202,7 @@ JEC.loadFeature = function(name, jsFile, callback) {
               JEC.featureStates[name] = { loaded: true };
               console.log('[JEC] ✓ Feature retry success: ' + name);
             }
-          } catch(e2) {
+          } catch (e2) {
             console.error('[JEC] ✗ Retry failed for ' + name);
           }
           if (callback) callback();
@@ -202,17 +211,18 @@ JEC.loadFeature = function(name, jsFile, callback) {
       }
     } else {
       JEC.featureStates[name] = { loaded: true };
+      console.log('[JEC] ✓ Feature loaded (no init): ' + name);
     }
     if (callback) callback();
   };
-  
+
   script.onerror = function() {
     console.warn('[JEC] ⚠ Feature JS not found: ' + jsFile);
     JEC.featureStates[name] = { loaded: false, notFound: true };
     JEC.renderMaintenancePlaceholder(name, 'maintenance');
     if (callback) callback();
   };
-  
+
   script.src = url;
   document.head.appendChild(script);
 };
@@ -221,20 +231,22 @@ JEC.waitForModules = function(moduleNames, timeoutMs) {
   timeoutMs = timeoutMs || 3000;
   return new Promise(function(resolve) {
     const startTime = Date.now();
-    
+
     const checkInterval = setInterval(function() {
       const allDone = moduleNames.every(function(name) {
         if (JEC.BUILT_IN.includes(name)) return true;
         const state = JEC.featureStates[name];
         if (!state) return false;
-        return state.loaded === true || 
-               state.disabled === true || 
-               state.error || 
+        return state.loaded === true ||
+               state.disabled === true ||
+               state.error ||
                state.notFound ||
                state.timeout;
       });
-      
-      if (allDone || (Date.now() - startTime) > timeoutMs) {
+
+      const elapsed = Date.now() - startTime;
+
+      if (allDone || elapsed > timeoutMs) {
         clearInterval(checkInterval);
         resolve();
       }
@@ -245,10 +257,10 @@ JEC.waitForModules = function(moduleNames, timeoutMs) {
 JEC.renderMaintenancePlaceholder = function(featureName, type) {
   const container = document.getElementById('feat-' + featureName);
   if (!container) return;
-  
+
   const msg = JEC.config.I18N || {};
   const lang = JEC.lang;
-  
+
   let title, desc, icon;
   if (type === 'error') {
     title = (msg.error_load && msg.error_load[lang]) || 'Under Repair';
@@ -259,7 +271,7 @@ JEC.renderMaintenancePlaceholder = function(featureName, type) {
     desc = (msg.under_construction && msg.under_construction[lang]) || 'This feature is under development';
     icon = 'engineering';
   }
-  
+
   container.innerHTML = '<div class="maintenance-card">' +
     '<span class="material-icons-round maintenance-icon">' + icon + '</span>' +
     '<div class="maintenance-title">' + JEC.esc(title) + '</div>' +
@@ -272,26 +284,9 @@ JEC.isFeatureLoaded = function(name) {
   return state && state.loaded === true;
 };
 
-JEC.lazyLoadForView = function(viewName) {
-  const viewModuleMap = {
-    'learn': ['learn'],
-    'practice': ['practice'],
-    'extra': ['extra', 'logbook'],
-    'profile': ['profile', 'bm', 'notes', 'ach']
-  };
-  
-  const modules = viewModuleMap[viewName] || [];
-  const toLoad = modules.filter(function(m) {
-    const state = JEC.featureStates[m];
-    return !state || (!state.loaded && !state.disabled && !state.notFound);
-  });
-  
-  if (toLoad.length > 0) {
-    JEC.loadPriorityModules(toLoad);
-  }
-};
-
-// ═══════════ SHOW/HIDE PAGES ═══════════
+// ═══════════════════════════════════════════════════
+// SHOW/HIDE PAGES
+// ═══════════════════════════════════════════════════
 JEC.showLoginPage = function() {
   JEC.appState = 'login';
   const loginPage = document.getElementById('feat-login');
@@ -303,34 +298,36 @@ JEC.showLoginPage = function() {
 JEC.enterDashboard = function() {
   JEC.appState = 'dashboard';
   JEC.dashboardReady = true;
-  
+
   const loginPage = document.getElementById('feat-login');
   const dashboard = document.getElementById('dashboard');
   if (loginPage) loginPage.classList.add('hidden');
   if (dashboard) dashboard.classList.add('active');
-  
+
   const userName = document.getElementById('user-name');
   if (userName && JEC.user) {
     userName.textContent = JEC.user.nickname ? '@' + JEC.user.nickname : JEC.user.name;
   }
-  
+
   JEC.applyHeaderBg();
   JEC.applyCustomLogo();
   JEC.fetchOnlineCount();
-  
+
   if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
     JEC_UI.showFLMFab();
   }
-  
+
   JEC.refreshActiveFeatureUI();
 };
 
-// ═══════════ BUILT-IN LOGIN ═══════════
+// ═══════════════════════════════════════════════════
+// BUILT-IN LOGIN
+// ═══════════════════════════════════════════════════
 JEC.initBuiltInLogin = function() {
   const loginBtn = document.getElementById('login-btn');
   const loginPin = document.getElementById('login-pin');
   const loginId = document.getElementById('login-id');
-  
+
   if (loginBtn) {
     loginBtn.onclick = function() { JEC.doLogin(); };
   }
@@ -352,29 +349,29 @@ JEC.doLogin = async function() {
   const errorEl = document.getElementById('login-error');
   const errorMsg = document.getElementById('login-error-msg');
   const loadingEl = document.getElementById('login-loading');
-  
+
   if (!idEl || !pinEl) {
     console.error('[JEC] Login elements not found');
     return;
   }
-  
+
   const id = idEl.value.trim().toLowerCase();
   const pin = pinEl.value.trim();
-  
+
   if (errorEl) errorEl.classList.remove('show');
-  
+
   if (!id || !pin) {
     if (errorMsg) errorMsg.textContent = JEC.t('fill_all_fields') || 'Please fill all fields';
     if (errorEl) errorEl.classList.add('show');
     return;
   }
-  
+
   if (loadingEl) loadingEl.classList.add('show');
-  
+
   try {
     const result = await JEC.login(id, pin);
     if (loadingEl) loadingEl.classList.remove('show');
-    
+
     if (result.success) {
       JEC.enterDashboard();
       setTimeout(function() {
@@ -387,14 +384,16 @@ JEC.doLogin = async function() {
       if (errorMsg) errorMsg.textContent = result.msg || JEC.t('login_failed') || 'Login failed';
       if (errorEl) errorEl.classList.add('show');
     }
-  } catch(e) {
+  } catch (e) {
     if (loadingEl) loadingEl.classList.remove('show');
     if (errorMsg) errorMsg.textContent = JEC.t('network_error') || 'Network error: ' + e.message;
     if (errorEl) errorEl.classList.add('show');
   }
 };
 
-// ═══════════ CLOCK ═══════════
+// ═══════════════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════════════
 JEC.startClock = function() {
   JEC.updateClock();
   setInterval(JEC.updateClock, 1000);
@@ -403,7 +402,7 @@ JEC.startClock = function() {
 JEC.updateClock = function() {
   const el = document.getElementById('datetime');
   if (!el) return;
-  
+
   const now = new Date();
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -416,9 +415,9 @@ JEC.updateClock = function() {
   const ampm = h >= 12 ? 'PM' : 'AM';
   h = h % 12;
   if (h === 0) h = 12;
-  
+
   el.textContent = day + ', ' + d + ' ' + m + ' ' + y + ' · ' + h + ':' + min + ' ' + ampm;
-  
+
   const greetEl = document.getElementById('greet-text');
   if (greetEl) {
     const hour = now.getHours();
@@ -430,7 +429,9 @@ JEC.updateClock = function() {
   }
 };
 
-// ═══════════ URL HASH ROUTING ═══════════
+// ═══════════════════════════════════════════════════
+// HASH ROUTER
+// ═══════════════════════════════════════════════════
 JEC.initHashRouter = function() {
   window.addEventListener('hashchange', JEC.handleHashChange);
 };
@@ -443,44 +444,46 @@ JEC.handleHashChange = function() {
 JEC.navigateFromHash = function() {
   const hash = window.location.hash.substring(1);
   if (!hash) return;
-  
+
   const parts = hash.split('/');
   if (parts.length < 3) return;
-  
+
   const module = parts[0];
   const unitId = parts[1];
   const partId = parts[2];
-  
+
   if (!JEC.materiData[module]) {
     JEC.toast(JEC.t('invalid_module') || 'Invalid module', 'error');
     return;
   }
-  
+
   const materi = JEC.materiData[module] || {};
   const unit = (materi.materials || {})[unitId];
   if (!unit) {
     JEC.toast(JEC.t('invalid_unit') || 'Invalid unit', 'error');
     return;
   }
-  
+
   const part = (unit.parts || {})[partId];
   if (!part) {
     JEC.toast(JEC.t('invalid_part') || 'Invalid part', 'error');
     return;
   }
-  
+
   JEC.switchView('learn');
-  
-  if (typeof JEC_LEARN !== 'undefined') {
+
+  if (typeof JEC_LEARN !== 'undefined' && JEC_LEARN.renderMateri) {
     JEC.currentModule = module;
     JEC.currentUnitId = unitId;
     JEC.currentPartId = partId;
-    
-    JEC_LEARN.state.module = module;
-    JEC_LEARN.state.unitId = unitId;
-    JEC_LEARN.state.partId = partId;
-    JEC_LEARN.state.view = 'materi';
-    
+
+    if (JEC_LEARN.state) {
+      JEC_LEARN.state.module = module;
+      JEC_LEARN.state.unitId = unitId;
+      JEC_LEARN.state.partId = partId;
+      JEC_LEARN.state.view = 'materi';
+    }
+
     JEC_LEARN.renderMateri(module, unitId, partId);
   }
 };
@@ -493,7 +496,9 @@ JEC.updateHash = function(module, unitId, partId) {
   }
 };
 
-// ═══════════ THEME ═══════════
+// ═══════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════
 JEC.applyTheme = function() {
   const saved = localStorage.getItem('jec_theme') || 'light';
   if (saved === 'dark') {
@@ -523,15 +528,17 @@ JEC.updateThemeIcon = function() {
   icon.textContent = current === 'dark' ? 'light_mode' : 'dark_mode';
 };
 
-// ═══════════ LANGUAGE ═══════════
+// ═══════════════════════════════════════════════════
+// LANGUAGE
+// ═══════════════════════════════════════════════════
 JEC.applyLang = function() {
   const langBtn = document.getElementById('lang-btn');
   const loginLangBtn = document.getElementById('login-lang-btn');
   const langText = JEC.lang.toUpperCase();
-  
+
   if (langBtn) langBtn.textContent = langText;
   if (loginLangBtn) loginLangBtn.textContent = langText;
-  
+
   document.querySelectorAll('[data-i18n]').forEach(function(el) {
     const key = el.getAttribute('data-i18n');
     const val = JEC.t(key);
@@ -558,7 +565,9 @@ JEC.t = function(key) {
   return obj;
 };
 
-// ═══════════ OFFLINE DETECTION ═══════════
+// ═══════════════════════════════════════════════════
+// OFFLINE DETECTION
+// ═══════════════════════════════════════════════════
 JEC.setupOfflineDetection = function() {
   const update = function() {
     const bar = document.getElementById('offline-bar');
@@ -574,14 +583,16 @@ JEC.setupOfflineDetection = function() {
   update();
 };
 
-// ═══════════ CUSTOM LOGO & HEADER BG ═══════════
+// ═══════════════════════════════════════════════════
+// CUSTOM LOGO & HEADER BG
+// ═══════════════════════════════════════════════════
 JEC.applyCustomLogo = function() {
   const logoUrl = localStorage.getItem('jec_logo_url') || '';
   const loginLogo = document.getElementById('login-logo-img');
   const headerLogo = document.getElementById('header-logo-img');
   const loginFallback = document.getElementById('login-logo-fallback');
   const headerFallback = document.getElementById('header-logo-fallback');
-  
+
   if (logoUrl) {
     if (loginLogo) { loginLogo.src = logoUrl; loginLogo.style.display = 'block'; }
     if (headerLogo) { headerLogo.src = logoUrl; headerLogo.style.display = 'block'; }
@@ -598,13 +609,13 @@ JEC.applyCustomLogo = function() {
 JEC.applyHeaderBg = function() {
   const headerBg = document.getElementById('header-bg');
   if (!headerBg) return;
-  
+
   const bgType = localStorage.getItem('jec_header_bg_type') || '';
   const bgUrl = localStorage.getItem('jec_header_bg_url') || '';
-  
+
   headerBg.style.backgroundImage = '';
   headerBg.className = 'header-bg';
-  
+
   if (bgType === 'image' && bgUrl) {
     headerBg.style.backgroundImage = 'url(' + bgUrl + ')';
     headerBg.style.backgroundSize = 'cover';
@@ -612,7 +623,9 @@ JEC.applyHeaderBg = function() {
   }
 };
 
-// ═══════════ API WRAPPER ═══════════
+// ═══════════════════════════════════════════════════
+// API WRAPPER
+// ═══════════════════════════════════════════════════
 JEC.apiGet = async function(params) {
   const url = JEC.config.LOG;
   if (!url) throw new Error('LOG URL not configured');
@@ -635,34 +648,36 @@ JEC.apiPost = async function(data) {
   });
 };
 
-// ═══════════ LOGIN & SESSION (DUA GERBANG) ═══════════
+// ═══════════════════════════════════════════════════
+// LOGIN & SESSION (DUAL-GATE + ROBUST AUTO-LOGIN)
+// ═══════════════════════════════════════════════════
 JEC.login = async function(id, pin) {
   try {
-    // 1. CEK STATUS GERBANG DARI FIREBASE
+    // Step 1: Cek status gerbang dari Firebase
     let loginMode = 'github';
     try {
-      const statusRes = await fetch(JEC.config.FIREBASE_URL + '/server_status.json');
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const statusRes = await fetch(JEC.config.FIREBASE_URL + '/server_status.json', { signal: controller.signal });
+      clearTimeout(timeout);
       loginMode = await statusRes.json() || 'github';
     } catch (err) {
       console.warn('[JEC] Gagal cek status gerbang, fallback ke github', err);
     }
-    
-    // Simpan mode ke memori lokal
+
     localStorage.setItem('jec_login_mode', loginMode);
-    
+
     let userData = null;
 
     if (loginMode === 'firebase') {
-      // ==========================================
       // GERBANG B: MODE UJIAN (FIREBASE)
-      // ==========================================
-      const fbRes = await fetch(`${JEC.config.FIREBASE_URL}/students/${id}.json`);
+      const fbRes = await fetch(JEC.config.FIREBASE_URL + '/students/' + id + '.json');
       const fbData = await fbRes.json();
-      
+
       if (!fbData) return { success: false, msg: 'ID tidak ditemukan di server ujian.' };
       if (String(fbData.pin) !== String(pin)) return { success: false, msg: 'PIN salah.' };
       if (fbData.active === false) return { success: false, msg: 'Akun tidak aktif.' };
-      
+
       userData = {
         id: String(id),
         name: fbData.name,
@@ -673,21 +688,18 @@ JEC.login = async function(id, pin) {
         sessionDuration: fbData.sessionDuration,
         daysLeft: 30
       };
-      console.log("[JEC] Login via Firebase (Mode Ujian) Sukses");
-
+      console.log('[JEC] Login via Firebase (Mode Ujian) Sukses');
     } else {
-      // ==========================================
       // GERBANG A: MODE NORMAL (GITHUB u.json)
-      // ==========================================
       const ghRes = await fetch(JEC.config.DATA + 'u.json?v=' + Date.now());
       const ghData = await ghRes.json();
-      
+
       const student = ghData.students.find(s => String(s.id) === String(id));
-      
+
       if (!student) return { success: false, msg: 'ID tidak ditemukan.' };
       if (String(student.pin) !== String(pin)) return { success: false, msg: 'PIN salah.' };
       if (student.active === false) return { success: false, msg: 'Akun tidak aktif.' };
-      
+
       userData = {
         id: String(student.id),
         name: student.name,
@@ -696,52 +708,80 @@ JEC.login = async function(id, pin) {
         batch: String(student.batch),
         startDate: student.startDate,
         sessionDuration: student.sessionDuration,
-        daysLeft: 30 
+        daysLeft: 30
       };
-      console.log("[JEC] Login via GitHub (Mode Normal) Sukses");
+      console.log('[JEC] Login via GitHub (Mode Normal) Sukses');
     }
 
-    // 2. LANJUTKAN PROSES JIKA LOGIN BERHASIL
+    // Step 2: Lanjutkan proses jika login berhasil
     JEC.user = userData;
     localStorage.setItem('jec_user', JSON.stringify(JEC.user));
-    
+
     await JEC.loadAllData();
     JEC.checkDailyChallenge();
     JEC.checkAllAchievements();
-    JEC.logActivity('login', `Login successful via ${loginMode}`);
+    JEC.logActivity('login', 'Login successful via ' + loginMode);
     localStorage.setItem('jec_last_login_' + JEC.user.id, Date.now());
-    
+
     return { success: true };
 
-  } catch(e) {
-    console.error("[JEC] Login Error:", e);
+  } catch (e) {
+    console.error('[JEC] Login Error:', e);
     return { success: false, msg: 'Kesalahan jaringan: ' + e.message };
   }
 };
 
 JEC.autoLogin = async function(u) {
+  // Step 1: Coba check_session ke Apps Script (dengan timeout 5 detik)
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
     const data = await JEC.apiGet({ action: 'check_session', id: u.id });
-    if (data.active) {
+    clearTimeout(timeout);
+
+    if (data && data.active === true) {
+      // Session valid → lanjut
       JEC.user = u;
-      JEC.user.daysLeft = data.daysLeft;
+      JEC.user.daysLeft = data.daysLeft || 30;
       await JEC.loadAllData();
       JEC.checkDailyChallenge();
       JEC.checkAllAchievements();
+      console.log('[JEC] Auto-login sukses (session valid)');
       return true;
-    } else {
+    } else if (data && data.active === false) {
+      // Session expired → hapus user, minta login ulang
+      console.warn('[JEC] Session expired, clearing user');
       localStorage.removeItem('jec_user');
       JEC.user = null;
       return false;
-    }
-  } catch(e) {
-    console.warn('[JEC] Auto-login check failed:', e);
-    try {
+    } else {
+      // Response aneh → anggap valid, lanjut dengan data lokal
+      console.warn('[JEC] check_session response aneh, lanjut dengan data lokal');
       JEC.user = u;
       await JEC.loadAllData();
       return true;
-    } catch(e2) {
-      return false;
+    }
+  } catch (e) {
+    // Step 2: API gagal → JANGAN hapus user, lanjut dengan data lokal
+    console.warn('[JEC] check_session gagal (' + e.message + '), fallback ke data lokal');
+
+    try {
+      JEC.user = u;
+      JEC.user.daysLeft = u.daysLeft || 30;
+
+      // Coba load data materi dari GitHub (tidak perlu Apps Script)
+      await JEC.loadAllData();
+      JEC.checkDailyChallenge();
+      JEC.checkAllAchievements();
+
+      console.log('[JEC] Auto-login sukses (fallback lokal)');
+      return true;
+    } catch (e2) {
+      // Step 3: Semua gagal → TETAP masuk dashboard, jangan paksa login
+      console.error('[JEC] Semua load gagal, tetap masuk dashboard:', e2.message);
+      JEC.user = u;
+      return true; // PENTING: return true, jangan false!
     }
   }
 };
@@ -755,28 +795,34 @@ JEC.logout = function() {
   location.reload();
 };
 
-// ═══════════ DATA LOADING ═══════════
+// ═══════════════════════════════════════════════════
+// DATA LOADING
+// ═══════════════════════════════════════════════════
 JEC.loadAllData = async function() {
   try {
+    // Load 5 modul materi dari GitHub
     const modules = ['spe', 'voc', 'gra', 'wri', 'lis'];
     for (let i = 0; i < modules.length; i++) {
       const m = modules[i];
       try {
         const r = await fetch(JEC.config.DATA + m + '.json?v=' + Date.now());
         if (r.ok) JEC.materiData[m] = await r.json();
-      } catch(e) {}
+      } catch (e) {}
     }
-    
+
+    // Load ext.json
     try {
       const er = await fetch(JEC.config.DATA + 'ext.json?v=' + Date.now());
       if (er.ok) JEC.extData = await er.json();
-    } catch(e) {}
-    
+    } catch (e) {}
+
+    // Load lb.json
     try {
       const lr = await fetch(JEC.config.DATA + 'lb.json?v=' + Date.now());
       if (lr.ok) JEC.lbData = await lr.json();
-    } catch(e) {}
-    
+    } catch (e) {}
+
+    // Load progress dari Apps Script
     try {
       const pr = await JEC.apiGet({ action: 'fetch_progress', id: JEC.user.id });
       JEC.progressMap = {};
@@ -785,19 +831,21 @@ JEC.loadAllData = async function() {
           JEC.progressMap[p.module + '_' + p.unitId + '_' + p.partId] = p.status;
         });
       }
-    } catch(e) {}
-    
+    } catch (e) {}
+
+    // Load leaderboard dari Apps Script
     try {
       const lbr = await JEC.apiGet({ action: 'fetch_leaderboard', batch: JEC.user.batch });
       if (Array.isArray(lbr)) JEC.leaderboardData = lbr;
-    } catch(e) {}
-    
+    } catch (e) {}
+
+    // Load local data
     JEC.unlockedAch = JSON.parse(localStorage.getItem('jec_ach_' + JEC.user.id) || '[]');
     JEC.bookmarkList = JSON.parse(localStorage.getItem('jec_bm_' + JEC.user.id) || '[]');
     JEC.notesMap = JSON.parse(localStorage.getItem('jec_notes_' + JEC.user.id) || '{}');
-    
+
     JEC.updateStats();
-  } catch(e) {
+  } catch (e) {
     console.warn('[JEC] Data load failed:', e);
   }
 };
@@ -808,13 +856,15 @@ JEC.updateStats = function() {
   s.bmCount = JEC.bookmarkList.length;
   s.notesCount = Object.keys(JEC.notesMap).length;
   s.hasProfile = !!(JEC.user && JEC.user.name);
-  
+
   const hour = new Date().getHours();
   s.earlyBird = hour < 6;
   s.nightOwl = hour >= 22 || hour < 5;
 };
 
-// ═══════════ LOGGING ═══════════
+// ═══════════════════════════════════════════════════
+// LOGGING
+// ═══════════════════════════════════════════════════
 JEC.logActivity = function(type, details) {
   if (!JEC.user) return;
   JEC.apiPost({
@@ -843,26 +893,28 @@ JEC.fetchOnlineCount = async function() {
     JEC.onlineCount = Array.isArray(data) ? data.length : 0;
     const el = document.getElementById('online-num');
     if (el) el.textContent = JEC.onlineCount;
-  } catch(e) {
+  } catch (e) {
     JEC.onlineCount = 0;
   }
 };
 
-// ═══════════ DAILY CHALLENGE ═══════════
+// ═══════════════════════════════════════════════════
+// DAILY CHALLENGE
+// ═══════════════════════════════════════════════════
 JEC.checkDailyChallenge = function() {
   if (!JEC.user) return;
   const challenges = JEC.config.DAILY_CHALLENGES || [];
   if (!challenges.length) return;
-  
+
   const today = new Date().toISOString().split('T')[0];
   const lastDone = localStorage.getItem('jec_dc_date_' + JEC.user.id);
-  
+
   if (lastDone === today) {
     JEC.dcToday = null;
     JEC.currentDC = null;
     return;
   }
-  
+
   const seed = new Date().getDate() + new Date().getMonth() * 31;
   JEC.currentDC = challenges[seed % challenges.length];
   JEC.dcToday = {
@@ -876,13 +928,13 @@ JEC.checkDailyChallenge = function() {
 JEC.triggerDailyChallenge = function(trigger, data) {
   if (!JEC.user || !JEC.currentDC || !JEC.dcToday) return;
   if (JEC.dcToday.completed) return;
-  
+
   const ch = JEC.currentDC;
   if (ch.trigger !== trigger) return;
-  
+
   let shouldComplete = false;
-  
-  switch(trigger) {
+
+  switch (trigger) {
     case 'speak': case 'writing': case 'review': case 'note': case 'bookmark': case 'login':
       shouldComplete = true; break;
     case 'voc_part': shouldComplete = data && data.module === 'voc'; break;
@@ -908,24 +960,24 @@ JEC.triggerDailyChallenge = function(trigger, data) {
       }
       break;
   }
-  
+
   if (shouldComplete) JEC.completeDailyChallenge();
 };
 
 JEC.completeDailyChallenge = function() {
   if (!JEC.currentDC || !JEC.dcToday) return;
   if (JEC.dcToday.completed) return;
-  
+
   JEC.dcToday.completed = true;
   const today = new Date().toISOString().split('T')[0];
   localStorage.setItem('jec_dc_date_' + JEC.user.id, today);
-  
+
   const xp = JEC.currentDC.xp || 20;
   JEC.toast(
     ((JEC.config.I18N.dc_complete && JEC.config.I18N.dc_complete[JEC.lang]) || 'Daily Challenge Completed!') + ' +' + xp + ' XP',
     'success', 3000
   );
-  
+
   JEC.apiPost({
     action: 'save_daily_challenge',
     id: JEC.user.id,
@@ -933,23 +985,26 @@ JEC.completeDailyChallenge = function() {
     challengeTitle: JEC.currentDC.en,
     xpEarned: xp
   }).catch(function() {});
-  
+
+  JEC.stats.dcCount = (JEC.stats.dcCount || 0) + 1;
   JEC.checkAllAchievements();
 };
 
-// ═══════════ ACHIEVEMENT ENGINE ═══════════
+// ═══════════════════════════════════════════════════
+// ACHIEVEMENT ENGINE
+// ═══════════════════════════════════════════════════
 JEC.checkAllAchievements = function() {
   if (!JEC.user) return;
   const achs = JEC.config.ACHIEVEMENTS || [];
   const s = JEC.stats;
-  
+
   achs.forEach(function(ach) {
     if (JEC.unlockedAch.includes(ach.id)) return;
     try {
       if (typeof ach.cond === 'function' && ach.cond(s)) {
         JEC.unlockAchievement(ach.id);
       }
-    } catch(e) {}
+    } catch (e) {}
   });
 };
 
@@ -957,13 +1012,13 @@ JEC.unlockAchievement = function(achId) {
   if (JEC.unlockedAch.includes(achId)) return;
   JEC.unlockedAch.push(achId);
   localStorage.setItem('jec_ach_' + JEC.user.id, JSON.stringify(JEC.unlockedAch));
-  
+
   const achs = JEC.config.ACHIEVEMENTS || [];
   const ach = achs.find(function(a) { return a.id === achId; });
   if (!ach) return;
-  
+
   JEC.showAchToast(ach);
-  
+
   JEC.apiPost({
     action: 'earn_achievement',
     id: JEC.user.id,
@@ -975,10 +1030,10 @@ JEC.unlockAchievement = function(achId) {
 JEC.showAchToast = function(ach) {
   const existing = document.getElementById('ach-toast');
   if (existing) existing.remove();
-  
+
   const title = (JEC.config.I18N.ach_unlocked && JEC.config.I18N.ach_unlocked[JEC.lang]) || 'Achievement Unlocked!';
   const name = JEC.lang === 'id' ? ach.id : ach.en;
-  
+
   const toast = document.createElement('div');
   toast.id = 'ach-toast';
   toast.className = 'ach-toast';
@@ -988,7 +1043,7 @@ JEC.showAchToast = function(ach) {
     '<div class="ach-toast-name">' + JEC.esc(name) + '</div>' +
     '</div>';
   document.body.appendChild(toast);
-  
+
   setTimeout(function() { toast.classList.add('show'); }, 50);
   setTimeout(function() {
     toast.classList.remove('show');
@@ -996,21 +1051,23 @@ JEC.showAchToast = function(ach) {
   }, 3500);
 };
 
-// ═══════════ PROGRESS & ACTIVITY (DUA GERBANG) ═══════════
+// ═══════════════════════════════════════════════════
+// PROGRESS & ACTIVITY
+// ═══════════════════════════════════════════════════
 JEC.markDone = function(module, unitId, partId, score) {
   if (!JEC.user) return;
   const key = module + '_' + unitId + '_' + partId;
   if (JEC.progressMap[key] === 'done') return;
-  
+
   JEC.progressMap[key] = 'done';
   score = score || 100;
-  
+
   JEC.apiPost({
     action: 'mark_done',
     id: JEC.user.id, batch: JEC.user.batch,
     module: module, unitId: unitId, partId: partId, score: score
   }).catch(function() {});
-  
+
   JEC.updateStats();
   JEC.checkAllAchievements();
   JEC.triggerDailyChallenge(module + '_part', { module: module });
@@ -1020,13 +1077,11 @@ JEC.markDone = function(module, unitId, partId, score) {
 JEC.saveScore = function(module, unitId, partId, score, totalQ, correctA) {
   if (!JEC.user) return;
 
-  // Baca memori: Sedang di gerbang mana kita sekarang?
+  // Baca mode login
   const currentMode = localStorage.getItem('jec_login_mode') || 'github';
 
   if (currentMode === 'firebase') {
-    // ==========================================
     // MODE UJIAN: Kirim nilai langsung ke Firebase
-    // ==========================================
     const testRecord = {
       timestamp: new Date().toISOString(),
       id: JEC.user.id,
@@ -1038,19 +1093,15 @@ JEC.saveScore = function(module, unitId, partId, score, totalQ, correctA) {
       correctAnswers: correctA
     };
 
-    // Gunakan POST agar Firebase membuatkan ID unik (firebaseKey)
     fetch(JEC.config.FIREBASE_URL + '/test_results.json', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(testRecord)
     }).catch(function(e) {
-      console.error("[JEC] Gagal mengirim nilai ke Firebase:", e);
+      console.error('[JEC] Gagal mengirim nilai ke Firebase:', e);
     });
-
   } else {
-    // ==========================================
-    // MODE NORMAL: Kirim nilai ke Google Apps Script
-    // ==========================================
+    // MODE NORMAL: Kirim ke Apps Script
     JEC.apiPost({
       action: 'save_score',
       id: JEC.user.id, batch: JEC.user.batch,
@@ -1059,7 +1110,6 @@ JEC.saveScore = function(module, unitId, partId, score, totalQ, correctA) {
     }).catch(function() {});
   }
 
-  // Lanjutkan memproses gamifikasi & statistik siswa di lokal
   JEC.stats.quizCount++;
   if (score === 100) {
     JEC.stats.perfectQuiz = true;
@@ -1072,14 +1122,14 @@ JEC.saveScore = function(module, unitId, partId, score, totalQ, correctA) {
 
 JEC.saveFocusMode = function(module, unitId, partId, duration, completed) {
   if (!JEC.user) return;
-  
+
   JEC.apiPost({
     action: 'save_focus_mode',
     id: JEC.user.id, batch: JEC.user.batch,
     module: module, unitId: unitId, partId: partId,
     duration: duration, completed: completed
   }).catch(function() {});
-  
+
   if (completed) {
     JEC.stats.focusCount++;
     JEC.stats.focusHours += duration / 60;
@@ -1092,16 +1142,16 @@ JEC.addBookmark = function(module, unitId, partId) {
   if (!JEC.user) return;
   const key = module + '_' + unitId + '_' + partId;
   if (JEC.bookmarkList.includes(key)) return;
-  
+
   JEC.bookmarkList.push(key);
   localStorage.setItem('jec_bm_' + JEC.user.id, JSON.stringify(JEC.bookmarkList));
-  
+
   JEC.apiPost({
     action: 'add_bookmark',
     id: JEC.user.id, batch: JEC.user.batch,
     module: module, unitId: unitId, partId: partId
   }).catch(function() {});
-  
+
   JEC.updateStats();
   JEC.triggerDailyChallenge('bookmark', {});
   JEC.checkAllAchievements();
@@ -1112,54 +1162,78 @@ JEC.removeBookmark = function(module, unitId, partId) {
   const key = module + '_' + unitId + '_' + partId;
   const idx = JEC.bookmarkList.indexOf(key);
   if (idx === -1) return;
-  
+
   JEC.bookmarkList.splice(idx, 1);
   localStorage.setItem('jec_bm_' + JEC.user.id, JSON.stringify(JEC.bookmarkList));
-  
+
   JEC.apiPost({
     action: 'remove_bookmark',
     id: JEC.user.id, batch: JEC.user.batch,
     module: module, unitId: unitId, partId: partId
   }).catch(function() {});
-  
+
   JEC.updateStats();
 };
 
 JEC.saveNote = function(module, unitId, partId, content) {
   if (!JEC.user) return;
   const key = module + '_' + unitId + '_' + partId;
-  
+
   if (content && content.trim()) {
     JEC.notesMap[key] = content;
   } else {
     delete JEC.notesMap[key];
   }
   localStorage.setItem('jec_notes_' + JEC.user.id, JSON.stringify(JEC.notesMap));
-  
+
   JEC.apiPost({
     action: 'save_note',
     id: JEC.user.id, batch: JEC.user.batch,
     module: module, unitId: unitId, partId: partId, content: content
   }).catch(function() {});
-  
+
   JEC.updateStats();
   JEC.triggerDailyChallenge('note', {});
   JEC.checkAllAchievements();
 };
 
-// ═══════════ VIEW ROUTER ═══════════
+// ═══════════════════════════════════════════════════
+// VIEW ROUTER
+// ═══════════════════════════════════════════════════
 JEC.switchView = function(name, btn) {
   document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
   const target = document.getElementById('view-' + name);
   if (target) target.classList.add('active');
-  
+
   document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
-  
+
   JEC.activeView = name;
   JEC.lazyLoadForView(name);
 };
 
+JEC.lazyLoadForView = function(viewName) {
+  const viewModuleMap = {
+    'learn': ['learn'],
+    'practice': ['practice'],
+    'extra': ['extra', 'logbook'],
+    'profile': ['profile', 'bm', 'notes', 'ach']
+  };
+
+  const modules = viewModuleMap[viewName] || [];
+  const toLoad = modules.filter(function(m) {
+    const state = JEC.featureStates[m];
+    return !state || (!state.loaded && !state.disabled && !state.notFound);
+  });
+
+  if (toLoad.length > 0) {
+    JEC.loadPriorityModules(toLoad);
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// FULLSCREEN
+// ═══════════════════════════════════════════════════
 JEC.toggleFullscreen = function() {
   const icon = document.getElementById('fs-icon');
   if (!document.fullscreenElement) {
@@ -1173,6 +1247,9 @@ JEC.toggleFullscreen = function() {
   }
 };
 
+// ═══════════════════════════════════════════════════
+// OVERLAY
+// ═══════════════════════════════════════════════════
 JEC.openOv = function(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
@@ -1183,6 +1260,9 @@ JEC.closeOv = function(id) {
   if (el) el.classList.remove('active');
 };
 
+// ═══════════════════════════════════════════════════
+// GM (EXERCISE/MINIGAMES)
+// ═══════════════════════════════════════════════════
 JEC.closeGM = function() {
   const overlay = document.getElementById('gm-overlay');
   const frame = document.getElementById('gm-frame');
@@ -1190,11 +1270,23 @@ JEC.closeGM = function() {
   if (frame) frame.src = 'about:blank';
 };
 
-// ═══════════ TOAST ═══════════
+JEC.openGM = function(url, title) {
+  const overlay = document.getElementById('gm-overlay');
+  const frame = document.getElementById('gm-frame');
+  const titleEl = document.getElementById('gm-title');
+
+  if (overlay) overlay.classList.add('active');
+  if (frame) frame.src = url || 'about:blank';
+  if (titleEl) titleEl.textContent = title || 'Exercise';
+};
+
+// ═══════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════
 JEC.toast = function(msg, type, duration) {
   type = type || 'success';
   duration = duration || 2000;
-  
+
   let toastBar = document.getElementById('toast-bar');
   if (!toastBar) {
     toastBar = document.createElement('div');
@@ -1203,27 +1295,29 @@ JEC.toast = function(msg, type, duration) {
     toastBar.innerHTML = '<span class="material-icons-round toast-icon"></span><span class="toast-msg"></span>';
     document.body.appendChild(toastBar);
   }
-  
+
   const icon = toastBar.querySelector('.toast-icon');
   const msgEl = toastBar.querySelector('.toast-msg');
-  
+
   let iconChar = 'check_circle';
   if (type === 'error') iconChar = 'error';
   else if (type === 'warning') iconChar = 'warning';
   else if (type === 'info') iconChar = 'info';
-  
+
   toastBar.className = 'toast-bar toast-' + type;
   icon.textContent = iconChar;
   msgEl.textContent = msg;
   toastBar.classList.add('show');
-  
+
   if (JEC._toastTimer) clearTimeout(JEC._toastTimer);
   JEC._toastTimer = setTimeout(function() {
     toastBar.classList.remove('show');
   }, duration);
 };
 
-// ═══════════ UTILITIES ═══════════
+// ═══════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════
 JEC.esc = function(s) {
   return (s || '').toString()
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -1235,7 +1329,7 @@ JEC.refreshActiveFeatureUI = function() {
   Object.keys(JEC.featureStates).forEach(function(name) {
     const refreshFn = window['JEC_' + name.toUpperCase() + '_REFRESH'];
     if (typeof refreshFn === 'function' && JEC.featureStates[name].loaded) {
-      try { refreshFn(JEC); } catch(e) {}
+      try { refreshFn(JEC); } catch (e) {}
     }
   });
 };
@@ -1246,7 +1340,7 @@ JEC.reportIssue = function(text) {
     return;
   }
   const wa = JEC.config.WA_ADMIN || '6285335913758';
-  const msg = encodeURIComponent('[JEC Report]\nID: ' + JEC.user.id + '\nName: ' + JEC.user.name + '\n\n' + text);
+  const msg = encodeURIComponent('[JEC Report]\nID: ' + (JEC.user ? JEC.user.id : '-') + '\nName: ' + (JEC.user ? JEC.user.name : '-') + '\n\n' + text);
   window.open('https://wa.me/' + wa + '?text=' + msg, '_blank');
   JEC.closeOv('ov-report');
   JEC.toast('Opening WhatsApp...', 'success');
@@ -1259,9 +1353,11 @@ JEC.forceRefresh = async function() {
   JEC.toast('Refreshed!', 'success');
 };
 
-// ═══════════ DEBUG ═══════════
+// ═══════════════════════════════════════════════════
+// DEBUG
+// ═══════════════════════════════════════════════════
 JEC.debug = function() {
-  console.log('══════ JEC DEBUG v6.00 ══════');
+  console.log('══════ JEC DEBUG v8.00 ══════');
   console.log('App State:', JEC.appState);
   console.log('Dashboard Ready:', JEC.dashboardReady);
   console.log('User:', JEC.user);
@@ -1269,39 +1365,30 @@ JEC.debug = function() {
   console.log('Priority 1:', JEC.PRIORITY_1);
   console.log('Priority 2:', JEC.PRIORITY_2);
   console.log('Priority 3:', JEC.PRIORITY_3);
-  
-  const features = JEC.config.FEATURES || {};
-  Object.keys(features).forEach(function(name) {
-    const initFn = window['JEC_' + name.toUpperCase() + '_INIT'];
-    const container = document.getElementById('feat-' + name);
-    console.log(
-      name + ':',
-      'enabled=' + (features[name].enabled ? 'yes' : 'no'),
-      'initFn=' + (typeof initFn === 'function' ? 'OK' : 'MISSING'),
-      'container=' + (container ? 'OK' : 'MISSING'),
-      'state=' + JSON.stringify(JEC.featureStates[name] || {})
-    );
-  });
+  console.log('Stats:', JEC.stats);
+  console.log('Login Mode:', localStorage.getItem('jec_login_mode'));
   console.log('══════ END DEBUG ══════');
 };
 
-// ═══════════ FLM TIMER DI HEADER ═══════════
+// ═══════════════════════════════════════════════════
+// FLM TIMER DI HEADER
+// ═══════════════════════════════════════════════════
 JEC.startFLMTimer = function(duration) {
   duration = duration || JEC.config.MFL_DEFAULT || 25;
   JEC.flmTotalSeconds = duration * 60;
   JEC.flmSeconds = JEC.flmTotalSeconds;
   JEC.flmActive = true;
-  
+
   const activeBar = document.getElementById('flm-active-bar');
   if (activeBar) activeBar.classList.remove('hidden');
-  
+
   JEC.updateFLMHeaderTimer();
-  
+
   if (JEC.flmTimer) clearInterval(JEC.flmTimer);
   JEC.flmTimer = setInterval(function() {
     JEC.flmSeconds--;
     JEC.updateFLMHeaderTimer();
-    
+
     if (JEC.flmSeconds <= 0) {
       JEC.completeFLM();
     }
@@ -1322,10 +1409,10 @@ JEC.completeFLM = function() {
   if (JEC.flmTimer) clearInterval(JEC.flmTimer);
   JEC.flmActive = false;
   JEC.flmTimer = null;
-  
+
   const activeBar = document.getElementById('flm-active-bar');
   if (activeBar) activeBar.classList.add('hidden');
-  
+
   JEC.saveFocusMode(
     JEC.currentModule,
     JEC.currentUnitId,
@@ -1333,9 +1420,9 @@ JEC.completeFLM = function() {
     JEC.flmTotalSeconds / 60,
     true
   );
-  
+
   JEC.toast(JEC.t('flm_complete') || 'Focus session completed!', 'success', 3000);
-  
+
   if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
     JEC_UI.showFLMFab();
   }
@@ -1343,20 +1430,22 @@ JEC.completeFLM = function() {
 
 JEC.exitFLM = function() {
   if (!confirm(JEC.t('flm_exit_confirm') || 'Exit Focus Learn Mode?')) return;
-  
+
   if (JEC.flmTimer) clearInterval(JEC.flmTimer);
   JEC.flmActive = false;
   JEC.flmTimer = null;
-  
+
   const activeBar = document.getElementById('flm-active-bar');
   if (activeBar) activeBar.classList.add('hidden');
-  
+
   if (typeof JEC_UI !== 'undefined' && JEC_UI.showFLMFab) {
     JEC_UI.showFLMFab();
   }
 };
 
-// ═══════════ INTERVALS ═══════════
+// ═══════════════════════════════════════════════════
+// INTERVALS
+// ═══════════════════════════════════════════════════
 setInterval(function() {
   if (JEC.user) {
     JEC.heartbeat();
@@ -1364,4 +1453,5 @@ setInterval(function() {
   }
 }, 30000);
 
+// Export
 window.JEC = JEC;
