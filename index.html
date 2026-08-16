@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#833AB4">
+<meta name="description" content="JEC - Jagat E Course | Platform Belajar Bahasa Inggris">
+<title>JEC - Jagat E Course</title>
+
+<!-- ═══════════ EXTERNAL CSS (Clean Instagram Theme) ═══════════ -->
+<link rel="stylesheet" href="https://raw.githubusercontent.com/caksup/jec/main/s/s.css?v=9.00">
+
+<!-- ═══════════ FONTS ═══════════ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+
+<!-- ═══════════ FAVICON ═══════════ -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='80' font-size='80' font-weight='800' font-family='Arial' fill='%23833AB4'%3EJ%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SPLASH SCREEN (Instagram Gradient) -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="feat-splash" class="splash">
+  <div class="splash-logo">JEC</div>
+  <div class="splash-name">JAGAT E COURSE</div>
+  <div class="splash-tag">BELAJAR BAHASA INGGRIS</div>
+  <div class="splash-loader"></div>
+  <div class="splash-bot">JEC 2026 • v9.00 • Jagat Kreatif</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- OFFLINE BAR -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="offline-bar">
+  <span class="material-icons-round">wifi_off</span>
+  <span data-i18n="offline">You're offline</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- LOGIN PAGE -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="feat-login" class="login-page hidden">
+  <button class="login-lang-btn" id="login-lang-btn" onclick="JEC.toggleLang()">EN</button>
+  
+  <div class="login-card">
+    <div class="login-logo-container">
+      <img id="login-logo-img" class="login-logo-img" src="" alt="JEC Logo" 
+           onerror="this.style.display='none'; document.getElementById('login-logo-fallback').style.display='flex';">
+      <div id="login-logo-fallback" class="login-logo-fallback">
+        <span class="material-icons-round">school</span>
+      </div>
+    </div>
+    
+    <div class="login-welcome" data-i18n="welcome_to">Welcome to</div>
+    <div class="login-title">
+      <span class="t-jec">JEC</span>
+      <span class="t-digital" data-i18n="digital">Digital</span>
+      <span data-i18n="course">Course</span>
+    </div>
+    <p class="login-tagline" data-i18n="tagline">
+      Belajar bahasa Inggris itu <b>mudah</b>, <b>seru</b>, dan <b>menyenangkan!</b>
+    </p>
+    
+    <div class="login-form">
+      <div class="login-error" id="login-error">
+        <span class="material-icons-round">error</span>
+        <span id="login-error-msg"></span>
+      </div>
+      <div class="login-field">
+        <label data-i18n="student_id">
+          <span class="material-icons-round" style="font-size:12px;vertical-align:middle">badge</span>
+          Student ID
+        </label>
+        <input type="text" id="login-id" placeholder="260101" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label>
+          <span class="material-icons-round" style="font-size:12px;vertical-align:middle">lock</span>
+          PIN
+        </label>
+        <input type="password" id="login-pin" placeholder="••••" maxlength="6" autocomplete="current-password">
+      </div>
+      <button class="btn-primary" id="login-btn">
+        <span class="material-icons-round">login</span>
+        <span data-i18n="login_btn">SIGN IN</span>
+      </button>
+      <div class="login-footer" data-i18n="login_footer">Forgot PIN? Contact admin.</div>
+    </div>
+  </div>
+  
+  <div class="login-loading" id="login-loading">
+    <div class="login-loading-card">
+      <div class="login-loading-spinner"></div>
+      <div class="login-loading-text" data-i18n="loading">Signing in...</div>
+      <div class="login-loading-sub" data-i18n="loading_sub">Please wait a moment</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- DASHBOARD -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="dashboard" class="dashboard">
+
+  <!-- HEADER -->
+  <header class="header" id="feat-header">
+    <div class="header-bg" id="header-bg"></div>
+    <div class="header-content">
+      <div class="header-top">
+        <div class="header-brand">
+          <img id="header-logo-img" class="header-logo-img" src="" alt="JEC"
+               onerror="this.style.display='none'; document.getElementById('header-logo-fallback').style.display='flex';">
+          <div id="header-logo-fallback" class="header-logo-fallback">
+            <span class="material-icons-round">school</span>
+          </div>
+          <span class="header-brand-name">JAGAT E COURSE</span>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" id="btn-fullscreen" onclick="JEC.toggleFullscreen()" title="Fullscreen">
+            <span class="material-icons-round" id="fs-icon">fullscreen</span>
+          </button>
+          <button class="icon-btn" id="btn-theme" onclick="JEC.toggleTheme()" title="Theme">
+            <span class="material-icons-round" id="theme-icon">dark_mode</span>
+          </button>
+          <button class="icon-btn lang-btn" id="lang-btn" onclick="JEC.toggleLang()" title="Language">EN</button>
+          <button class="icon-btn" id="btn-menu" onclick="JEC.openOv('ov-menu')" title="Menu">
+            <span class="material-icons-round">more_vert</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="header-info">
+        <div class="header-datetime-row">
+          <span class="material-icons-round" style="font-size:12px">schedule</span>
+          <span class="header-datetime" id="datetime">—</span>
+          <span class="header-sep">|</span>
+          <span class="header-online">
+            <span class="online-dot"></span>
+            <span id="online-num">0</span>
+            <span data-i18n="online">online</span>
+          </span>
+        </div>
+        <div class="header-greeting">
+          <span id="greet-text" data-i18n="greet.morning">Good morning</span>,
+          <span class="header-username" id="user-name" onclick="JEC.switchView('profile')">—</span>
+          <span class="header-wave">👋</span>
+        </div>
+        <div class="header-chips">
+          <span class="chip" title="Student ID"><span class="material-icons-round">badge</span><span id="chip-id">-</span></span>
+          <span class="chip" title="Class"><span class="material-icons-round">school</span><span id="chip-class">-</span></span>
+          <span class="chip" title="Days Left"><span class="material-icons-round">schedule</span><span id="chip-days">-</span></span>
+          <span class="chip" title="Progress"><span class="material-icons-round">flag</span><span id="chip-progress">0/0</span></span>
+          <span class="chip" title="Streak"><span class="material-icons-round">local_fire_department</span><span id="chip-streak">0</span></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENT VIEWS -->
+  <div class="content">
+    
+    <!-- VIEW: LEARN -->
+    <div class="view active" id="view-learn">
+      <div class="view-header">
+        <span class="material-icons-round view-icon">school</span>
+        <span data-i18n="learn">Learn</span>
+      </div>
+      <div id="feat-learn">
+        <div class="load-state">
+          <span class="material-icons-round">sync</span>
+          <div>Loading modules...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: PRACTICE -->
+    <div class="view" id="view-practice">
+      <div class="view-header">
+        <span class="material-icons-round view-icon">fitness_center</span>
+        <span data-i18n="practice">Practice</span>
+      </div>
+      <div id="feat-practice">
+        <div class="load-state">
+          <span class="material-icons-round">sync</span>
+          <div>Loading practice...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: EXTRA -->
+    <div class="view" id="view-extra">
+      <div class="view-header">
+        <span class="material-icons-round view-icon">more_horiz</span>
+        <span data-i18n="extra">Extra</span>
+      </div>
+      <div id="feat-extra">
+        <div class="load-state">
+          <span class="material-icons-round">sync</span>
+          <div>Loading extra tools...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: PROFILE -->
+    <div class="view" id="view-profile">
+      <div class="view-header">
+        <span class="material-icons-round view-icon">person</span>
+        <span data-i18n="profile">Profile</span>
+      </div>
+      <div id="feat-profile">
+        <div class="load-state">
+          <span class="material-icons-round">sync</span>
+          <div>Loading profile...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: MODULAR (untuk ext.js inject) -->
+    <div class="view" id="view-modular">
+      <div class="view-header">
+        <span class="material-icons-round view-icon">extension</span>
+        <span id="modular-title">Feature</span>
+      </div>
+      <div id="feat-modular"></div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="nav-btn active" onclick="JEC.switchView('learn', this)">
+      <span class="material-icons-round">school</span>
+      <span class="nav-label" data-i18n="learn">Learn</span>
+    </button>
+    <button class="nav-btn" onclick="JEC.switchView('practice', this)">
+      <span class="material-icons-round">fitness_center</span>
+      <span class="nav-label" data-i18n="practice">Practice</span>
+    </button>
+    <button class="nav-btn" onclick="JEC.switchView('extra', this)">
+      <span class="material-icons-round">more_horiz</span>
+      <span class="nav-label" data-i18n="extra">Extra</span>
+    </button>
+    <button class="nav-btn" onclick="JEC.switchView('profile', this)">
+      <span class="material-icons-round">person</span>
+      <span class="nav-label" data-i18n="profile">Profile</span>
+    </button>
+    <button class="nav-av" id="nav-av" onclick="JEC_UI.openProfile()" title="My Profile">🧑‍🎓</button>
+  </nav>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- FLM: FLOATING ACTION BUTTON -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="flm-fab" class="flm-fab hidden">
+  <span class="material-icons-round flm-fab-icon">timer</span>
+  <span class="flm-fab-label">FLM</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- FLM: ACTIVE BAR -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="flm-active-bar" class="flm-active-bar hidden">
+  <span class="material-icons-round flm-bar-icon">lock</span>
+  <span class="flm-bar-text">Focus Learn Mode Active</span>
+  <span class="flm-bar-timer" id="flm-header-timer">00:00</span>
+  <button class="flm-exit-btn" onclick="JEC_UI.exitFLM()">
+    <span class="material-icons-round">logout</span>
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- DAILY CHALLENGE BALLOON -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="feat-dc-balloon" class="dc-balloon" onclick="JEC_UI.openDCModal()">
+  <span class="material-icons-round dc-balloon-icon">emoji_events</span>
+  <span data-i18n="daily_challenge">Daily Challenge</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- OVERLAYS -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<!-- FLM Info Popup -->
+<div class="overlay" id="ov-flm">
+  <div class="modal flm-modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">timer</span>
+      <span data-i18n="flm_title">Focus Learn Mode</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-flm')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="flm-info">
+      <div class="flm-info-icon">
+        <span class="material-icons-round">psychology</span>
+      </div>
+      <div class="flm-info-title" data-i18n="flm_ready">Ready to Focus?</div>
+      <div class="flm-info-text" data-i18n="flm_desc">
+        Focus Learn Mode will lock your navigation for 25 minutes. No distractions!
+      </div>
+      <div class="flm-timer-preview">
+        <span class="material-icons-round">timer</span>
+        <span id="flm-duration-preview">25:00</span>
+      </div>
+      <button class="btn-primary flm-play-btn" onclick="JEC_UI.startFLM()">
+        <span class="material-icons-round">play_arrow</span>
+        <span data-i18n="flm_play">Start Focus</span>
+      </button>
+      <button class="btn-ghost" onclick="JEC.closeOv('ov-flm')">
+        <span data-i18n="cancel">Cancel</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Menu -->
+<div class="overlay" id="ov-menu">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">menu</span>
+      <span data-i18n="menu">Menu</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-menu')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <button class="menu-item" onclick="JEC.closeOv('ov-menu'); JEC_UI.openGuide()">
+      <span class="material-icons-round">menu_book</span>
+      <span data-i18n="guide">Guide</span>
+    </button>
+    <button class="menu-item" onclick="JEC.closeOv('ov-menu'); JEC_UI.openReport()">
+      <span class="material-icons-round">report_problem</span>
+      <span data-i18n="report">Report Issue</span>
+    </button>
+    <button class="menu-item" onclick="JEC.closeOv('ov-menu'); JEC.forceRefresh()">
+      <span class="material-icons-round">refresh</span>
+      <span data-i18n="refresh_data">Refresh Data</span>
+    </button>
+    <button class="menu-item" onclick="JEC_UI.openLogout()">
+      <span class="material-icons-round">logout</span>
+      <span data-i18n="logout">Logout</span>
+    </button>
+  </div>
+</div>
+
+<!-- Guide -->
+<div class="overlay" id="ov-guide">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">menu_book</span>
+      <span data-i18n="guide">Guide</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-guide')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div id="feat-guide-content"></div>
+  </div>
+</div>
+
+<!-- Report -->
+<div class="overlay" id="ov-report">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">report_problem</span>
+      <span data-i18n="report">Report Issue</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-report')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <textarea id="report-text" rows="4" data-i18n-placeholder="report_placeholder" 
+              placeholder="Describe the problem..." 
+              style="width:100%;border:1px solid var(--bd);border-radius:var(--r-sm);background:var(--sf2);padding:.7rem;margin-bottom:.7rem"></textarea>
+    <button class="btn-primary btn-wa" onclick="JEC.reportIssue(document.getElementById('report-text').value)">
+      <span class="material-icons-round">chat</span>
+      <span data-i18n="send_wa">Send via WhatsApp</span>
+    </button>
+  </div>
+</div>
+
+<!-- Logout Confirm -->
+<div class="overlay" id="ov-logout">
+  <div class="modal" style="text-align:center">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">logout</span>
+      <span data-i18n="logout">Logout</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-logout')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div style="font-size:3rem;color:var(--red);margin:.5rem 0">👋</div>
+    <p data-i18n="logout_confirm" style="margin-bottom:1rem">Are you sure you want to logout?</p>
+    <div class="btn-row">
+      <button class="btn-ghost" onclick="JEC.closeOv('ov-logout')">Cancel</button>
+      <button class="btn-primary btn-danger" onclick="JEC.logout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<!-- Daily Challenge Modal -->
+<div class="overlay" id="ov-dc">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">emoji_events</span>
+      <span data-i18n="daily_challenge">Daily Challenge</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-dc')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div id="feat-dc-content"></div>
+  </div>
+</div>
+
+<!-- Profile Modal (Full) -->
+<div class="overlay" id="ov-profile">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">person</span>
+      <span data-i18n="my_profile">My Profile</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-profile')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div id="feat-profile-full"></div>
+  </div>
+</div>
+
+<!-- Avatar Selector -->
+<div class="overlay" id="ov-avatar">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">face</span>
+      <span data-i18n="choose_avatar">Choose Avatar</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-avatar')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div id="feat-avatar-content"></div>
+  </div>
+</div>
+
+<!-- React/Feedback -->
+<div class="overlay" id="ov-react">
+  <div class="modal" style="text-align:center">
+    <div class="modal-header">
+      <span class="material-icons-round modal-icon">thumb_up</span>
+      <span data-i18n="feedback">Feedback</span>
+      <button class="icon-btn modal-close" onclick="JEC.closeOv('ov-react')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div id="feat-react-content"></div>
+  </div>
+</div>
+
+<!-- GM (Exercise/Minigames) Iframe -->
+<div id="gm-overlay" class="gm-overlay">
+  <div class="gm-header">
+    <button class="icon-btn gm-close" onclick="JEC.closeGM()">
+      <span class="material-icons-round">close</span>
+    </button>
+    <span class="gm-title" id="gm-title">Exercise</span>
+  </div>
+  <iframe id="gm-frame" src="about:blank"></iframe>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SCRIPTS (Order is IMPORTANT) -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<!-- 1. Config (must be first) -->
+<script src="https://raw.githubusercontent.com/caksup/jec/main/j/c.js?v=9.00"></script>
+
+<!-- 2. Ext.js Router (for feature injection) -->
+<script src="https://raw.githubusercontent.com/caksup/jec/main/j/ext.js?v=9.00"></script>
+
+<!-- 3. i18n Dictionary -->
+<script src="https://raw.githubusercontent.com/caksup/jec/main/j/i18n.js?v=9.00"></script>
+
+<!-- 4. UI Controllers -->
+<script src="https://raw.githubusercontent.com/caksup/jec/main/j/ui.js?v=9.00"></script>
+
+<!-- 5. Core Engine (loads last, but initializes first via DOMContentLoaded) -->
+<script src="https://raw.githubusercontent.com/caksup/jec/main/j/j.js?v=9.00"></script>
+
+</body>
+</html>
