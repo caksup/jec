@@ -1,4 +1,20 @@
 {
   "module": "speaking",
-  "materials": {}
+  "materials": {
+    "unit1": {
+      "title": "Unit 1 Introduction",
+      "locked": false,
+      "hidden": false,
+      "parts": {
+        "p1_intro": {
+          "title": "Intro Part",
+          "audioUrl": "",
+          "transcript": "can | bisa\nmake | membuat",
+          "quiz": [],
+          "locked": false,
+          "hidden": false
+        }
+      }
+    }
+  }
 }
