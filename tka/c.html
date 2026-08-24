@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevTools Console | JEC</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet">
+    <style>
+        body{font-family:'Inter',sans-serif;background:#1e1e1e;color:#ddd;margin:0;padding:20px;}
+        h1{color:#4ec9b0;font-size:1.3rem;}
+        .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 18px;border:none;border-radius:10px;font-weight:600;cursor:pointer;margin:5px 5px 5px 0;font-family:inherit;}
+        .btn.green{background:#4CAF50;color:#fff;} .btn.blue{background:#2196F3;color:#fff;}
+        #result{margin-top:15px;border-radius:12px;overflow:hidden;border:1px solid #333;}
+        .hint{color:#888;font-size:.8rem;}
+    </style>
+</head>
+<body>
+    <h1>🛠️ DevTools Console</h1>
+    <p class="hint">Cek error & integrasi antar file (firebase-config, hash, modal, app-admin, HTML).</p>
+
+    <button class="btn green" onclick="DevTools.showConsole()"><span class="material-symbols-rounded">terminal</span> Buka Console (Eruda)</button>
+    <button class="btn blue" onclick="runCheck()"><span class="material-symbols-rounded">network_check</span> Cek Integrasi</button>
+
+    <div id="result"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/hash.js"></script>
+    <script src="js/c.js"></script>
+
+    <script>
+        async function runCheck() {
+            const r = await DevTools.check();
+            DevTools.render(r, document.getElementById('result'));
+        }
+        // Auto-run saat dibuka
+        runCheck();
+    </script>
+</body>
+</html>

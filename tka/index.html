@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TKA 2026/2027 - Siswa | Jagat EC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet">
+    <link rel="stylesheet" href="css/style-global.css">
+    <link rel="stylesheet" href="css/style-student.css">
+    <style>
+        #options-container{list-style:none;padding:0;margin:0;}
+        .option-item{background:var(--white);border:2px solid #e0e0e0;border-radius:10px;padding:15px;margin-bottom:10px;display:flex;align-items:center;gap:15px;cursor:pointer;transition:.2s;font-size:1rem;}
+        .option-item.selected{border-color:var(--primary);background:#e3f2fd;font-weight:600;}
+        .option-label{width:35px;height:35px;background:var(--bg-color);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:var(--primary-dark);flex-shrink:0;}
+        .option-item.selected .option-label{background:var(--primary);color:var(--white);}
+        .option-text{flex:1;}
+        .cbt-nav-buttons{display:flex;gap:10px;margin-top:20px;}
+        .cbt-nav-buttons .btn{flex:1;}
+
+        .cbt-header{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--primary-dark);color:#fff;padding:10px 14px;}
+        .cbt-header .timer-box{display:flex;align-items:center;gap:6px;font-weight:800;font-size:1.05rem;}
+        .cbt-header .cbt-actions{display:flex;align-items:center;gap:12px;}
+        .cbt-header .fs-btn{cursor:pointer;font-size:22px;color:#fff;}
+        .cbt-header .btn-finish{display:flex;align-items:center;gap:6px;background:var(--danger);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:600;cursor:pointer;font-family:inherit;font-size:.8rem;}
+        .cbt-subheader{background:var(--white);padding:8px 14px;border-bottom:1px solid #eee;position:sticky;top:52px;z-index:99;}
+        .cbt-sesi-title{font-weight:800;color:var(--primary-dark);margin-bottom:4px;font-size:.9rem;}
+        .timeline{display:flex;align-items:center;overflow-x:auto;padding:6px 2px;}
+        .tl-node{display:flex;align-items:center;}
+        .tl-node .tl-dot{width:12px;height:12px;border-radius:50%;background:var(--danger);cursor:pointer;flex-shrink:0;transition:.2s;}
+        .tl-node.done .tl-dot{background:var(--success);}
+        .tl-node.current .tl-dot{transform:scale(1.5);box-shadow:0 0 0 3px rgba(33,150,243,.3);}
+        .tl-node::after{content:"";width:14px;height:2px;background:#ddd;flex-shrink:0;}
+        .tl-node:last-child::after{display:none;}
+
+        .sesi-item{background:var(--white);border-radius:12px;padding:18px;margin-bottom:12px;display:flex;align-items:center;gap:15px;cursor:pointer;border:2px solid #eee;}
+        .sesi-icon{width:50px;height:50px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;}
+        .sesi-icon .material-symbols-rounded{color:#fff;font-size:26px;}
+        .sesi-info{flex:1;} .sesi-info h4{margin:0 0 4px;} .sesi-info p{margin:0;font-size:.8rem;color:var(--text-muted);}
+
+        .history-item{background:var(--white);border-radius:12px;padding:15px;margin-bottom:12px;display:flex;align-items:center;gap:15px;cursor:pointer;border:2px solid #eee;}
+        .history-score{width:55px;height:55px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.3rem;color:#fff;}
+        .history-score.good{background:var(--success);} .history-score.mid{background:var(--warning);} .history-score.bad{background:var(--danger);}
+        .history-info{flex:1;} .history-info h4{margin:0 0 4px;} .history-info p{margin:0;font-size:.8rem;color:var(--text-muted);}
+        .review-item{background:var(--white);border-radius:12px;padding:15px;margin-bottom:15px;border-left:5px solid;}
+        .review-item.correct{border-color:var(--success);} .review-item.wrong{border-color:var(--danger);} .review-item.empty{border-color:var(--text-muted);}
+        .review-q{font-weight:600;margin-bottom:10px;}
+        .review-opt{padding:6px 10px;border-radius:6px;margin-bottom:5px;font-size:.9rem;display:flex;gap:8px;align-items:center;}
+        .review-opt.is-correct{background:#e8f5e9;color:var(--success);font-weight:600;}
+        .review-opt.is-wrong{background:#ffebee;color:var(--danger);}
+
+        .profile-avatar{width:90px;height:90px;border-radius:50%;margin:0 auto 10px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;font-size:3rem;border:4px solid #fff;box-shadow:0 4px 15px rgba(0,0,0,.15);}
+        .prow{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid #f0f0f0;font-size:.9rem;}
+        .prow:last-child{border-bottom:none;}
+        .prow .pl{color:var(--text-muted);flex-shrink:0;}
+        .prow .pv{font-weight:600;text-align:right;}
+        .profile-field{margin-bottom:12px;}
+        .profile-field label{display:block;font-size:.8rem;font-weight:600;color:var(--text-muted);margin-bottom:4px;}
+        .profile-field input,.profile-field textarea{width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:.95rem;font-family:inherit;box-sizing:border-box;}
+        .emoji-picker{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;background:#f8f9fa;border-radius:12px;padding:10px;margin-bottom:12px;}
+        .emoji-picker span{font-size:1.8rem;cursor:pointer;padding:5px;border-radius:8px;}
+        .emoji-picker span:hover{background:#e3f2fd;}
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <div class="splash-content"><div class="logo-text">JEC</div><div class="logo-subtext">Simulasi TKA Realtime</div><div class="loader"></div></div>
+        <div class="splash-footer">Developed by : Jagat EC</div>
+    </div>
+
+    <div id="app" class="hidden">
+
+        <!-- LOGIN -->
+        <section id="view-login" class="view-section active">
+            <div class="login-box">
+                <div class="login-header"><span class="material-symbols-rounded icon-large">school</span><h2>Portal TKA JEC</h2><p>Tahun Ajaran 2026/2027</p></div>
+                <form id="form-login-student">
+                    <div class="input-group"><span class="material-symbols-rounded">badge</span><input type="text" id="userId" placeholder="ID Siswa" required autocomplete="off"></div>
+                    <div class="input-group"><span class="material-symbols-rounded">dialpad</span><input type="password" id="userPin" placeholder="PIN" required autocomplete="off"></div>
+                    <button type="submit" id="btn-login" class="btn-primary">Masuk Ujian</button>
+                </form>
+                <div class="login-footer">Developed by : Jagat EC</div>
+            </div>
+        </section>
+
+        <!-- DASHBOARD -->
+        <section id="view-dashboard" class="view-section hidden">
+            <header class="app-header"><div class="header-left"><span class="material-symbols-rounded">dashboard</span><span>Dashboard Siswa</span></div><div class="header-right"><span class="material-symbols-rounded" id="btn-logout" style="cursor:pointer;">logout</span></div></header>
+            <div class="content-area">
+                <div class="card-welcome"><h3>Selamat Datang, <span id="display-student-name">Siswa</span>!</h3><p>ID: <span id="display-student-id"></span> | <span id="display-student-school"></span></p></div>
+                <div class="menu-grid">
+                    <div class="menu-item" id="menu-exam"><span class="material-symbols-rounded">play_lesson</span><span>Latihan TKA</span></div>
+                    <div class="menu-item" id="menu-history"><span class="material-symbols-rounded">history</span><span>Riwayat Nilai</span></div>
+                    <div class="menu-item" id="menu-profile"><span class="material-symbols-rounded">account_circle</span><span>Profile</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PILIH SESI -->
+        <section id="view-pilih-sesi" class="view-section hidden">
+            <header class="app-header"><div class="header-left"><span class="material-symbols-rounded" onclick="StudentApp.navigate('view-dashboard')" style="cursor:pointer;">arrow_back</span><span>Pilih Sesi Latihan</span></div></header>
+            <div class="content-area"><div id="sesi-list"></div></div>
+        </section>
+
+        <!-- CBT -->
+        <section id="view-cbt" class="view-section hidden">
+            <div class="cbt-header">
+                <div class="timer-box"><span class="material-symbols-rounded">timer</span><span id="cbt-timer">60:00</span></div>
+                <div class="cbt-actions">
+                    <span class="material-symbols-rounded fs-btn" id="btn-fullscreen-cbt" title="Fullscreen">fullscreen</span>
+                    <button id="btn-finish-early" class="btn-finish"><span class="material-symbols-rounded" style="font-size:16px;">stop_circle</span> Akhiri</button>
+                </div>
+            </div>
+            <div class="cbt-subheader">
+                <div class="cbt-sesi-title" id="cbt-sesi-title">Sesi</div>
+                <div class="timeline" id="question-timeline"></div>
+            </div>
+            <div class="content-area">
+                <div class="question-box" id="question-text">Mempersiapkan soal...</div>
+                <ul id="options-container"></ul>
+                <div class="cbt-nav-buttons">
+                    <button id="btn-prev" class="btn btn-primary">Sebelumnya</button>
+                    <button id="btn-next" class="btn btn-primary">Selanjutnya</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIWAYAT -->
+        <section id="view-history" class="view-section hidden">
+            <header class="app-header"><div class="header-left"><span class="material-symbols-rounded" onclick="StudentApp.navigate('view-dashboard')" style="cursor:pointer;">arrow_back</span><span id="history-header-title">Riwayat Nilai</span></div></header>
+            <div class="content-area">
+                <div id="history-list"></div>
+                <div id="history-detail" class="hidden">
+                    <button id="btn-back-history" class="btn btn-primary" style="width:100%;margin-bottom:15px;"><span class="material-symbols-rounded">arrow_back</span> Kembali ke Daftar</button>
+                    <div id="history-detail-content"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PROFILE (view + edit) -->
+        <section id="view-profile" class="view-section hidden">
+            <header class="app-header"><div class="header-left"><span class="material-symbols-rounded" onclick="StudentApp.navigate('view-dashboard')" style="cursor:pointer;">arrow_back</span><span>Profile Siswa</span></div></header>
+            <div class="content-area">
+                <div class="card-welcome" style="text-align:center;">
+                    <div class="profile-avatar" id="prof-avatar">👦</div>
+                    <h3 id="prof-name-display">Nama Siswa</h3>
+                    <p style="font-size:.85rem;color:var(--text-muted);">ID: <span id="prof-id"></span> | Kelas: <span id="prof-class"></span></p>
+                </div>
+
+                <!-- MODE VIEW (teks) -->
+                <div class="card-welcome" id="profile-view">
+                    <div class="prow"><span class="pl">Nama</span><span class="pv" id="v-namalengkap">-</span></div>
+                    <div class="prow"><span class="pl">Nama Panggilan</span><span class="pv" id="v-nama">-</span></div>
+                    <div class="prow"><span class="pl">Tempat, Tgl Lahir</span><span class="pv" id="v-ttl">-</span></div>
+                    <div class="prow"><span class="pl">Alamat</span><span class="pv" id="v-alamat">-</span></div>
+                    <div class="prow"><span class="pl">Asal Sekolah</span><span class="pv" id="v-asal">-</span></div>
+                    <div class="prow"><span class="pl">Kelas</span><span class="pv" id="v-kelas">-</span></div>
+                    <div class="prow"><span class="pl">Kontak WA</span><span class="pv" id="v-wa">-</span></div>
+                    <button id="btn-edit-profile" class="btn btn-primary" style="width:100%;margin-top:12px;"><span class="material-symbols-rounded">edit</span> Edit Profile</button>
+                </div>
+
+                <!-- MODE EDIT (input) -->
+                <div class="card-welcome hidden" id="profile-edit">
+                    <div class="emoji-picker" id="emoji-picker"><span data-emoji="👦"></span><span data-emoji="👧"></span></div>
+                    <div class="profile-field"><label>Nama Panggilan</label><input type="text" id="prof-nama"></div>
+                    <div class="profile-field"><label>Tempat, Tanggal Lahir</label><input type="text" id="prof-ttl"></div>
+                    <div class="profile-field"><label>Alamat</label><textarea id="prof-alamat" rows="2"></textarea></div>
+                    <div class="profile-field"><label>Asal Sekolah</label><input type="text" id="prof-asal"></div>
+                    <div class="profile-field"><label>Kelas</label><input type="text" id="prof-kelas"></div>
+                    <div class="profile-field"><label>Kontak WA</label><input type="text" id="prof-wa" placeholder="0812..."></div>
+                    <div class="btn-group" style="display:flex;gap:10px;">
+                        <button id="btn-save-profile" class="btn btn-success" style="flex:1;"><span class="material-symbols-rounded">save</span> Simpan</button>
+                        <button id="btn-cancel-profile" class="btn btn-danger" style="flex:1;">Batal</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/hash.js"></script>
+    <script src="js/modal.js"></script>
+    <script src="js/app-student.js"></script>
+    <script src="js/cbt-engine.js"></script>
+</body>
+</html>

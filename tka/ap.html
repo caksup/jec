@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin | Jagat EC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet">
+    <link rel="stylesheet" href="css/style-global.css">
+    <link rel="stylesheet" href="css/style-admin.css">
+    <style>
+        .pill-bar{position:sticky;top:56px;z-index:120;width:100vw;margin-left:calc(50% - 50vw);background:#fff;padding:10px 16px;box-shadow:0 2px 8px rgba(0,0,0,.08);display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;margin-bottom:16px;}
+        .pill{padding:8px 14px;border-radius:999px;border:2px solid #e0e0e0;background:#fff;cursor:pointer;font-weight:600;font-size:.85rem;display:flex;align-items:center;gap:6px;transition:.2s;font-family:inherit;color:var(--text-muted);flex-shrink:0;}
+        .pill .material-symbols-rounded{font-size:18px;}
+        .pill .pill-label{display:none;}
+        .pill.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+        .pill.active .pill-label{display:inline;}
+        .pill-bar.sub{position:static;width:auto;margin-left:0;background:#f5f7fa;border-radius:999px;box-shadow:none;flex-wrap:wrap;}
+        .pill-bar.sub .pill{border-color:transparent;background:transparent;}
+        .pill-bar.sub .pill.active{background:var(--primary);color:#fff;}
+        .badge-kategori{display:inline-block;background:#e3f2fd;color:var(--primary-dark);padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600;}
+        .badge-jenis{display:inline-block;background:#f3e5f5;color:#7B1FA2;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600;}
+        .badge-nomor{display:inline-block;background:#fff3e0;color:#E65100;padding:3px 8px;border-radius:20px;font-size:.75rem;font-weight:700;margin-right:6px;}
+        .switch{position:relative;display:inline-block;width:50px;height:26px;}
+        .switch input{opacity:0;width:0;height:0;}
+        .slider{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s;}
+        .slider:before{content:"";position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;}
+        .switch input:checked + .slider{background:var(--success);}
+        .switch input:checked + .slider:before{transform:translateX(24px);}
+        #import-text{min-height:200px;font-family:monospace;font-size:.85rem;}
+        .review-card{background:var(--white);border-radius:12px;padding:15px;margin-bottom:15px;border-left:5px solid var(--primary);}
+        .review-card .q{font-weight:600;margin-bottom:8px;}
+        .review-card .opts{font-size:.9rem;color:#555;margin-bottom:8px;}
+        .review-card .answer{color:var(--success);font-weight:700;}
+        .review-card .pembahasan{background:#f5f7fa;border-radius:8px;padding:10px;font-size:.85rem;margin-top:8px;}
+        .soal-row{background:var(--white);border:2px solid #eee;border-radius:10px;padding:12px;margin-bottom:10px;}
+        .tool-card{display:flex;align-items:center;gap:12px;background:#f8f9fa;border-radius:12px;padding:14px;margin-bottom:12px;}
+        .tool-card .material-symbols-rounded{font-size:28px;color:var(--primary);}
+        .tool-card .t{flex:1;} .tool-card .t strong{display:block;font-size:.92rem;} .tool-card .t small{color:var(--text-muted);}
+        .review-flex{display:flex;gap:12px;align-items:flex-start;}
+        .qnav{width:52px;flex-shrink:0;position:sticky;top:120px;max-height:70vh;overflow-y:auto;}
+        .qnav .qn{display:block;width:42px;height:36px;margin-bottom:6px;border-radius:8px;background:#e0e0e0;color:#333;text-align:center;line-height:36px;font-weight:700;cursor:pointer;font-size:.85rem;}
+        .qnav .qn.benar{background:var(--success);color:#fff;}
+        .qnav .qn.salah{background:var(--danger);color:#fff;}
+        .qtable{flex:1;min-width:0;}
+        .stu-ans{display:inline-block;margin:2px 4px 2px 0;padding:3px 8px;border-radius:14px;font-size:.78rem;font-weight:600;}
+        .stu-ans.ok{background:#e8f5e9;color:var(--success);}
+        .stu-ans.no{background:#ffebee;color:var(--danger);}
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN -->
+    <section id="view-login" class="view-section active">
+        <div class="login-box" style="background:#fff;">
+            <div class="login-header"><span class="material-symbols-rounded icon-large" style="color:var(--primary);">admin_panel_settings</span><h2>Admin JEC</h2><p>Secured Area</p></div>
+            <form id="form-login-admin">
+                <div class="input-group"><span class="material-symbols-rounded">person</span><input type="text" id="adminId" placeholder="Admin ID" required autocomplete="off"></div>
+                <div class="input-group"><span class="material-symbols-rounded">lock</span><input type="password" id="adminPin" placeholder="PIN" required autocomplete="off"></div>
+                <button type="submit" id="btn-login" class="btn-primary">Masuk</button>
+            </form>
+            <div class="login-footer" style="margin-top:20px;">Developed by : Jagat EC</div>
+        </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view-section hidden">
+        <header class="app-header" style="background:var(--primary-dark);">
+            <div class="header-left"><span class="material-symbols-rounded">admin_panel_settings</span><span>Admin Panel JEC</span></div>
+            <div class="header-right">
+                <span class="material-symbols-rounded" id="btn-fullscreen-admin" style="cursor:pointer;" title="Fullscreen">fullscreen</span>
+                <span class="material-symbols-rounded" id="btn-logout" style="cursor:pointer;">logout</span>
+            </div>
+        </header>
+        <div class="admin-layout">
+            <main class="main-content">
+
+                <!-- 1. OVERVIEW -->
+                <div id="panel-overview" class="content-panel">
+                    <div class="panel-card"><h3 class="panel-title">🔴 Live Monitoring</h3>
+                        <div class="table-responsive"><table><thead><tr><th>Siswa</th><th>Sesi</th><th>Status</th><th>Progress</th><th>Update</th></tr></thead><tbody id="overview-live-body"><tr><td colspan="5" class="text-center">Memuat...</td></tr></tbody></table></div></div>
+                    <div class="panel-card"><h3 class="panel-title">🏆 Rekap Hasil Final</h3>
+                        <div class="table-responsive"><table><thead><tr><th>Siswa</th><th>Sesi</th><th>Skor</th><th>Benar</th><th>Salah</th><th>Kosong</th><th>Tanggal</th><th>Aksi</th></tr></thead><tbody id="overview-final-body"><tr><td colspan="8" class="text-center">Memuat...</td></tr></tbody></table></div></div>
+                </div>
+
+                <!-- 2. MANAGE USER -->
+                <div id="panel-users" class="content-panel hidden">
+                    <div class="panel-card">
+                        <h3 class="panel-title">Manajemen Siswa</h3>
+                        <div class="pill-bar">
+                            <button class="pill active" data-sistab="si-tab-manual"><span class="material-symbols-rounded">edit</span><span class="pill-label">Input Manual</span></button>
+                            <button class="pill" data-sistab="si-tab-generate"><span class="material-symbols-rounded">auto_awesome</span><span class="pill-label">Generate Otomatis</span></button>
+                            <button class="pill" data-sistab="si-tab-kelas"><span class="material-symbols-rounded">layers</span><span class="pill-label">Batch</span></button>
+                        </div>
+                        <div id="si-tab-manual" class="sistab"><div class="form-container"><form id="form-add-student">
+                            <div class="form-row"><div class="form-group"><label>ID JEC</label><input type="text" id="add-id" class="form-control" placeholder="260101" required></div><div class="form-group"><label>Nama</label><input type="text" id="add-nama" class="form-control" required></div></div>
+                            <div class="form-row"><div class="form-group"><label>Nama Panggilan</label><input type="text" id="add-panggilan" class="form-control"></div><div class="form-group"><label>Kelas</label><input type="text" id="add-kelas" class="form-control" placeholder="9" required></div><div class="form-group"><label>Batch</label><input type="text" id="add-batch" class="form-control" placeholder="01" required></div></div>
+                            <div class="form-row"><div class="form-group"><label>TTL</label><input type="text" id="add-ttl" class="form-control" placeholder="Tuban, 12 Mei 2011"></div><div class="form-group"><label>Kontak WA</label><input type="text" id="add-wa" class="form-control" placeholder="0812..."></div><div class="form-group"><label>PIN</label><input type="text" id="add-pin" class="form-control" value="1234" required></div></div>
+                            <div class="form-row"><div class="form-group"><label>Asal Sekolah</label><input type="text" id="add-asal" class="form-control" required></div><div class="form-group" style="flex:2;"><label>Alamat</label><input type="text" id="add-alamat" class="form-control"></div></div>
+                            <button type="submit" id="btn-save-student" class="btn btn-success" style="width:auto;"><span class="material-symbols-rounded">save</span> Simpan</button>
+                        </form></div></div>
+                        <div id="si-tab-generate" class="sistab hidden"><div class="form-container"><p style="color:var(--text-muted);font-size:.9rem;">Format: <strong>TT+Batch+Urutan</strong> (260101 = Siswa 1). PIN 1234.</p>
+                            <form id="form-gen-auto"><div class="form-row">
+                                <div class="form-group"><label>Tahun (TT)</label><input type="text" id="gen-tahun" class="form-control" value="26" maxlength="2" required></div>
+                                <div class="form-group"><label>Batch</label><input type="text" id="gen-batch" class="form-control" value="01" maxlength="2" required></div>
+                                <div class="form-group"><label>Jumlah Siswa</label><input type="number" id="gen-jumlah" class="form-control" value="5" min="1" required></div></div>
+                                <button type="submit" id="btn-gen-auto" class="btn btn-primary" style="width:auto;"><span class="material-symbols-rounded">group_add</span> Generate Sekarang</button></form></div></div>
+                        <div id="si-tab-kelas" class="sistab hidden">
+                            <div class="form-row" style="align-items:flex-end;">
+                                <div class="form-group" style="max-width:200px;"><label>Filter Batch</label><select id="batch-filter" class="form-control"><option value="">Semua Batch</option></select></div>
+                                <button id="btn-del-selected" class="btn btn-accent" style="width:auto;"><span class="material-symbols-rounded">delete</span> Hapus Terpilih</button>
+                                <button id="btn-wipe-users" class="btn btn-danger" style="width:auto;"><span class="material-symbols-rounded">delete_sweep</span> Hapus Semua</button>
+                            </div>
+                            <div class="table-responsive"><table><thead><tr><th>✓</th><th>ID</th><th>Nama</th><th>Panggilan</th><th>Kelas</th><th>Asal</th><th>TTL</th><th>WA</th><th>Alamat</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="student-list-body"><tr><td colspan="11" class="text-center">Memuat...</td></tr></tbody></table></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. BANK SOAL -->
+                <div id="panel-soal" class="content-panel hidden">
+                    <div class="panel-card">
+                        <h3 class="panel-title">Manajemen Bank Soal</h3>
+                        <div class="pill-bar">
+                            <button class="pill active" data-soaltab="so-tab-input"><span class="material-symbols-rounded">edit_note</span><span class="pill-label">Input</span></button>
+                            <button class="pill" data-soaltab="so-tab-sesi"><span class="material-symbols-rounded">category</span><span class="pill-label">Daftar Sesi</span></button>
+                            <button class="pill" data-soaltab="so-tab-soal"><span class="material-symbols-rounded">list</span><span class="pill-label">Daftar Soal</span></button>
+                        </div>
+                        <div id="so-tab-input" class="soaltab">
+                            <div class="pill-bar sub">
+                                <button class="pill active" data-inputtab="in-tab-ai"><span class="material-symbols-rounded">smart_toy</span><span class="pill-label">AI</span></button>
+                                <button class="pill" data-inputtab="in-tab-teks"><span class="material-symbols-rounded">content_paste</span><span class="pill-label">Teks Massal</span></button>
+                                <button class="pill" data-inputtab="in-tab-manual"><span class="material-symbols-rounded">edit</span><span class="pill-label">Manual</span></button>
+                            </div>
+                            <div id="in-tab-ai" class="inputtab"><div class="form-container"><form id="form-ai-generate">
+                                <div class="form-row"><div class="form-group"><label>Sesi</label><input type="text" id="ai-sesi" class="form-control" list="sesi-list" placeholder="Sesi 1" required></div><div class="form-group"><label>Topik</label><input type="text" id="ai-topic" class="form-control" placeholder="Simple Present" required></div></div>
+                                <button type="submit" id="btn-generate-ai" class="btn btn-ai"><span class="material-symbols-rounded">smart_toy</span> Generate (AI)</button></form>
+                                <div id="ai-result-area" class="hidden mt-3"><pre id="ai-result-container"></pre><div class="btn-group mt-3"><button id="btn-discard-ai" class="btn btn-danger" style="width:auto;">Buang</button><button id="btn-save-ai" class="btn btn-success" style="width:auto;">Simpan</button></div></div></div></div>
+                            <div id="in-tab-teks" class="inputtab hidden"><div class="form-container"><form id="form-import-soal">
+                                <div class="form-group"><label>Sesi</label><input type="text" id="import-sesi" class="form-control" list="sesi-list" placeholder="Sesi 1" required></div>
+                                <div class="form-group"><label>Tempel Teks</label><textarea id="import-text" class="form-control" placeholder="[soal]
+1. soal
+a. 
+b. 
+[jawaban]
+1. a
+[pembahasan]
+1. ...
+[kategori]
+1. past tense"></textarea></div>
+                                <button type="submit" id="btn-import-soal" class="btn btn-primary" style="width:auto;"><span class="material-symbols-rounded">upload</span> Generate dari Teks</button></form></div></div>
+                            <div id="in-tab-manual" class="inputtab hidden"><div class="form-container"><form id="form-add-soal">
+                                <div class="form-row"><div class="form-group"><label>Sesi</label><input type="text" id="soal-sesi" class="form-control" list="sesi-list" required></div><div class="form-group"><label>Kategori</label><input type="text" id="soal-jenis" class="form-control" list="jenis-list" required></div><div class="form-group"><label>No</label><input type="number" id="soal-nomor" class="form-control" required></div></div>
+                                <div class="form-group"><label>Pertanyaan</label><textarea id="soal-pertanyaan" class="form-control" required></textarea></div>
+                                <div class="form-row"><div class="form-group"><label>A</label><input type="text" id="soal-a" class="form-control" required></div><div class="form-group"><label>B</label><input type="text" id="soal-b" class="form-control" required></div></div>
+                                <div class="form-row"><div class="form-group"><label>C</label><input type="text" id="soal-c" class="form-control" required></div><div class="form-group"><label>D</label><input type="text" id="soal-d" class="form-control" required></div></div>
+                                <div class="form-row"><div class="form-group"><label>Kunci</label><select id="soal-jawaban" class="form-control"><option>A</option><option>B</option><option>C</option><option>D</option></select></div><div class="form-group" style="flex:2;"><label>Pembahasan</label><input type="text" id="soal-pembahasan" class="form-control"></div></div>
+                                <button type="submit" id="btn-save-soal" class="btn btn-success" style="width:auto;"><span class="material-symbols-rounded">save</span> Simpan</button></form></div></div>
+                        </div>
+                        <div id="so-tab-sesi" class="soaltab hidden"><div class="table-responsive"><table><thead><tr><th>Sesi</th><th>Jumlah</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="sesi-list-body"><tr><td colspan="4" class="text-center">Memuat...</td></tr></tbody></table></div></div>
+                        <div id="so-tab-soal" class="soaltab hidden">
+                            <div class="form-group" style="max-width:300px;"><label>Filter Kategori</label><select id="soal-jenis-filter" class="form-control"><option value="">Semua Kategori</option></select></div>
+                            <div id="soal-group-container"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. PEMBAHASAN -->
+                <div id="panel-review" class="content-panel hidden">
+                    <div class="panel-card">
+                        <h3 class="panel-title">📖 Pembahasan</h3>
+                        <div class="pill-bar">
+                            <button class="pill active" data-reviewtab="rv-tab-materi"><span class="material-symbols-rounded">menu_book</span><span class="pill-label">Materi & Pembahasan</span></button>
+                            <button class="pill" data-reviewtab="rv-tab-siswa"><span class="material-symbols-rounded">person_search</span><span class="pill-label">Review Siswa</span></button>
+                        </div>
+                        <div id="rv-tab-materi" class="reviewtab">
+                            <div class="form-group" style="max-width:300px;"><label>Filter Sesi</label><select id="review-kategori-filter" class="form-control"><option value="">Semua</option></select></div>
+                            <div class="review-flex">
+                                <div class="qnav" id="materi-qnav"></div>
+                                <div class="qtable" id="review-soal-container"></div>
+                            </div>
+                        </div>
+                        <div id="rv-tab-siswa" class="reviewtab hidden">
+                            <div class="form-group" style="max-width:300px;"><label>Sesi</label><select id="review-sesi" class="form-control"><option value="">Pilih Sesi</option></select></div>
+                            <div class="review-flex">
+                                <div class="qnav" id="review-qnav"></div>
+                                <div class="qtable" id="review-siswa-container"><p>Pilih sesi untuk melihat jawaban semua siswa per soal.</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. SETTINGS -->
+                <div id="panel-settings" class="content-panel hidden">
+                    <div class="panel-card"><h3 class="panel-title">⚙️ Settings & Tools</h3>
+                        <div class="tool-card"><span class="material-symbols-rounded">timer</span><div class="t"><strong>Timer Ujian (menit)</strong><small>Durasi waktu untuk siswa mengerjakan.</small></div>
+                            <input type="number" id="set-timer" class="form-control" value="60" min="1" style="width:80px;">
+                            <button class="btn btn-success" style="width:auto;" id="btn-save-timer">Simpan</button></div>
+                        <div class="tool-card"><span class="material-symbols-rounded">terminal</span><div class="t"><strong>Console (Eruda)</strong><small>Debug error dari HP.</small></div><button class="btn btn-primary" style="width:auto;" onclick="DevTools.showConsole()">Buka</button></div>
+                        <div class="tool-card"><span class="material-symbols-rounded">network_check</span><div class="t"><strong>Cek Integrasi</strong><small>Verifikasi antar file & Firestore.</small></div><button class="btn btn-success" style="width:auto;" onclick="runIntegration()">Cek</button></div>
+                        <div class="tool-card"><span class="material-symbols-rounded">bug_report</span><div class="t"><strong>Halaman DevTools</strong><small>Buka c.html.</small></div><a class="btn btn-accent" style="width:auto;text-decoration:none;" href="c.html">Buka</a></div>
+                        <div class="tool-card"><span class="material-symbols-rounded">restart_alt</span><div class="t"><strong>Reset Session Admin</strong><small>Kembali ke login.</small></div><button class="btn btn-danger" style="width:auto;" onclick="AdminApp.clearSession();location.reload();">Reset</button></div>
+                        <div id="integration-result" style="margin-top:10px;border-radius:12px;overflow:hidden;"></div></div>
+                </div>
+
+            </main>
+        </div>
+
+        <!-- BOTTOM NAV -->
+        <nav id="bottom-nav" class="bottom-nav">
+            <div class="bnav-item active" data-target="panel-overview"><span class="material-symbols-rounded">dashboard</span><span class="bnav-label">Overview</span></div>
+            <div class="bnav-item" data-target="panel-users"><span class="material-symbols-rounded">group</span><span class="bnav-label">Siswa</span></div>
+            <div class="bnav-item" data-target="panel-soal"><span class="material-symbols-rounded">quiz</span><span class="bnav-label">Bank Soal</span></div>
+            <div class="bnav-item" data-target="panel-review"><span class="material-symbols-rounded">menu_book</span><span class="bnav-label">Pembahasan</span></div>
+            <div class="bnav-item" data-target="panel-settings"><span class="material-symbols-rounded">settings</span><span class="bnav-label">Settings</span></div>
+        </nav>
+    </section>
+
+    <datalist id="sesi-list"><option value="Sesi 1"></option><option value="Sesi 2"></option><option value="Sesi 3"></option><option value="Sesi 4"></option><option value="Sesi 5"></option><option value="Sesi 6"></option></datalist>
+    <datalist id="jenis-list"><option value="Present Tense"></option><option value="Past Tense"></option><option value="Future Tense"></option><option value="Passive Voice"></option><option value="Modal Verbs"></option><option value="Vocabulary"></option><option value="Reading Comprehension"></option><option value="Narrative Text"></option><option value="Descriptive Text"></option><option value="Procedure Text"></option></datalist>
+
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/hash.js"></script>
+    <script src="js/modal.js"></script>
+    <script src="js/c.js"></script>
+    <script src="js/admin-core.js"></script>
+    <script src="js/admin-students.js"></script>
+    <script src="js/admin-soal.js"></script>
+    <script src="js/admin-review.js"></script>
+    <script> function runIntegration(){ DevTools.check().then(r=>DevTools.render(r, document.getElementById('integration-result'))); } </script>
+</body>
+</html>
