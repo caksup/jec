@@ -1,0 +1,105 @@
+/* css/style-student.css */
+
+/* Login Box Siswa */
+#view-login { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    padding: 20px; 
+}
+.login-box { 
+    background: var(--white); 
+    width: 100%; 
+    max-width: 400px; 
+    border-radius: 12px; 
+    padding: 30px 20px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+    text-align: center; 
+}
+.login-header .icon-large { font-size: 3.5rem; color: var(--primary); margin-bottom: 10px; }
+.login-header h2 { font-size: 1.5rem; color: var(--primary-dark); }
+.login-header p { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 30px; }
+.input-group { 
+    display: flex; 
+    align-items: center; 
+    background: var(--bg-color); 
+    border-radius: 8px; 
+    margin-bottom: 15px; 
+    padding: 12px 15px; 
+}
+.input-group .material-symbols-rounded { color: var(--text-muted); margin-right: 10px; }
+.input-group input { 
+    border: none; 
+    background: transparent; 
+    outline: none; 
+    width: 100%; 
+    font-size: 1rem; 
+}
+.login-footer { margin-top: 25px; font-size: 0.8rem; color: var(--text-muted); }
+
+/* Dashboard Siswa */
+.app-header { 
+    background: var(--primary); 
+    color: var(--white); 
+    padding: 15px 20px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+}
+.header-left, .header-right { display: flex; align-items: center; gap: 10px; }
+.content-area { padding: 20px; max-width: 800px; margin: 0 auto; }
+
+.card-welcome { 
+    background: var(--white); 
+    border-radius: 10px; 
+    padding: 20px; 
+    margin-bottom: 20px; 
+    border-left: 5px solid var(--primary); 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+}
+.card-welcome p { color: var(--text-muted); font-size: 0.9rem; margin-top: 5px; }
+
+.menu-grid { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 15px; 
+}
+.menu-item { 
+    background: var(--white); 
+    border-radius: 10px; 
+    padding: 25px 10px; 
+    text-align: center; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 10px; 
+    color: var(--primary-dark); 
+    font-weight: 600; 
+    cursor: pointer; 
+}
+.menu-item .material-symbols-rounded { font-size: 2.5rem; color: var(--primary); }
+
+/* CBT Engine UI */
+.cbt-header { 
+    background: #fff; 
+    padding: 15px; 
+    border-bottom: 2px solid #ddd; 
+    display: flex; 
+    justify-content: space-between; 
+    position: sticky; 
+    top: 0; 
+    z-index: 100; 
+    font-size: 1.1rem;
+}
+.timer-box { font-weight: bold; color: var(--danger); display: flex; align-items: center; gap: 5px;}
+.question-box { 
+    background: #fff; 
+    padding: 20px; 
+    margin-bottom: 20px; 
+    border-radius: 8px; 
+    font-size: 1.1rem; 
+    line-height: 1.6; 
+    border: 1px solid #ddd;
+}
