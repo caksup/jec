@@ -1,0 +1,257 @@
+<!-- #13 | /root/sp.html | v 4.1 | u 08/09/2026 • 12:00:00 | xu : ke-6 | note : #noteresponse
+- FIX: bottom nav kini BISA DIKLIK (onclick PS.setTab) - sebelumnya hanya Info yg ter-bind.
+- FIX: #page-home default class "active" agar tidak blank walau JS telat.
+- FIX: bump versi script & css (?v=4) untuk bust cache.
+- Tetap: login, header brand + date line, 6 tab-page, test 4 tipe, result, modal, toast. -->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#2563eb">
+<title>Panel Siswa - Exercise TKA English</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="css/g.css" rel="stylesheet">
+<link href="css/s.css?v=4" rel="stylesheet">
+<link href="css/brand.css" rel="stylesheet">
+</head>
+<body>
+
+<!-- ============================================
+     LOGIN
+     ============================================ -->
+<div id="loginScreen" class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="material-icons">school</span>
+      <h1>Jagat English Course</h1>
+      <p>Exercise TKA English</p>
+    </div>
+    <div class="err" id="loginErr"></div>
+    <form id="loginForm">
+      <div class="form-group">
+        <label class="form-label"><span class="material-icons">badge</span>ID Siswa</label>
+        <input type="text" class="form-control" id="loginId" placeholder="Contoh: 260101" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label"><span class="material-icons">lock</span>PIN</label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="loginPin" required style="padding-right:40px;">
+          <button type="button" class="menu-toggle" id="togglePin" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);">
+            <span class="material-icons">visibility_off</span>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-full"><span class="material-icons">login</span>Masuk</button>
+    </form>
+    <div class="login-footer">
+      <p>Exercise TKA English &copy; 2026 Jagat Education Center</p>
+      <p style="margin-top:.25rem;"><a href="sp.html?devtools" style="color:#64748b;font-size:.7rem;">DevTools</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     STUDENT APP (bottom nav 6 tab)
+     ============================================ -->
+<div id="studentApp" class="student-app" style="display:none;">
+
+  <!-- HEADER (brand + ID + nama, tanpa logout) -->
+  <header class="app-header" id="sHeader" style="display:none;">
+    <div class="header-brand">
+      <span class="material-icons">school</span>
+      <span class="hb-wrap">
+        <span class="hb-short">JEC</span>
+        <span class="hb-long">Jagat Education Center</span>
+      </span>
+    </div>
+    <div class="header-right">
+      <div class="header-user">
+        <span class="material-icons">school</span>
+        <strong id="sUserId">-</strong>
+        <span class="header-name" id="sUserName"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- DATE LINE (hari, tanggal, jam real-time) -->
+  <div class="s-date-line" id="sDateLine">
+    <span class="material-icons">schedule</span>Memuat waktu...
+  </div>
+
+  <!-- ====== TAB PAGES ====== -->
+  <div style="max-width:800px;margin:0 auto;">
+
+    <!-- TAB: HOME -->
+    <div id="page-home" class="tab-page active">
+      <h2 class="section-title"><span class="material-icons">dashboard</span>Overview</h2>
+      <div id="homeOverview"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
+
+      <h2 class="section-title"><span class="material-icons">notifications_active</span>Notifikasi</h2>
+      <div id="homeNotif"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
+
+      <h2 class="section-title"><span class="material-icons">event_available</span>Sesi Perlu Dikerjakan</h2>
+      <div id="homeSesiList"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
+    </div>
+
+    <!-- TAB: RIWAYAT -->
+    <div id="page-riwayat" class="tab-page">
+      <h2 class="section-title"><span class="material-icons">history</span>Riwayat Sesi</h2>
+      <div id="riwayatList"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
+    </div>
+
+    <!-- TAB: NILAI -->
+    <div id="page-nilai" class="tab-page">
+      <h2 class="section-title"><span class="material-icons">emoji_events</span>Nilai Per Sesi</h2>
+      <div id="nilaiTable"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
+    </div>
+
+    <!-- TAB: FEEDBACK -->
+    <div id="page-feedback" class="tab-page">
+      <div id="feedbackTabContent"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
+    </div>
+
+    <!-- TAB: PROFILE -->
+    <div id="page-profile" class="tab-page">
+      <div id="profileTabContent"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
+    </div>
+
+    <!-- TAB: INFO -->
+    <div id="page-info" class="tab-page">
+      <div id="infoTabContent"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
+    </div>
+
+  </div>
+
+  <!-- ====== BOTTOM NAVIGATION (6 tab, kini clickable) ====== -->
+  <nav class="bottom-nav-tabs" id="bottomNav">
+    <button class="bn-item active" data-tab="home" onclick="PS.setTab('home')">
+      <span class="material-icons">home</span><span>Home</span>
+    </button>
+    <button class="bn-item" data-tab="riwayat" onclick="PS.setTab('riwayat')">
+      <span class="material-icons">history</span><span>Riwayat</span>
+    </button>
+    <button class="bn-item" data-tab="nilai" onclick="PS.setTab('nilai')">
+      <span class="material-icons">emoji_events</span><span>Nilai</span>
+    </button>
+    <button class="bn-item" data-tab="feedback" onclick="PS.setTab('feedback')">
+      <span class="material-icons">rate_review</span><span>Feedback</span>
+    </button>
+    <button class="bn-item" data-tab="profile" onclick="PS.setTab('profile')">
+      <span class="material-icons">person</span><span>Profile</span>
+    </button>
+    <button class="bn-item" data-tab="info" onclick="PS.setTab('info')">
+      <span class="material-icons">info</span><span>Info</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ============================================
+     TEST PAGE
+     ============================================ -->
+<div id="testPage" class="test-page" style="display:none;">
+  <div class="test-header">
+    <div class="th-left">Soal <span id="curNum">1</span>/<span id="totNum">0</span></div>
+    <div style="display:flex;align-items:center;gap:.5rem;">
+      <div id="violCounter" title="Pelanggaran" style="display:flex;align-items:center;gap:.375rem;padding:.5rem .75rem;background:#f1f5f9;border-radius:8px;font-weight:700;color:#64748b;">
+        <span class="material-icons" style="font-size:18px;">shield</span>
+        <span id="violDisplay">0/3</span>
+      </div>
+      <div class="test-timer" id="testTimer">
+        <span class="material-icons">timer</span>
+        <span id="timerDisplay">00:00</span>
+      </div>
+    </div>
+  </div>
+  <div class="num-strip-row">
+    <div class="num-strip" id="numStrip"></div>
+    <button class="btn btn-secondary btn-sm" onclick="toggleNavPanel()" title="Menu Soal">
+      <span class="material-icons">grid_view</span>
+    </button>
+  </div>
+  <div class="test-body" id="testBody"></div>
+
+  <div class="question-nav-panel" id="questionNavPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+      <strong style="font-size:.9375rem;">Navigasi Soal</strong>
+      <button class="menu-toggle" onclick="toggleNavPanel()"><span class="material-icons">close</span></button>
+    </div>
+    <div class="question-grid-nav" id="questionGridNav"></div>
+    <button class="btn btn-success w-full" onclick="confirmSubmit()">
+      <span class="material-icons">send</span>Kumpulkan
+    </button>
+  </div>
+</div>
+
+<!-- ============================================
+     RESULT PAGE
+     ============================================ -->
+<div id="resultPage" class="result-page" style="display:none;">
+  <div class="result-card">
+    <div class="result-icon" id="resultIcon"><span class="material-icons">emoji_events</span></div>
+    <h2 style="font-size:1.5rem;font-weight:700;">Selesai!</h2>
+    <p style="color:#64748b;">Anda telah menyelesaikan Exercise TKA</p>
+    <div class="result-score" id="resultScore">0</div>
+    <div class="result-details">
+      <div><div class="result-detail-label">Benar</div><div class="result-detail-value" style="color:#10b981;" id="rCorrect">0</div></div>
+      <div><div class="result-detail-label">Salah</div><div class="result-detail-value" style="color:#ef4444;" id="rWrong">0</div></div>
+      <div><div class="result-detail-label">Waktu</div><div class="result-detail-value" id="rTime">0:00</div></div>
+      <div><div class="result-detail-label">Akurasi</div><div class="result-detail-value" style="color:#2563eb;" id="rAcc">0%</div></div>
+    </div>
+    <div style="display:flex;gap:.5rem;flex-direction:column;">
+      <button class="btn btn-secondary" onclick="reviewAnswers()"><span class="material-icons">rate_review</span>Review Jawaban</button>
+      <button class="btn btn-primary" onclick="backToDashboard()"><span class="material-icons">home</span>Kembali</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal & Toast -->
+<div id="modalOverlay" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="material-icons modal-icon" id="modalIcon">info</span>
+      <h3 class="modal-title" id="modalTitle">Info</h3>
+    </div>
+    <div class="modal-content"><div class="modal-message" id="modalMsg"></div></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<!-- ============================================
+     SCRIPTS (urut dependency, cache-busted)
+     ============================================ -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>
+window.PS = window.PS || {
+  user:null, sessions:[], questions:[], currentSession:null,
+  answers:{}, flagged:new Set(), currentIndex:0, timeRemaining:0,
+  timer:null, startTime:null, tabSwitch:0, blur:0, antiLog:[],
+  settings:{antiCheatEnabled:true,maxTabSwitches:3},
+  attemptId:null, myAttempts:[],
+  activeTab:'home', myProfile:null, myValues:[]
+};
+</script>
+
+<script type="text/javascript" src="js/fc.js"></script>
+<script type="text/javascript" src="js/rwmonitor.js"></script>
+<script type="text/javascript" src="js/hash.js"></script>
+<script type="text/javascript" src="js/modal.js"></script>
+<script type="text/javascript" src="js/s/state.js?v=4"></script>
+<script type="text/javascript" src="js/s/login.js?v=4"></script>
+<script type="text/javascript" src="js/s/dashboard.js?v=4"></script>
+<script type="text/javascript" src="js/s/feedback.js?v=4"></script>
+<script type="text/javascript" src="js/s/info.js?v=4"></script>
+<script type="text/javascript" src="js/s/nilai.js?v=4"></script>
+<script type="text/javascript" src="js/s/profile.js?v=4"></script>
+<script type="text/javascript" src="js/s/result.js?v=4"></script>
+<script type="text/javascript" src="js/s/riwayat.js?v=4"></script>
+<script type="text/javascript" src="js/s/test.js?v=4"></script>
+<script type="text/javascript" src="js/s/s-devtools.js"></script>
+
+</body>
+</html>
