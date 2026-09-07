@@ -1,0 +1,479 @@
+/* #05 | /root/css/s.css | v 2.3 | u 08/09/2026 • 09:30:00 | xu : ke-4 | note : #noteresponse
+- TAMBAHAN: style untuk arsitektur baru Panel Siswa (bottom nav 6 tab, tab pages,
+  home mini-grid/notif, feedback form+list, profile foto emoji + info + logout).
+- SEMUA style lama (student-app, profile, session, test, result, anti-cheat, modal)
+  TIDAK DIUBAH. Hanya TAMBAHAN di akhir file.
+- Override padding-bottom student-app untuk memberi ruang bottom nav (tanpa menghapus baris lama). */
+
+.student-app{min-height:100vh;padding-top:56px;background:#f8fafc}
+
+/* Profile */
+.profile-card{background:linear-gradient(135deg,#2563eb,#1e40af);border-radius:16px;color:#fff;padding:1.25rem;margin-bottom:1rem;position:relative;overflow:hidden}
+.profile-row{display:flex;align-items:center;gap:1rem;position:relative}
+.profile-avatar{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+.profile-name{font-size:1.125rem;font-weight:700}
+.profile-id{font-size:.8125rem;opacity:.85;font-family:monospace}
+.profile-batch{display:inline-flex;align-items:center;gap:.25rem;background:rgba(255,255,255,.2);padding:.25rem .625rem;border-radius:50px;font-size:.75rem;margin-top:.375rem}
+.profile-actions{display:flex;gap:.5rem;margin-top:1rem;position:relative}
+.profile-actions .btn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)}
+
+/* Session list */
+.session-item{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.75rem;cursor:pointer;transition:all .2s}
+.session-item:hover{box-shadow:0 4px 12px rgba(0,0,0,.05);border-color:#2563eb}
+.session-item.disabled{opacity:.6;cursor:not-allowed}
+.session-title{font-weight:600;font-size:.9375rem;display:flex;align-items:center;gap:.5rem}
+.session-title .material-icons{color:#2563eb}
+.session-meta{display:flex;gap:.75rem;font-size:.75rem;color:#64748b;margin-top:.25rem;flex-wrap:wrap}
+.session-meta span{display:flex;align-items:center;gap:.25rem}
+.session-meta .material-icons{font-size:14px}
+.session-status{padding:.375rem .75rem;border-radius:50px;font-size:.75rem;font-weight:600;flex-shrink:0}
+.session-status.available{background:#d1fae5;color:#065f46}
+.session-status.locked{background:#f1f5f9;color:#64748b}
+.session-status.completed{background:#dbeafe;color:#1e40af}
+.session-status.expired{background:#fee2e2;color:#991b1b}
+
+/* ===== TEST PAGE (layout baru) ===== */
+.test-page{min-height:100vh;background:#f8fafc;padding-bottom:90px;-webkit-user-select:none;user-select:none}
+.test-page input{-webkit-user-select:text;user-select:text}
+.test-header{position:sticky;top:0;background:#fff;border-bottom:1px solid #e2e8f0;padding:.75rem 1rem;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+.th-left{font-weight:700;font-size:.9375rem;color:#1e293b}
+.test-timer{display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:#fef3c7;border-radius:8px;font-weight:700;color:#92400e}
+.test-timer.warning{background:#fee2e2;color:#991b1b;animation:pulse 1s infinite}
+.test-timer .material-icons{font-size:20px}
+
+/* Strip nomor + menu soal */
+.num-strip-row{position:sticky;top:57px;background:#fff;border-bottom:1px solid #e2e8f0;padding:.5rem 1rem;display:flex;align-items:center;gap:.5rem;z-index:99}
+.num-strip{display:flex;gap:.375rem;overflow-x:auto;flex:1;scrollbar-width:none}
+.num-strip::-webkit-scrollbar{display:none}
+.num-dot{flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:2px solid #e2e8f0;background:#fff;font-weight:700;font-size:.8125rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.num-dot.answered{background:#10b981;border-color:#10b981;color:#fff}
+.num-dot.current{background:#2563eb;border-color:#2563eb;color:#fff}
+
+/* Kartu soal + kontrol */
+.question-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:1.25rem;margin:1rem}
+.q-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:1rem}
+.q-head-left{font-weight:700;font-size:.875rem;display:flex;align-items:center;gap:.5rem}
+.q-ctrl{display:flex;gap:.375rem}
+.q-ctrl button{width:34px;height:34px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#475569}
+.q-ctrl button:hover{border-color:#2563eb;color:#2563eb}
+.question-text{line-height:1.7;margin-bottom:1.25rem;white-space:pre-wrap}
+
+/* Options */
+.options-list{display:grid;gap:.75rem}
+.option-item{display:flex;align-items:flex-start;gap:.75rem;padding:1rem;border:2px solid #e2e8f0;border-radius:12px;cursor:pointer;transition:all .15s}
+.option-item.selected{border-color:#2563eb;background:#eff6ff}
+.option-label{width:32px;height:32px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.875rem;flex-shrink:0}
+.option-item.selected .option-label{background:#2563eb;color:#fff}
+.option-text{flex:1;line-height:1.6;padding-top:.25rem}
+
+/* PGK */
+.statement-list{display:grid;gap:.75rem}
+.statement-item{padding:1rem;border:2px solid #e2e8f0;border-radius:12px}
+.statement-text{margin-bottom:.75rem;line-height:1.6}
+.statement-options{display:flex;gap:.5rem}
+.statement-btn{flex:1;padding:.5rem;border:2px solid #e2e8f0;background:#fff;border-radius:8px;cursor:pointer;font-weight:600}
+.statement-btn.selected{border-color:#2563eb;background:#2563eb;color:#fff}
+
+/* ISIAN */
+.answer-input{width:100%;padding:1rem;border:2px solid #e2e8f0;border-radius:12px;font-size:1rem;font-family:inherit}
+.answer-input:focus{outline:none;border-color:#2563eb}
+
+/* Navigasi fixed bottom (untuk halaman test) */
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e2e8f0;padding:.75rem 1rem;display:flex;gap:.5rem;z-index:100;box-shadow:0 -2px 8px rgba(0,0,0,.05)}
+.bottom-nav .btn{flex:1}
+
+/* Nav panel grid */
+.question-nav-panel{position:fixed;right:0;top:56px;bottom:0;width:280px;background:#fff;border-left:1px solid #e2e8f0;padding:1rem;overflow-y:auto;transform:translateX(100%);transition:transform .3s;z-index:120}
+.question-nav-panel.active{transform:translateX(0)}
+.question-grid-nav{display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem;margin-bottom:1rem}
+.q-nav-btn{aspect-ratio:1;border:2px solid #e2e8f0;background:#fff;border-radius:8px;cursor:pointer;font-weight:700;position:relative}
+.q-nav-btn.current{background:#2563eb;border-color:#2563eb;color:#fff}
+.q-nav-btn.answered{background:#10b981;border-color:#10b981;color:#fff}
+
+/* Result */
+.result-page{min-height:100vh;padding-top:56px;background:#f8fafc}
+.result-card{max-width:500px;margin:2rem auto;background:#fff;border-radius:16px;padding:2rem;text-align:center;border:1px solid #e2e8f0}
+.result-icon{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 1.5rem;background:#d1fae5;color:#10b981}
+.result-score{font-size:3rem;font-weight:700;color:#2563eb;margin:.5rem 0}
+.result-details{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin:1.5rem 0;padding:1.5rem;background:#f8fafc;border-radius:12px}
+.result-detail-label{font-size:.75rem;color:#64748b}
+.result-detail-value{font-size:1.25rem;font-weight:700}
+
+/* Anti-cheat warning */
+.anti-cheat-warning{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#ef4444;color:#fff;padding:.75rem 1.5rem;border-radius:8px;display:flex;align-items:center;gap:.5rem;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:9999;font-weight:600;max-width:90vw}
+
+/* Modal blur kuat untuk mulai test */
+.modal-overlay.blur-strong{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+
+@media (min-width:1024px){.question-nav-panel{transform:translateX(0)}.test-body{margin-right:300px}}
+@media (max-width:767px){.question-card{padding:1rem}.result-details{grid-template-columns:1fr}}
+
+/* =========================================================================
+   TAMBAHAN v2.3 - Arsitektur Baru Panel Siswa (bottom nav 6 tab)
+   ========================================================================= */
+
+/* Override: student-app perlu padding-bottom untuk memberi ruang bottom nav */
+.student-app{padding-bottom:80px;}
+
+/* ===== DATE LINE (di bawah header) ===== */
+.s-date-line{
+  background:#fff;
+  border-bottom:1px solid #e2e8f0;
+  padding:.5rem 1rem;
+  text-align:center;
+  font-size:.8125rem;
+  color:#64748b;
+  font-family:'Inter',sans-serif;
+  letter-spacing:.3px;
+}
+.s-date-line .material-icons{font-size:14px;vertical-align:-2px;margin-right:.25rem;color:#2563eb;}
+
+/* ===== BOTTOM NAVIGATION (fixed bawah, 6 tab) ===== */
+.bottom-nav-tabs{
+  position:fixed;
+  left:0;right:0;bottom:0;
+  background:#fff;
+  border-top:1px solid #e2e8f0;
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  z-index:200;
+  padding:.375rem 0 .5rem;
+  padding-bottom:calc(.5rem + env(safe-area-inset-bottom));
+  box-shadow:0 -2px 10px rgba(0,0,0,.06);
+}
+.bn-item{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:.125rem;
+  padding:.375rem .25rem;
+  background:transparent;
+  border:none;
+  cursor:pointer;
+  color:#64748b;
+  font-size:.625rem;
+  font-weight:600;
+  font-family:inherit;
+  transition:color .15s;
+  position:relative;
+}
+.bn-item .material-icons{font-size:22px;}
+.bn-item.active{color:#2563eb;}
+.bn-item.active::before{
+  content:'';
+  position:absolute;
+  top:0;left:20%;right:20%;
+  height:3px;background:#2563eb;border-radius:0 0 3px 3px;
+}
+.bn-item:active{transform:scale(.95);}
+
+/* ===== TAB PAGES CONTAINER ===== */
+.tab-page{display:none;padding:1rem;animation:fadeTab .25s ease;}
+.tab-page.active{display:block;}
+@keyframes fadeTab{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+/* Section title (untuk tab Home / lainnya) */
+.section-title{
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  font-size:1rem;
+  font-weight:700;
+  color:#1e293b;
+  margin:1.25rem 0 .75rem;
+}
+.section-title .material-icons{color:#2563eb;font-size:22px;}
+.section-title:first-child{margin-top:0;}
+
+/* ===== TAB HOME: MINI GRID (overview 3 card) ===== */
+.mini-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:.625rem;
+  margin-bottom:.5rem;
+}
+.mini-card{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  padding:.875rem .625rem;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+  transition:transform .15s;
+}
+.mini-card:active{transform:scale(.97);}
+.mini-icon{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto .5rem;
+}
+.mini-icon .material-icons{font-size:20px;color:#fff;}
+.mini-label{font-size:.625rem;color:#64748b;font-weight:600;line-height:1.2;margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.3px;}
+.mini-value{font-size:1.5rem;font-weight:700;color:#1e293b;line-height:1;}
+
+.mini-card-primary .mini-icon{background:#2563eb;}
+.mini-card-primary .mini-value{color:#2563eb;}
+.mini-card-success .mini-icon{background:#10b981;}
+.mini-card-success .mini-value{color:#10b981;}
+.mini-card-warning .mini-icon{background:#f59e0b;}
+.mini-card-warning .mini-value{color:#f59e0b;}
+
+/* ===== TAB HOME: NOTIFIKASI ===== */
+.notif-header{
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  padding:.625rem .875rem;
+  background:linear-gradient(135deg,#fef3c7,#fde68a);
+  border-radius:10px 10px 0 0;
+  color:#92400e;
+  font-size:.875rem;
+}
+.notif-header .material-icons{color:#f59e0b;}
+.notif-list{background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;overflow:hidden;}
+.notif-item{
+  display:flex;
+  align-items:center;
+  gap:.75rem;
+  padding:.75rem .875rem;
+  border-bottom:1px solid #f1f5f9;
+}
+.notif-item:last-child{border-bottom:none;}
+.notif-main{flex:1;min-width:0;}
+.notif-title{font-size:.875rem;font-weight:600;color:#1e293b;margin-bottom:.25rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.notif-meta{display:flex;gap:.75rem;font-size:.7rem;color:#64748b;flex-wrap:wrap;}
+.notif-meta span{display:flex;align-items:center;gap:.2rem;}
+.notif-meta .material-icons{font-size:12px;}
+
+/* ===== TAB HOME: LIST SESI PERLU DIKERJAKAN (extend session-item) ===== */
+.session-item.resume{border-color:#10b981;background:linear-gradient(135deg,#ecfdf5,#fff);}
+.session-item.resume .session-status{background:#10b981;color:#fff;}
+
+/* ===== TAB FEEDBACK ===== */
+.fb-form-card{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  padding:1rem;
+  margin-bottom:1rem;
+}
+.fb-radio-label{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:.375rem;
+  padding:.625rem;
+  border:2px solid #e2e8f0;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:.8125rem;
+  font-weight:600;
+  color:#475569;
+  transition:all .15s;
+}
+.fb-radio-label input[type="radio"]{display:none;}
+.fb-radio-label:has(input:checked){
+  border-color:#2563eb;
+  background:#eff6ff;
+  color:#2563eb;
+}
+.fb-radio-label .material-icons{font-size:18px;}
+
+.fb-list-section{margin-top:1.25rem;}
+.fb-item{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  padding:.75rem .875rem;
+  margin-bottom:.5rem;
+}
+.fb-item-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:.375rem;
+}
+.fb-item-subject{font-size:.875rem;font-weight:600;color:#1e293b;margin-bottom:.25rem;}
+.fb-item-msg{font-size:.8125rem;color:#475569;line-height:1.5;white-space:pre-wrap;}
+
+/* ===== TAB PROFILE ===== */
+.pf-photo-card{
+  background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);
+  border-radius:16px;
+  padding:1.5rem 1rem 1rem;
+  text-align:center;
+  color:#fff;
+  margin-bottom:1rem;
+  position:relative;
+  overflow:hidden;
+}
+.pf-photo-card::before{
+  content:'';
+  position:absolute;
+  top:-40px;right:-40px;
+  width:150px;height:150px;
+  background:rgba(255,255,255,.08);
+  border-radius:50%;
+}
+.pf-photo-card::after{
+  content:'';
+  position:absolute;
+  bottom:-60px;left:-30px;
+  width:180px;height:180px;
+  background:rgba(255,255,255,.05);
+  border-radius:50%;
+}
+.pf-photo{
+  width:80px;height:80px;
+  border-radius:50%;
+  background:rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto .75rem;
+  border:3px solid rgba(255,255,255,.3);
+  position:relative;z-index:1;
+}
+.pf-emoji{font-size:42px;line-height:1;}
+.pf-name{font-size:1.125rem;font-weight:700;margin-bottom:.25rem;position:relative;z-index:1;}
+.pf-id{font-size:.75rem;opacity:.9;font-family:monospace;margin-bottom:.5rem;position:relative;z-index:1;}
+.pf-batch{display:flex;justify-content:center;gap:.375rem;flex-wrap:wrap;margin-bottom:.75rem;position:relative;z-index:1;}
+.pf-batch .badge{background:rgba(255,255,255,.2);color:#fff;font-size:.7rem;}
+.pf-edit-motivasi{
+  background:rgba(255,255,255,.15)!important;
+  color:#fff!important;
+  border:1px solid rgba(255,255,255,.3)!important;
+  position:relative;z-index:1;
+}
+.pf-motivasi{
+  background:rgba(255,255,255,.15);
+  border-radius:8px;
+  padding:.625rem .75rem;
+  margin-top:.625rem;
+  font-size:.8125rem;
+  line-height:1.5;
+  font-style:italic;
+  position:relative;z-index:1;
+}
+.pf-motivasi-empty{opacity:.75;font-style:italic;}
+
+.pf-info-card{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  padding:1rem;
+  margin-bottom:.75rem;
+}
+.pf-section-title{
+  display:flex;
+  align-items:center;
+  gap:.375rem;
+  font-size:.875rem;
+  font-weight:700;
+  color:#2563eb;
+  margin-bottom:.625rem;
+  padding-bottom:.5rem;
+  border-bottom:1px solid #e2e8f0;
+}
+.pf-section-title .material-icons{font-size:18px;}
+.pf-info-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:.75rem;
+  padding:.5rem 0;
+  border-bottom:1px dashed #f1f5f9;
+  font-size:.8125rem;
+}
+.pf-info-row:last-child{border-bottom:none;}
+.pf-info-label{
+  display:flex;
+  align-items:center;
+  gap:.375rem;
+  color:#64748b;
+  flex-shrink:0;
+  font-weight:500;
+}
+.pf-info-label .material-icons{font-size:16px;color:#94a3b8;}
+.pf-info-value{color:#1e293b;font-weight:600;text-align:right;flex:1;min-width:0;word-break:break-word;}
+
+.pf-actions{display:grid;gap:.5rem;margin:.5rem 0;}
+.pf-logout-wrap{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #e2e8f0;}
+.pf-logout-btn{
+  background:#ef4444;
+  color:#fff;
+  font-weight:600;
+  padding:.875rem 1rem;
+  justify-content:center;
+}
+.pf-logout-btn:hover{background:#dc2626;}
+
+/* ===== TAB RIWAYAT & NILAI ===== */
+.riwayat-item{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  padding:.875rem;
+  margin-bottom:.5rem;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:.75rem;
+}
+.riwayat-main{flex:1;min-width:0;}
+.riwayat-title{font-size:.875rem;font-weight:600;color:#1e293b;margin-bottom:.25rem;display:flex;align-items:center;gap:.375rem;}
+.riwayat-meta{display:flex;gap:.625rem;font-size:.7rem;color:#64748b;flex-wrap:wrap;}
+.riwayat-meta span{display:flex;align-items:center;gap:.2rem;}
+.riwayat-meta .material-icons{font-size:12px;}
+
+.nilai-table{
+  width:100%;
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  overflow:hidden;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:.8125rem;
+}
+.nilai-table th{
+  background:#f8fafc;
+  padding:.625rem .75rem;
+  text-align:left;
+  font-weight:600;
+  color:#64748b;
+  font-size:.7rem;
+  text-transform:uppercase;
+  letter-spacing:.3px;
+  border-bottom:1px solid #e2e8f0;
+}
+.nilai-table td{
+  padding:.75rem .75rem;
+  border-bottom:1px solid #f1f5f9;
+  color:#1e293b;
+}
+.nilai-table tbody tr:last-child td{border-bottom:none;}
+.nilai-score{
+  font-weight:700;
+  font-size:1rem;
+  color:#2563eb;
+}
+.nilai-score.high{color:#10b981;}
+.nilai-score.low{color:#ef4444;}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width:400px){
+  .mini-grid{gap:.375rem;}
+  .mini-card{padding:.625rem .375rem;}
+  .mini-value{font-size:1.25rem;}
+  .mini-label{font-size:.5625rem;}
+  .bn-item{font-size:.5625rem;}
+  .bn-item .material-icons{font-size:20px;}
+}
+
+@media (min-width:768px){
+  .mini-grid{grid-template-columns:repeat(3,1fr);max-width:600px;margin-left:auto;margin-right:auto;}
+  .tab-page{padding:1rem 1.5rem;}
+  .pf-photo-card{max-width:600px;margin-left:auto;margin-right:auto;}
+}
