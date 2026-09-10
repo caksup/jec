@@ -1,8 +1,8 @@
-<!-- #13 | /root/sp.html | v 4.1 | u 08/09/2026 • 12:00:00 | xu : ke-6 | note : #noteresponse
-- FIX: bottom nav kini BISA DIKLIK (onclick PS.setTab) - sebelumnya hanya Info yg ter-bind.
-- FIX: #page-home default class "active" agar tidak blank walau JS telat.
-- FIX: bump versi script & css (?v=4) untuk bust cache.
-- Tetap: login, header brand + date line, 6 tab-page, test 4 tipe, result, modal, toast. -->
+<!-- #13 | /root/sp.html | v 4.2 | u 09/09/2026 • 10:10:00 | xu : ke-7 | note : #noteresponse
+- TAMBAH: js/s/homework.js?v=5 (handler mode Homework/PR) di urutan alfabet.
+- BUMP: seluruh cache-bust js/s/*.js dan css/s.css ke ?v=5 (mode Live vs Homework).
+- Struktur TIDAK diubah: login, header brand + date line, 6 tab-page, test page (Live & Homework
+  pakai container sama; routing otomatis via test.js v1.9), result page (badge mode via result.js v2.0). -->
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -15,7 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <link href="css/g.css" rel="stylesheet">
-<link href="css/s.css?v=4" rel="stylesheet">
+<link href="css/s.css?v=5" rel="stylesheet">
 <link href="css/brand.css" rel="stylesheet">
 </head>
 <body>
@@ -126,7 +126,7 @@
 
   </div>
 
-  <!-- ====== BOTTOM NAVIGATION (6 tab, kini clickable) ====== -->
+  <!-- ====== BOTTOM NAVIGATION (6 tab, clickable) ====== -->
   <nav class="bottom-nav-tabs" id="bottomNav">
     <button class="bn-item active" data-tab="home" onclick="PS.setTab('home')">
       <span class="material-icons">home</span><span>Home</span>
@@ -150,7 +150,7 @@
 </div>
 
 <!-- ============================================
-     TEST PAGE
+     TEST PAGE (dipakai Live Exercise & Homework)
      ============================================ -->
 <div id="testPage" class="test-page" style="display:none;">
   <div class="test-header">
@@ -187,7 +187,7 @@
 </div>
 
 <!-- ============================================
-     RESULT PAGE
+     RESULT PAGE (badge mode di-inject oleh result.js v2.0)
      ============================================ -->
 <div id="resultPage" class="result-page" style="display:none;">
   <div class="result-card">
@@ -222,7 +222,7 @@
 <div id="toast" class="toast"></div>
 
 <!-- ============================================
-     SCRIPTS (urut dependency, cache-busted)
+     SCRIPTS (urut dependency + alfabet, cache-busted v5)
      ============================================ -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -241,16 +241,17 @@ window.PS = window.PS || {
 <script type="text/javascript" src="js/rwmonitor.js"></script>
 <script type="text/javascript" src="js/hash.js"></script>
 <script type="text/javascript" src="js/modal.js"></script>
-<script type="text/javascript" src="js/s/state.js?v=4"></script>
-<script type="text/javascript" src="js/s/login.js?v=4"></script>
-<script type="text/javascript" src="js/s/dashboard.js?v=4"></script>
-<script type="text/javascript" src="js/s/feedback.js?v=4"></script>
-<script type="text/javascript" src="js/s/info.js?v=4"></script>
-<script type="text/javascript" src="js/s/nilai.js?v=4"></script>
-<script type="text/javascript" src="js/s/profile.js?v=4"></script>
-<script type="text/javascript" src="js/s/result.js?v=4"></script>
-<script type="text/javascript" src="js/s/riwayat.js?v=4"></script>
-<script type="text/javascript" src="js/s/test.js?v=4"></script>
+<script type="text/javascript" src="js/s/state.js?v=5"></script>
+<script type="text/javascript" src="js/s/login.js?v=5"></script>
+<script type="text/javascript" src="js/s/dashboard.js?v=5"></script>
+<script type="text/javascript" src="js/s/feedback.js?v=5"></script>
+<script type="text/javascript" src="js/s/homework.js?v=5"></script>
+<script type="text/javascript" src="js/s/info.js?v=5"></script>
+<script type="text/javascript" src="js/s/nilai.js?v=5"></script>
+<script type="text/javascript" src="js/s/profile.js?v=5"></script>
+<script type="text/javascript" src="js/s/result.js?v=5"></script>
+<script type="text/javascript" src="js/s/riwayat.js?v=5"></script>
+<script type="text/javascript" src="js/s/test.js?v=5"></script>
 <script type="text/javascript" src="js/s/s-devtools.js"></script>
 
 </body>
