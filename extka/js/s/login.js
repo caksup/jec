@@ -1,11 +1,15 @@
-/* #24 | /root/js/s/login.js | v 2.1 | u 08/09/2026 • 12:10:00 | xu : ke-5 | note : #noteresponse
-- FIX BLANK SAAT REFRESH: restore() kini memanggil showDashboard() (yg menampilkan #studentApp)
-  pada jalur tanpa-resume; sebelumnya studentApp tidak pernah ditampilkan -> blank putih.
-- TAMBAH jaring pengaman: setelah window load, jika login sembunyi + app sembunyi + user ada,
-  paksa tampilkan app + setTab home.
-- FIX: restore dibungkus try/catch agar error tak membuat blank.
-- Tetap: persist session (localStorage+sessionStorage), auto-resume in_progress,
-  date line (#sDateLine), load profil extended, toggle PIN, logout conditional. */
+/* #24 | /root/js/s/login.js | v 2.2 | u 10/09/2026 • 08:55:00 | xu : ke-6 | note : #noteresponse
+- FIX BUG "dua layar block bersamaan" (jalur login/refresh):
+  * showDashboard()   -> showScreen('app')    [hide login/test/result, show app + sHeader]
+  * safetyNet()       -> showScreen('app')    [jaring pengaman pakai showScreen]
+  * renderHeader()    -> hapus manual sHeader.style.display (showScreen yang atur)
+  * restore()         -> hapus manual $('loginScreen').style.display='none' (showDashboard
+    yang atur via showScreen)
+  * login submit      -> otomatis ikut karena memanggil showDashboard()
+- TETAP (tidak dipotong dari v2.1): saveSession/readSession/clearSession
+  (localStorage+sessionStorage), startClock (#sDateLine real-time), loadProfileExtended,
+  restore (try/catch + auto-resume in_progress via autoResume), jaring pengaman boot,
+  toggle PIN visibility, login form submit handler, logout conditional. */
 
 (function(){
   'use strict';
@@ -44,10 +48,10 @@
     if (!window.__sClock) window.__sClock = setInterval(upd, 1000);
   }
 
+  // FIX: hapus manipulasi sHeader manual (showScreen yang atur)
   function renderHeader(user){
     var u = $('sUserId'); if (u) u.textContent = user.id;
     var n = $('sUserName'); if (n) n.textContent = user.name;
-    var hdr = $('sHeader'); if (hdr) hdr.style.display = 'flex';
     startClock();
   }
 
@@ -66,9 +70,15 @@
     } catch(e){ console.warn('[PS] loadProfileExtended error:', e); }
   }
 
+  // FIX: pakai showScreen('app')
   async function showDashboard(){
-    $('loginScreen').style.display = 'none';
-    $('studentApp').style.display = 'block';   // <-- kunci: tampilkan app
+    if (window.showScreen) showScreen('app');
+    else {
+      var ls = $('loginScreen'); if (ls) ls.style.display = 'none';
+      var sa = $('studentApp'); if (sa) sa.style.display = 'block';
+      var tp = $('testPage'); if (tp) tp.style.display = 'none';
+      var rp = $('resultPage'); if (rp) rp.style.display = 'none';
+    }
     renderHeader(PS.user);
     await loadProfileExtended();
     if (window.loadDashboard) await loadDashboard();
@@ -83,7 +93,8 @@
     if (!user || !user.id) { clearSession(); return; }
 
     PS.user = user;
-    $('loginScreen').style.display = 'none';
+    // FIX: tidak perlu manipulasi loginScreen manual — showDashboard() di bawah
+    // (via showScreen) yang akan mengatur semua 4 layar sekaligus
     renderHeader(user);
     await loadProfileExtended();
 
@@ -101,18 +112,19 @@
       }
     }catch(e){ console.warn('[PS] cek resume gagal:', e); }
 
-    // FIX: tampilkan app + muat dashboard + tab home
+    // Tampilkan app + muat dashboard + tab home (showScreen('app'))
     await showDashboard();
   }
 
-  // Jaring pengaman: pastikan app tampil walau ada jalur yg terlewat
+  // Jaring pengaman: pakai showScreen('app') agar 4 layar selalu konsisten
   function safetyNet(){
     try{
       var ls = $('loginScreen'), ap = $('studentApp');
       if (PS.user && ls && ap &&
           ls.style.display === 'none' &&
           (ap.style.display === 'none' || ap.style.display === '')) {
-        ap.style.display = 'block';
+        if (window.showScreen) showScreen('app');
+        else { ap.style.display = 'block'; }
         renderHeader(PS.user);
         if (window.PS && typeof PS.setTab === 'function') PS.setTab(PS.activeTab || 'home');
       }
