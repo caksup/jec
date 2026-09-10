@@ -1,17 +1,30 @@
-/* #26 | /root/js/s/test.js | v 1.6 | u 08/09/2026 • 08:40:00 | xu : ke-7 | note : #noteresponse
-- UPDATE 1: counter pelanggaran (icon shield + 0/3) di header, sebelah KIRI timer; update real-time.
-- UPDATE 2: tombol PGK "B/S" diganti "True/False" (nilai boolean tetap; format soal bertahap).
-- UPDATE 3: modal mulai lebih modern: icon besar + baris info ber-icon (Sesi, Jumlah Soal, Durasi, Waktu Pengerjaan mulai-akhir).
-- UPDATE 4: tombol "Menu Soal" jadi icon-only (grid_view).
-- UPDATE 5: pencegatan siswa NON-assigned: modal "anda belum bisa akses simulasi tka ini, silahkan hubungi Mentor Teknis Simulasi TKA. terimakasih."
-- Kode LAINNYA 100% SAMA PERSIS dengan v1.5 (tidak dipotong). */
+/* #26 | /root/js/s/test.js | v 2.0 | u 10/09/2026 • 08:45:00 | xu : ke-12 | note : #noteresponse
+- FIX BUG "dua layar block bersamaan":
+  * showTestPage() -> showScreen('test')
+  * exitTestMode() tidak lagi manipulasi display manual (showResult/backToDashboard
+    memanggil showScreen sendiri via result.js v2.1).
+- FIX BUG answerPGK: q.id -> qid (typo dari v1.0 yang menyebabkan crash pada soal True/False).
+- TETAP (tidak dipotong dari v1.9): routing cerdas mode HOMEWORK vs LIVE (startSession
+  delegasi, initTest delegasi, autoResume delegasi), counter pelanggaran, True/False,
+  modal modern, Menu Soal icon-only, assigned-check, 4 tipe soal, timer, saveRemaining,
+  saveProgress, submitTest, confirmSubmit, anti-cheat per sesi (isAntiCheatOn), back trap,
+  playAlarm, enterFS/exitFS, infoRow, updateViolDisplay, isAssigned/blockNotAssigned. */
 
 (function(){
   'use strict';
   function $(id){ return document.getElementById(id); }
 
   var AC = null; // AudioContext
+
+  // ===== Cek apakah anti-cheat aktif untuk sesi saat ini =====
+  function isAntiCheatOn(){
+    if (!PS.settings.antiCheatEnabled) return false;
+    if (PS.currentSession && PS.currentSession.antiCheat === false) return false;
+    return true;
+  }
+
   function playAlarm(){
+    if (!isAntiCheatOn()) return;
     try{
       AC = AC || new (window.AudioContext||window.webkitAudioContext)();
       var t = AC.currentTime;
@@ -32,7 +45,6 @@
     try{ if(el.requestFullscreen) el.requestFullscreen().catch(function(){}); else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen(); }catch(e){} }
   function exitFS(){ try{ if(document.fullscreenElement) document.exitFullscreen().catch(function(){}); }catch(e){} }
 
-  // Baris info ber-icon utk modal mulai
   function infoRow(icon, label, value){
     return '<div style="display:flex;align-items:center;gap:.75rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:.625rem .75rem;">' +
       '<span class="material-icons" style="color:#2563eb;font-size:20px;">'+icon+'</span>' +
@@ -40,22 +52,25 @@
       '<div style="font-size:.875rem;font-weight:600;">'+value+'</div></div></div>';
   }
 
-  // Counter pelanggaran di header
   function updateViolDisplay(){
     var el=$('violDisplay');
     var max=PS.settings.maxTabSwitches||3;
-    if(el) el.textContent = PS.tabSwitch + '/' + max;
     var c=$('violCounter');
+    if (!isAntiCheatOn()) {
+      if (el) el.textContent = 'OFF';
+      if (c) { c.style.background = '#f1f5f9'; c.style.color = '#94a3b8'; }
+      return;
+    }
+    if(el) el.textContent = PS.tabSwitch + '/' + max;
     if(c){
       c.style.background = PS.tabSwitch>0 ? '#fee2e2' : '#f1f5f9';
       c.style.color = PS.tabSwitch>0 ? '#991b1b' : '#64748b';
     }
   }
 
-  // Cek apakah siswa di-assign ke sesi (jika sesi punya assignedStudents)
   function isAssigned(sess){
     var arr = sess && sess.assignedStudents;
-    if(!arr || !arr.length) return true; // sesi lama tanpa assign -> semua boleh
+    if(!arr || !arr.length) return true;
     return arr.indexOf(PS.user.id) !== -1;
   }
   function blockNotAssigned(){
@@ -64,6 +79,7 @@
       'error');
   }
 
+  // ===== START SESSION (entry point umum) =====
   async function startSession(id, status){
     console.log('[TKA] startSession dipanggil, id=', id, 'status=', status);
     if (status === 'locked' || status === 'expired') { toast('Sesi belum/tidak tersedia', 'warning'); return; }
@@ -72,19 +88,26 @@
       if (done) showResultFromAttempt(done.id);
       return;
     }
-    // Ambil info sesi untuk modal
     var s = PS.sessions.find(function(x){ return x.id === id; });
     var name = s ? s.name : 'Sesi';
     var dur = s ? (s.duration||60) : 60;
 
-    // UPDATE 5: cegah siswa non-assigned
     if (s && !isAssigned(s)) { blockNotAssigned(); return; }
 
-    // Hitung jumlah soal dulu (untuk tampilan modal)
+    // ===== DELEGASI: bila sesi ber-mode homework -> ke homework.js =====
+    if (s && s.mode === 'homework' && window.startHomework) {
+      return window.startHomework(id);
+    }
+
+    // ===== Jalur LIVE =====
     var qSnap = await db.collection('questions').where('sessionId','==',id).get();
 
     var startStr = (s && s.startTime) ? formatDate(s.startTime) : '-';
     var endStr = (s && s.endTime) ? formatDate(s.endTime) : '-';
+
+    var acBadge = (s && s.antiCheat === false)
+      ? infoRow('shield', 'Anti-Cheat', '<span style="color:#f59e0b;">Nonaktif</span>')
+      : infoRow('shield', 'Anti-Cheat', '<span style="color:#10b981;">Aktif</span>');
 
     var content =
       '<div style="text-align:center;margin-bottom:1rem;">' +
@@ -98,6 +121,7 @@
         infoRow('quiz', 'Jumlah Soal', qSnap.size + ' soal') +
         infoRow('timer', 'Durasi', dur + ' menit') +
         infoRow('schedule', 'Waktu Pengerjaan', startStr + '  s/d  ' + endStr) +
+        acBadge +
       '</div>' +
       '<div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:.75rem;border-radius:6px;font-size:.8125rem;color:#92400e;">' +
       'Peringatan: Selama simulasi berlangsung Anda <b>TIDAK diperkenankan</b> keluar browser atau berpindah tab. Pelanggaran akan tercatat dan dapat mengakhiri sesi secara otomatis.</div>';
@@ -131,8 +155,18 @@
     }
   }
 
-  window.autoResume = function(sessionId){ return initTest(sessionId); };
+  // ===== AUTO RESUME (dari dashboard/param URL) =====
+  window.autoResume = async function(sessionId){
+    try {
+      var snap = await db.collection('sessions').doc(sessionId).get();
+      if (snap.exists && snap.data().mode === 'homework' && window.resumeHomework) {
+        return window.resumeHomework(sessionId, null);
+      }
+    } catch(e){ console.warn('[TKA] cek mode sesi gagal:', e); }
+    return initTest(sessionId);
+  };
 
+  // ===== INIT TEST (untuk LIVE; delegasi ke homework.js bila mode homework) =====
   async function initTest(sessionId){
     var load = loading('Menyiapkan sesi...');
     try {
@@ -140,7 +174,12 @@
       if (!sessSnap.exists) { load.close(); alert2('Error','Sesi tidak ditemukan','error'); return; }
       PS.currentSession = Object.assign({ id: sessionId }, sessSnap.data());
 
-      // UPDATE 5: cegah non-assigned juga di jalur resume
+      // ===== DELEGASI: bila homework -> ke homework.js =====
+      if (PS.currentSession.mode === 'homework' && window.resumeHomework) {
+        load.close();
+        return window.resumeHomework(sessionId, null);
+      }
+
       if (!isAssigned(PS.currentSession)) { load.close(); blockNotAssigned(); return; }
 
       var qSnap = await db.collection('questions').where('sessionId','==',sessionId).get();
@@ -186,11 +225,16 @@
   }
 
   function showTestPage(){
-    var ls=$('loginScreen'); if(ls) ls.style.display='none';
-    $('studentApp').style.display='none';
-    $('resultPage').style.display='none';
-    var tp=$('testPage'); tp.style.display='block';
+    // FIX: pakai showScreen terpusat
+    if (window.showScreen) showScreen('test');
+    else {
+      var ls=$('loginScreen'); if(ls) ls.style.display='none';
+      $('studentApp').style.display='none';
+      $('resultPage').style.display='none';
+      var tp=$('testPage'); tp.style.display='block';
+    }
 
+    var tp=$('testPage');
     tp.innerHTML =
       '<div class="test-header">' +
         '<div class="th-left">Soal <span id="curNum">1</span>/<span id="totNum">' + PS.questions.length + '</span></div>' +
@@ -224,7 +268,6 @@
     enterTestMode();
   }
 
-  // Mode test: trap back + anti-cheat
   function enterTestMode(){
     history.pushState(null, '', location.href);
     window.addEventListener('popstate', onBack);
@@ -234,9 +277,11 @@
     window.removeEventListener('popstate', onBack);
     cleanupAntiCheat();
     exitFS();
+    // TIDAK manipulasi display di sini — showResult/backToDashboard yang atur via showScreen
   }
   function onBack(){
     history.pushState(null, '', location.href);
+    if (!isAntiCheatOn()) return;
     registerViolation('coba kembali');
     alert2('Peringatan', 'Anda tidak dapat kembali selama simulasi berlangsung. Fokus pada soal.', 'warning');
   }
@@ -315,7 +360,6 @@
 
     $('testBody').innerHTML = html;
 
-    // Bottom nav state
     var last = PS.currentIndex === PS.questions.length-1;
     $('btnPrevQ').disabled = PS.currentIndex===0;
     $('btnNextQ').style.display = last ? 'none' : 'inline-flex';
@@ -335,27 +379,30 @@
 
   window.answerPGS=function(qid,l){PS.answers[qid]=l;saveProgress();renderQuestion();};
   window.answerMCMA=function(qid,l){var c=PS.answers[qid]||[];var i=c.indexOf(l);if(i===-1)c.push(l);else c.splice(i,1);PS.answers[qid]=c;saveProgress();renderQuestion();};
+  // FIX: typo q.id -> qid (crash pada soal True/False di Live Exercise)
   window.answerPGK=function(qid,i,v){var a=PS.answers[qid]||[];a[i]=v;PS.answers[qid]=a;saveProgress();renderQuestion();};
   window.answerISIAN=function(qid,v){PS.answers[qid]=v.trim();saveProgress();};
   window.navQ=function(d){var n=PS.currentIndex+d;if(n<0||n>=PS.questions.length)return;PS.currentIndex=n;saveProgress();renderQuestion();};
   window.gotoQ=function(i){PS.currentIndex=i;saveProgress();renderQuestion();var p=$('questionNavPanel');if(p)p.classList.remove('active');};
   window.toggleNavPanel=function(){var p=$('questionNavPanel');if(p)p.classList.toggle('active');};
 
-  // Anti-cheat
   function registerViolation(type){
     PS.tabSwitch++;
     PS.antiLog.push({t:Date.now(),type:type});
     updateAnti();
     updateViolDisplay();
     playAlarm();
-    if (PS.settings.antiCheatEnabled && PS.tabSwitch >= PS.settings.maxTabSwitches) {
+    if (isAntiCheatOn() && PS.tabSwitch >= PS.settings.maxTabSwitches) {
       alert2('Pelanggaran!','Anda melebihi batas pelanggaran. Jawaban dikumpulkan.','error',function(){submitTest(true);});
     }
   }
   function onVis(){
     if(!PS.attemptId) return;
-    if(document.hidden){ registerViolation('tab_switch'); }
-    else { showAntiWarning(); }
+    if(document.hidden){
+      if (isAntiCheatOn()) registerViolation('tab_switch');
+    } else {
+      if (isAntiCheatOn()) showAntiWarning();
+    }
   }
   function onBlur(){ if(PS.attemptId){ PS.blur++; PS.antiLog.push({t:Date.now(),type:'blur'}); updateAnti(); } }
   function updateAnti(){ if(PS.attemptId) db.collection('attempts').doc(PS.attemptId).update({tabSwitchCount:PS.tabSwitch,blurCount:PS.blur,antiCheatLog:PS.antiLog}).catch(function(){}); }
