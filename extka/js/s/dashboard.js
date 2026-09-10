@@ -1,13 +1,25 @@
-/* #25 | /root/js/s/dashboard.js | v 2.1 | u 08/09/2026 • 12:20:00 | xu : ke-6 | note : #noteresponse
-- FIX "Notifikasi & Sesi Perlu Dikerjakan tidak tampil": loadAllData() kini fetch SEMUA sesi
-  (tanpa query boolean) lalu filter client-side, supaya sesi yang di-assign tetap muncul.
-- renderHomeTab kini menampilkan sesi aktif (bukan hanya available), termasuk yang locked/expired.
-- Tambah console.log debug untuk memudahkan troubleshooting.
-- KODE LAINNYA 100% SAMA PERSIS dengan v2.0 milik Anda (tidak dipotong). */
+/* #25 | /root/js/s/dashboard.js | v 2.5 | u 10/09/2026 • 07:20:00 | xu : ke-10 | note : #noteresponse
+- UPDATE 12 (Opsi A): fallback jumlah soal bila session.questionsCount kosong.
+  * Helper fillMissingQuestionsCount() mengumpulkan sessionId dari sesi yang akan
+    ditampilkan di Home (hwActive + hwMissed + live perlu), lalu query collection
+    questions dengan filter 'in' (chunked 30/sessionId agar aman), hitung count di client,
+    dan backfill sementara ke s.questionsCount di memory (TIDAK write ke Firestore).
+  * Card PR & Live sekarang menampilkan angka soal yang akurat sejak sesi dibuat,
+    tidak lagi "- soal".
+  * Query hanya dijalankan bila ada sesi tanpa counter; bila semua sesi sudah punya
+    questionsCount, tidak ada read tambahan.
+- TETAP (tidak dipotong dari v2.4): dispatcher 5 tab, loadAllData, computeStatus,
+  helper homework (isHw, hwCompletedAttempts, hwRetryAvailable, hwExpired, hwPending,
+  hwMissed), countdown deadline fmtDeadline, setSectionTitle, sessionView, openStart,
+  clearParamOnce, handleSessionParam, loadDashboard, fallback startHomework,
+  loadSessions, loadMyResults, escapeHtmlS. */
 
 (function(){
   'use strict';
   function $(id){ return document.getElementById(id); }
+  var BULAN_S = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  var RETRY_THRESHOLD = 50;   // fixed (2A)
+  var IN_CHUNK = 30;           // batas 'in' query Firestore
 
   // ===== Dispatcher untuk 5 tab bottom nav =====
   window.renderStudentTab = function(name){
@@ -20,7 +32,7 @@
     }
   };
 
-  // ===== Load data bersama (dipakai lintas tab) =====
+  // ===== Load data bersama =====
   async function loadAllData(){
     try {
       var set = await db.collection('settings').doc('global_settings').get();
@@ -29,29 +41,19 @@
         PS.settings.maxTabSwitches = set.data().maxTabSwitches || 3;
       }
     } catch(e){}
-
-    // Sessions: ambil SEMUA, filter client (hindari masalah query boolean)
-    // PERUBAHAN v2.1: sebelumnya pakai where(visible==true).where(status==true) yang bisa
-    // mengembalikan kosong jika field boolean tidak diset dengan benar.
     try {
       var snap = await db.collection('sessions').get();
       PS.sessions = [];
       snap.forEach(function(d){
         var s = Object.assign({id:d.id},d.data());
-        // Sertakan sesi yang status & visible tidak diset false (default = aktif)
         if (s.status !== false && s.visible !== false) PS.sessions.push(s);
       });
-      console.log('[PS] sessions loaded:', PS.sessions.length, PS.sessions.map(function(s){return s.name;}));
+      console.log('[PS] sessions loaded:', PS.sessions.length);
     } catch(e){ console.error('[PS] load sessions error:', e); }
-
-    // Attempts milik siswa
     try {
-      var attSnap = await db.collection('attempts')
-        .where('studentId','==',PS.user.id).get();
+      var attSnap = await db.collection('attempts').where('studentId','==',PS.user.id).get();
       PS.myAttempts = [];
-      attSnap.forEach(function(d){
-        PS.myAttempts.push(Object.assign({id:d.id}, d.data()));
-      });
+      attSnap.forEach(function(d){ PS.myAttempts.push(Object.assign({id:d.id}, d.data())); });
       console.log('[PS] attempts loaded:', PS.myAttempts.length);
     } catch(e){ console.error('[PS] load attempts error:', e); }
   }
@@ -64,219 +66,265 @@
     return 'available';
   }
 
+  // ===== Helper mode homework =====
+  function isHw(s){ return s.mode === 'homework'; }
+  function hwCompletedAttempts(s){
+    return PS.myAttempts.filter(function(a){ return a.sessionId===s.id && a.status==='completed'; });
+  }
+  function hwRetryAvailable(s){
+    if (!isHw(s) || s.retryMode !== 'conditional') return false;
+    var atts = hwCompletedAttempts(s);
+    if (atts.length === 0 || atts.length >= 2) return false;
+    var last = atts[atts.length-1];
+    var score = last.score||0;
+    var correct = last.correctAnswers||0;
+    var total = last.totalQuestions||1;
+    return (score < RETRY_THRESHOLD || correct < total/2);
+  }
+  function hwExpired(s){
+    if (!s.endTime) return false;
+    var end = new Date(s.endTime).getTime();
+    return !isNaN(end) && Date.now() > end;
+  }
+  function hwPending(s){
+    if (!isHw(s) || hwExpired(s)) return false;
+    var atts = hwCompletedAttempts(s);
+    if (atts.length === 0) return true;
+    return hwRetryAvailable(s);
+  }
+  function hwMissed(s){
+    return isHw(s) && hwExpired(s) && hwCompletedAttempts(s).length === 0;
+  }
+
+  // ===== Countdown deadline (6C: absolute + relative) =====
+  function p2(n){ return String(n).padStart(2,'0'); }
+  function relTime(ms){
+    var m = Math.floor(ms/60000);
+    var d = Math.floor(m/1440); m %= 1440;
+    var h = Math.floor(m/60);  m %= 60;
+    if (d>0) return d+' hari '+h+' jam';
+    if (h>0) return h+' jam '+m+' menit';
+    return m+' menit';
+  }
+  function fmtDeadline(s){
+    if (!s.endTime) return { text:'Tanpa deadline', urgent:false, over:false };
+    var end = new Date(s.endTime);
+    if (isNaN(end.getTime())) return { text:'Tanpa deadline', urgent:false, over:false };
+    var abs = end.getDate()+' '+BULAN_S[end.getMonth()]+' '+end.getFullYear()+', '+p2(end.getHours())+':'+p2(end.getMinutes());
+    var diff = end.getTime() - Date.now();
+    if (diff <= 0) return { text:'Deadline lewat: '+abs, urgent:true, over:true };
+    return { text:'Deadline: '+abs+' ('+relTime(diff)+' lagi)', urgent:(diff < 24*3600*1000), over:false };
+  }
+
+  // ===== Set judul section dinamis (ubah h2 bawaan sp.html) =====
+  function setSectionTitle(containerId, icon, text, color){
+    var c = $(containerId);
+    if (!c) return;
+    var h = c.previousElementSibling;
+    if (h && h.classList && h.classList.contains('section-title')) {
+      h.innerHTML = '<span class="material-icons" style="color:'+(color||'#2563eb')+';">'+icon+'</span>' + text;
+    }
+  }
+
+  // ===== Label session untuk LIVE =====
+  function sessionView(s, att){
+    if (att && att.status === 'completed')  return { label:'Selesai',        cls:'completed', disabled:true,  status:'completed' };
+    if (att && att.status === 'in_progress')return { label:'Lanjutkan',      cls:'completed', disabled:false, status:'available' };
+    var st = computeStatus(s);
+    if (st === 'locked')                    return { label:'Belum Dimulai',  cls:'locked',    disabled:true,  status:'locked' };
+    if (st === 'expired')                   return { label:'Terlewat',       cls:'expired',   disabled:true,  status:'expired' };
+    return { label:'Mulai', cls:'available', disabled:false, status:'available' };
+  }
+
   function openStart(sess){
     var tries = 0;
     (function attempt(){
-      if (window.startSession) {
-        window.startSession(sess.id, computeStatus(sess));
-      } else if (tries++ < 15) {
-        setTimeout(attempt, 200);
-      } else {
-        console.error('[Exercise TKA] startSession tidak tersedia');
-      }
+      if (window.startSession) { window.startSession(sess.id, computeStatus(sess)); }
+      else if (tries++ < 15) { setTimeout(attempt, 200); }
     })();
+  }
+
+  function clearParamOnce(){
+    try { if (location.search && history.replaceState) history.replaceState(null, '', location.pathname); } catch(e){}
   }
 
   async function handleSessionParam(){
     var code = null;
     try { code = new URLSearchParams(location.search).get('jec-sim-tka'); } catch(e){}
     if (!code) return;
-    console.log('[Exercise TKA] param kode:', code);
-
     var sess = PS.sessions.find(function(s){ return (s.code||'').toLowerCase() === code.toLowerCase(); });
-    if (!sess) { toast('Kode sesi tidak ditemukan','warning'); return; }
-    console.log('[Exercise TKA] sesi ditemukan:', sess.id, sess.name);
-
+    if (!sess) { toast('Kode sesi tidak ditemukan','warning'); clearParamOnce(); return; }
     var done = PS.myAttempts.find(function(a){ return a.sessionId===sess.id && a.status==='completed'; });
-    if (done && window.showResultFromAttempt) { showResultFromAttempt(done.id); return; }
-
+    if (done && window.showResultFromAttempt) { showResultFromAttempt(done.id); clearParamOnce(); return; }
     try {
       var inc = await db.collection('attempts')
         .where('studentId','==',PS.user.id).where('sessionId','==',sess.id).where('status','==','in_progress').get();
-      if (!inc.empty && window.autoResume) { window.autoResume(sess.id); return; }
-    } catch(e){ console.warn('[Exercise TKA] cek in_progress gagal:', e); }
-
-    try { openStart(sess); } catch(e){ console.error('[Exercise TKA] openStart error:', e); }
+      if (!inc.empty && window.autoResume) { window.autoResume(sess.id); clearParamOnce(); return; }
+    } catch(e){}
+    try { openStart(sess); clearParamOnce(); } catch(e){}
   }
 
-  // ===== Init dashboard lama (kompatibilitas) =====
   async function loadDashboard(){
     var pN = $('pName'); if(pN) pN.textContent = PS.user.name;
     var pI = $('pId');   if(pI) pI.textContent = PS.user.id;
     var pB = $('pBatch'); if(pB) pB.textContent = 'Batch ' + (PS.user.batch||'-') + ' | Tahun ' + (PS.user.year||'-');
-
     await loadAllData();
     await handleSessionParam();
-    // Default ke tab home
     if (window.PS && typeof PS.setTab === 'function') PS.setTab('home');
   }
 
-  // ===== TAB HOME: Overview + Notifikasi + List sesi =====
-  async function renderHomeTab(){
-    if (!PS.sessions || !PS.sessions.length || !PS.myAttempts) {
-      await loadAllData();
-    }
+  // ===== Fallback startHomework (homework.js akan override saat load) =====
+  if (!window.startHomework) {
+    window.startHomework = function(id){ if (window.startSession) startSession(id, 'available'); };
+  }
 
-    var now = new Date();
+  // ===== UPDATE 12: backfill sementara jumlah soal untuk sesi tanpa counter =====
+  // Mengisi s.questionsCount di memory (bukan Firestore) dengan query 'in' chunked 30.
+  // Hanya session yang akan ditampilkan (hwActive, hwMissed, live perlu) yang dihitung.
+  async function fillMissingQuestionsCount(sessionsToRender){
+    var need = sessionsToRender.filter(function(s){
+      return !s.questionsCount && s.questionsCount !== 0;
+    });
+    if (!need.length) return;
 
-    // ===== 1. OVERVIEW: 3 grid mini =====
-    var sesiDikerjakan = PS.myAttempts.length; // total attempt (inklusif in_progress)
-    var soalDikerjakan = 0;
-    var totalScore = 0;
-    var countCompleted = 0;
-    PS.myAttempts.forEach(function(a){
-      soalDikerjakan += (a.progress || 0) + (a.status==='completed' ? (a.totalQuestions - (a.progress||0)) : 0);
-      if (a.status === 'completed') {
-        totalScore += (a.score || 0);
-        countCompleted++;
+    var ids = need.map(function(s){ return s.id; });
+    var counts = {};   // sid -> count
+
+    try {
+      // Chunk 30 per query (batas Firestore 'in')
+      for (var i = 0; i < ids.length; i += IN_CHUNK) {
+        var chunk = ids.slice(i, i + IN_CHUNK);
+        var snap = await db.collection('questions').where('sessionId', 'in', chunk).get();
+        snap.forEach(function(d){
+          var sid = d.data().sessionId;
+          counts[sid] = (counts[sid] || 0) + 1;
+        });
       }
-    });
-    // Lebih akurat: jumlah soal di semua attempt
-    var soalDikerjakanAcc = 0;
+      // Backfill sementara ke memory PS.sessions (jangan write Firestore)
+      need.forEach(function(s){
+        if (counts[s.id] !== undefined) s.questionsCount = counts[s.id];
+      });
+      console.log('[PS] questionsCount backfill:', counts);
+    } catch(e){
+      console.warn('[PS] fill questionsCount gagal:', e.message);
+    }
+  }
+
+  // ===== TAB HOME =====
+  async function renderHomeTab(){
+    if (!PS.sessions || !PS.sessions.length) { await loadAllData(); }
+
+    // ----- 1. OVERVIEW -----
+    var sesiDikerjakan = PS.myAttempts.length;
+    var soalDikerjakan = 0, totalScore = 0, countCompleted = 0;
     PS.myAttempts.forEach(function(a){
-      if (a.status === 'completed') soalDikerjakanAcc += (a.totalQuestions || 0);
-      else if (a.progress) soalDikerjakanAcc += a.progress;
+      if (a.status === 'completed') { soalDikerjakan += (a.totalQuestions||0); totalScore += (a.score||0); countCompleted++; }
+      else if (a.progress) soalDikerjakan += a.progress;
     });
-    soalDikerjakan = soalDikerjakanAcc;
-    var avgNilai = countCompleted ? Math.round(totalScore / countCompleted) : 0;
+    var avgNilai = countCompleted ? Math.round(totalScore/countCompleted) : 0;
 
     var ov = $('homeOverview');
     if (ov) {
       ov.innerHTML =
         '<div class="mini-grid">' +
-          '<div class="mini-card mini-card-primary">' +
-            '<div class="mini-icon"><span class="material-icons">event_available</span></div>' +
-            '<div class="mini-label">Sesi Dikerjakan</div>' +
-            '<div class="mini-value">' + sesiDikerjakan + '</div>' +
-          '</div>' +
-          '<div class="mini-card mini-card-success">' +
-            '<div class="mini-icon"><span class="material-icons">quiz</span></div>' +
-            '<div class="mini-label">Soal Dikerjakan</div>' +
-            '<div class="mini-value">' + soalDikerjakan + '</div>' +
-          '</div>' +
-          '<div class="mini-card mini-card-warning">' +
-            '<div class="mini-icon"><span class="material-icons">emoji_events</span></div>' +
-            '<div class="mini-label">Rata-rata Nilai</div>' +
-            '<div class="mini-value">' + avgNilai + '</div>' +
-          '</div>' +
+          '<div class="mini-card mini-card-primary"><div class="mini-icon"><span class="material-icons">event_available</span></div>' +
+            '<div class="mini-label">Sesi Dikerjakan</div><div class="mini-value">' + sesiDikerjakan + '</div></div>' +
+          '<div class="mini-card mini-card-success"><div class="mini-icon"><span class="material-icons">quiz</span></div>' +
+            '<div class="mini-label">Soal Dikerjakan</div><div class="mini-value">' + soalDikerjakan + '</div></div>' +
+          '<div class="mini-card mini-card-warning"><div class="mini-icon"><span class="material-icons">emoji_events</span></div>' +
+            '<div class="mini-label">Rata-rata Nilai</div><div class="mini-value">' + avgNilai + '</div></div>' +
         '</div>';
     }
 
-    // ===== 2. NOTIFIKASI SESI BELUM DIKERJAKAN =====
-    // PERUBAHAN v2.1: tampilkan semua sesi aktif yang BELUM ada attempt,
-    // tidak hanya yang status='available' (jadi sesi locked pun tampil sbg notifikasi).
-    var notif = $('homeNotif');
-    if (notif) {
-      var belum = [];
-      PS.sessions.forEach(function(s){
-        var att = PS.myAttempts.find(function(a){ return a.sessionId === s.id; });
-        if (!att) {
-          var status = computeStatus(s);
-          belum.push({ s:s, status:status });
-        }
-      });
+    // ===== Siapkan daftar sesi yang akan ditampilkan (untuk fillMissingQuestionsCount) =====
+    var hwActive = PS.sessions.filter(hwPending);
+    var hwMissedArr = PS.sessions.filter(hwMissed);
+    var liveSessions = PS.sessions.filter(function(s){ return !isHw(s); });
+    var perlu = liveSessions.filter(function(s){
+      var att = PS.myAttempts.find(function(a){ return a.sessionId === s.id; });
+      var v = sessionView(s, att);
+      return (v.label === 'Mulai' || v.label === 'Lanjutkan' || v.label === 'Terlewat');
+    });
+    var allToRender = [].concat(hwActive, hwMissedArr, perlu);
+    await fillMissingQuestionsCount(allToRender);
 
-      if (belum.length === 0) {
-        notif.innerHTML =
-          '<div class="empty-state" style="padding:1.5rem;">' +
-            '<span class="material-icons">check_circle</span>' +
-            '<p>Semua sesi Exercise TKA sudah dikerjakan. Pertahankan!</p>' +
-          '</div>';
+    // ----- 2. HOMEWORK PENDING (PR) -----
+    setSectionTitle('homeNotif', 'menu_book', 'Homework Pending (PR)', '#f59e0b');
+    var hwWrap = $('homeNotif');
+    if (hwWrap) {
+      if (hwActive.length === 0 && hwMissedArr.length === 0) {
+        hwWrap.innerHTML =
+          '<div class="empty-state" style="padding:1.5rem;"><span class="material-icons">check_circle</span>' +
+          '<p>Tidak ada homework pending. Kerja bagus!</p></div>';
       } else {
-        notif.innerHTML =
-          '<div class="notif-header">' +
-            '<span class="material-icons">notifications_active</span>' +
-            '<strong>Sesi Belum Dikerjakan (' + belum.length + ')</strong>' +
-          '</div>' +
-          '<div class="notif-list">' + belum.map(function(item){
-            var s = item.s;
-            var last = '-';
-            if (s.startTime) last = formatDate(s.startTime);
-            var btnDisabled = (item.status === 'locked' || item.status === 'expired') ? ' disabled style="opacity:.5;cursor:not-allowed;"' : '';
-            var btnLabel = item.status === 'locked' ? 'Belum Mulai' : (item.status === 'expired' ? 'Selesai' : 'Mulai');
-            return '<div class="notif-item">' +
-              '<div class="notif-main">' +
-                '<div class="notif-title">' + escapeHtmlS(s.name) + '</div>' +
-                '<div class="notif-meta">' +
-                  '<span><span class="material-icons">schedule</span>Mulai: ' + last + '</span>' +
-                  '<span><span class="material-icons">timer</span>' + (s.duration||60) + ' mnt</span>' +
-                '</div>' +
+        var html = '';
+        hwActive.forEach(function(s){
+          var dl = fmtDeadline(s);
+          var retry = hwRetryAvailable(s);
+          var atts = hwCompletedAttempts(s);
+          var qLabel = (s.questionsCount!=null) ? s.questionsCount : '-';
+          html +=
+            '<div class="hw-card" onclick="startHomework(\'' + s.id + '\')">' +
+              '<div class="hw-card-head">' +
+                '<div class="hw-card-title"><span class="material-icons">menu_book</span>' + escapeHtmlS(s.name) + '</div>' +
+                (retry ? '<span class="hw-retry-badge"><span class="material-icons">refresh</span>Retry tersedia</span>' : '') +
               '</div>' +
-              '<button class="btn btn-primary btn-sm" onclick="startSession(\'' + s.id + '\',\'' + item.status + '\')"' + btnDisabled + '>' +
-                '<span class="material-icons">play_arrow</span>' + btnLabel +
-              '</button>' +
+              '<div class="hw-card-meta">' +
+                '<span><span class="material-icons">quiz</span>' + qLabel + ' soal</span>' +
+                '<span><span class="material-icons">timer</span>' + (s.duration||60) + ' mnt</span>' +
+                (atts.length ? '<span><span class="material-icons">history</span>Percobaan: ' + atts.length + '/2</span>' : '') +
+              '</div>' +
+              '<div class="hw-deadline' + (dl.urgent?' urgent':'') + '"><span class="material-icons">schedule</span>' + dl.text + '</div>' +
             '</div>';
-          }).join('') + '</div>';
+        });
+        hwMissedArr.forEach(function(s){
+          var dl = fmtDeadline(s);
+          html +=
+            '<div class="hw-card disabled">' +
+              '<div class="hw-card-head">' +
+                '<div class="hw-card-title"><span class="material-icons">menu_book</span>' + escapeHtmlS(s.name) + '</div>' +
+                '<span class="session-status expired">Terlewat</span>' +
+              '</div>' +
+              '<div class="hw-deadline urgent"><span class="material-icons">schedule</span>' + dl.text + '</div>' +
+            '</div>';
+        });
+        hwWrap.innerHTML = html;
       }
     }
 
-    // ===== 3. LIST SESI PERLU DIKERJAKAN =====
-    // PERUBAHAN v2.1: tampilkan semua sesi aktif yang BELUM completed,
-    // termasuk yang locked/expired (sebagai info), supaya sesi yang di-assign pasti muncul.
-    var list = $('homeSesiList');
-    if (list) {
-      var perlu = [];
-      PS.sessions.forEach(function(s){
-        var status = computeStatus(s);
-        var att = PS.myAttempts.find(function(a){ return a.sessionId === s.id; });
-        var label = 'Mulai', sub = 'Belum dikerjakan';
-        var disabled = false;
-        if (att && att.status === 'in_progress') {
-          label = 'Lanjutkan';
-          sub = 'Progress: ' + (att.progress||0) + '/' + (att.totalQuestions||0);
-        } else if (att && att.status === 'completed') {
-          return; // sudah selesai, skip
-        } else if (status === 'locked') {
-          label = 'Belum Mulai';
-          sub = 'Sesi belum dibuka';
-          disabled = true;
-        } else if (status === 'expired') {
-          label = 'Selesai';
-          sub = 'Waktu sesi telah berakhir';
-          disabled = true;
-        }
-        perlu.push({ s:s, label:label, sub:sub, status:status, disabled:disabled });
-      });
-
+    // ----- 3. LIVE EXERCISE TERSEDIA -----
+    setSectionTitle('homeSesiList', 'bolt', 'Live Exercise Tersedia', '#2563eb');
+    var liveWrap = $('homeSesiList');
+    if (liveWrap) {
       if (perlu.length === 0) {
-        list.innerHTML =
-          '<div class="empty-state" style="padding:1.5rem;">' +
-            '<span class="material-icons">event_busy</span>' +
-            '<p>Tidak ada sesi yang perlu dikerjakan saat ini</p>' +
-          '</div>';
+        liveWrap.innerHTML =
+          '<div class="empty-state" style="padding:1.5rem;"><span class="material-icons">event_busy</span>' +
+          '<p>Tidak ada live exercise yang perlu dikerjakan saat ini.</p></div>';
       } else {
-        list.innerHTML = perlu.map(function(item){
-          var s = item.s;
+        liveWrap.innerHTML = perlu.map(function(s){
           var att = PS.myAttempts.find(function(a){ return a.sessionId === s.id; });
-          var cls = att && att.status==='in_progress' ? 'session-item resume' : 'session-item';
-          if (item.disabled) cls += ' disabled';
-          var stcls = item.status === 'available' ? 'available' : (item.status === 'locked' ? 'locked' : 'expired');
-          if (item.label === 'Lanjutkan') stcls = 'completed';
-          return '<div class="' + cls + '" onclick="startSession(\'' + s.id + '\',\'' + item.status + '\')">' +
-            '<div>' +
-              '<div class="session-title"><span class="material-icons">event_available</span>' + escapeHtmlS(s.name) + '</div>' +
-              '<div class="session-meta">' +
-                '<span><span class="material-icons">timer</span>' + (s.duration||60) + ' mnt</span>' +
-                '<span><span class="material-icons">quiz</span>' + (s.questionsCount||'-') + ' soal</span>' +
-              '</div>' +
-              '<div style="font-size:.75rem;color:#64748b;margin-top:.25rem;">' + item.sub + '</div>' +
+          var v = sessionView(s, att);
+          var cls = 'session-item' + (v.label==='Lanjutkan' ? ' resume' : '') + (v.disabled ? ' disabled' : '');
+          var sub = '';
+          if (v.label === 'Lanjutkan') sub = 'Progress: ' + (att.progress||0) + '/' + (att.totalQuestions||0);
+          else if (v.label === 'Terlewat') sub = 'Waktu sesi telah berakhir sebelum dikerjakan';
+          else sub = 'Belum dikerjakan';
+          var qLabel = (s.questionsCount!=null) ? s.questionsCount : '-';
+          return '<div class="' + cls + '"' + (v.disabled ? '' : ' onclick="startSession(\'' + s.id + '\',\'' + v.status + '\')"') + '>' +
+            '<div><div class="session-title"><span class="material-icons">bolt</span>' + escapeHtmlS(s.name) + '</div>' +
+            '<div class="session-meta">' +
+              '<span><span class="material-icons">timer</span>' + (s.duration||60) + ' mnt</span>' +
+              '<span><span class="material-icons">quiz</span>' + qLabel + ' soal</span>' +
             '</div>' +
-            '<span class="session-status ' + stcls + '">' + item.label + '</span>' +
-          '</div>';
+            '<div style="font-size:.75rem;color:#64748b;margin-top:.25rem;">' + sub + '</div></div>' +
+            '<span class="session-status ' + v.cls + '">' + v.label + '</span></div>';
         }).join('');
       }
     }
   }
 
-  // ===== loadSessions & loadMyResults (dipakai tab Nilai & backward compat) =====
-  async function loadSessions(){
-    if (!PS.sessions || !PS.sessions.length) await loadAllData();
-  }
-
-  async function loadMyResults(){
-    if (!PS.myAttempts) await loadAllData();
-  }
-
+  async function loadSessions(){ if (!PS.sessions || !PS.sessions.length) await loadAllData(); }
+  async function loadMyResults(){ if (!PS.myAttempts) await loadAllData(); }
   function escapeHtmlS(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   window.loadDashboard = loadDashboard;
