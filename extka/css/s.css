@@ -1,9 +1,14 @@
-/* #05 | /root/css/s.css | v 2.3 | u 08/09/2026 • 09:30:00 | xu : ke-4 | note : #noteresponse
-- TAMBAHAN: style untuk arsitektur baru Panel Siswa (bottom nav 6 tab, tab pages,
-  home mini-grid/notif, feedback form+list, profile foto emoji + info + logout).
-- SEMUA style lama (student-app, profile, session, test, result, anti-cheat, modal)
-  TIDAK DIUBAH. Hanya TAMBAHAN di akhir file.
-- Override padding-bottom student-app untuk memberi ruang bottom nav (tanpa menghapus baris lama). */
+/* #05 | /root/css/s.css | v 2.4 | u 09/09/2026 • 09:00:00 | xu : ke-5 | note : #noteresponse
+- TAMBAHAN v2.4: style untuk mode HOMEWORK (PR) & badge mode Live/Homework.
+  * .mode-badge-live / .mode-badge-hw : badge penanda mode di manage-sesi & dashboard siswa.
+  * .hw-card : card homework (kuning) di dashboard siswa.
+  * .hw-deadline : countdown deadline (absolute + relative).
+  * .hw-progress : progress bar gamified (animasi width).
+  * .hw-fb-benar / .hw-fb-salah : feedback langsung per soal (Quizizz style).
+  * .hw-retry-badge : penanda kesempatan retry.
+  * .hw-anim-pop : animasi kecil saat feedback muncul.
+- SEMUA style lama (student-app, profile, session, test, result, anti-cheat, modal,
+  bottom-nav, tab-page, mini-grid, notif, feedback, profile-tab, riwayat, nilai) TIDAK DIUBAH. */
 
 .student-app{min-height:100vh;padding-top:56px;background:#f8fafc}
 
@@ -78,7 +83,7 @@
 .answer-input{width:100%;padding:1rem;border:2px solid #e2e8f0;border-radius:12px;font-size:1rem;font-family:inherit}
 .answer-input:focus{outline:none;border-color:#2563eb}
 
-/* Navigasi fixed bottom (untuk halaman test) */
+/* Navigasi fixed bottom */
 .bottom-nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e2e8f0;padding:.75rem 1rem;display:flex;gap:.5rem;z-index:100;box-shadow:0 -2px 8px rgba(0,0,0,.05)}
 .bottom-nav .btn{flex:1}
 
@@ -112,368 +117,171 @@
    TAMBAHAN v2.3 - Arsitektur Baru Panel Siswa (bottom nav 6 tab)
    ========================================================================= */
 
-/* Override: student-app perlu padding-bottom untuk memberi ruang bottom nav */
 .student-app{padding-bottom:80px;}
 
-/* ===== DATE LINE (di bawah header) ===== */
-.s-date-line{
-  background:#fff;
-  border-bottom:1px solid #e2e8f0;
-  padding:.5rem 1rem;
-  text-align:center;
-  font-size:.8125rem;
-  color:#64748b;
-  font-family:'Inter',sans-serif;
-  letter-spacing:.3px;
-}
-.s-date-line .material-icons{font-size:14px;vertical-align:-2px;margin-right:.25rem;color:#2563eb;}
+/* ===== DATE LINE ===== */
+.s-date-line{background:#fff;border-bottom:1px solid #e2e8f0;padding:.5rem 1rem;text-align:center;font-size:.8125rem;color:#64748b;font-family:'Inter',sans-serif;letter-spacing:.3px}
+.s-date-line .material-icons{font-size:14px;vertical-align:-2px;margin-right:.25rem;color:#2563eb}
 
-/* ===== BOTTOM NAVIGATION (fixed bawah, 6 tab) ===== */
-.bottom-nav-tabs{
-  position:fixed;
-  left:0;right:0;bottom:0;
-  background:#fff;
-  border-top:1px solid #e2e8f0;
-  display:grid;
-  grid-template-columns:repeat(6,1fr);
-  z-index:200;
-  padding:.375rem 0 .5rem;
-  padding-bottom:calc(.5rem + env(safe-area-inset-bottom));
-  box-shadow:0 -2px 10px rgba(0,0,0,.06);
-}
-.bn-item{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:.125rem;
-  padding:.375rem .25rem;
-  background:transparent;
-  border:none;
-  cursor:pointer;
-  color:#64748b;
-  font-size:.625rem;
-  font-weight:600;
-  font-family:inherit;
-  transition:color .15s;
-  position:relative;
-}
-.bn-item .material-icons{font-size:22px;}
-.bn-item.active{color:#2563eb;}
-.bn-item.active::before{
-  content:'';
-  position:absolute;
-  top:0;left:20%;right:20%;
-  height:3px;background:#2563eb;border-radius:0 0 3px 3px;
-}
-.bn-item:active{transform:scale(.95);}
+/* ===== BOTTOM NAVIGATION ===== */
+.bottom-nav-tabs{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e2e8f0;display:grid;grid-template-columns:repeat(6,1fr);z-index:200;padding:.375rem 0 .5rem;padding-bottom:calc(.5rem + env(safe-area-inset-bottom));box-shadow:0 -2px 10px rgba(0,0,0,.06)}
+.bn-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.125rem;padding:.375rem .25rem;background:transparent;border:none;cursor:pointer;color:#64748b;font-size:.625rem;font-weight:600;font-family:inherit;transition:color .15s;position:relative}
+.bn-item .material-icons{font-size:22px}
+.bn-item.active{color:#2563eb}
+.bn-item.active::before{content:'';position:absolute;top:0;left:20%;right:20%;height:3px;background:#2563eb;border-radius:0 0 3px 3px}
+.bn-item:active{transform:scale(.95)}
 
-/* ===== TAB PAGES CONTAINER ===== */
-.tab-page{display:none;padding:1rem;animation:fadeTab .25s ease;}
-.tab-page.active{display:block;}
-@keyframes fadeTab{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+/* ===== TAB PAGES ===== */
+.tab-page{display:none;padding:1rem;animation:fadeTab .25s ease}
+.tab-page.active{display:block}
+@keyframes fadeTab{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
-/* Section title (untuk tab Home / lainnya) */
-.section-title{
-  display:flex;
-  align-items:center;
-  gap:.5rem;
-  font-size:1rem;
-  font-weight:700;
-  color:#1e293b;
-  margin:1.25rem 0 .75rem;
-}
-.section-title .material-icons{color:#2563eb;font-size:22px;}
-.section-title:first-child{margin-top:0;}
+.section-title{display:flex;align-items:center;gap:.5rem;font-size:1rem;font-weight:700;color:#1e293b;margin:1.25rem 0 .75rem}
+.section-title .material-icons{color:#2563eb;font-size:22px}
+.section-title:first-child{margin-top:0}
 
-/* ===== TAB HOME: MINI GRID (overview 3 card) ===== */
-.mini-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:.625rem;
-  margin-bottom:.5rem;
-}
-.mini-card{
-  background:#fff;
-  border:1px solid #e2e8f0;
-  border-radius:12px;
-  padding:.875rem .625rem;
-  text-align:center;
-  position:relative;
-  overflow:hidden;
-  transition:transform .15s;
-}
-.mini-card:active{transform:scale(.97);}
-.mini-icon{
-  width:36px;height:36px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  margin:0 auto .5rem;
-}
-.mini-icon .material-icons{font-size:20px;color:#fff;}
-.mini-label{font-size:.625rem;color:#64748b;font-weight:600;line-height:1.2;margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.3px;}
-.mini-value{font-size:1.5rem;font-weight:700;color:#1e293b;line-height:1;}
+/* ===== MINI GRID ===== */
+.mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.625rem;margin-bottom:.5rem}
+.mini-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:.875rem .625rem;text-align:center;position:relative;overflow:hidden;transition:transform .15s}
+.mini-card:active{transform:scale(.97)}
+.mini-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto .5rem}
+.mini-icon .material-icons{font-size:20px;color:#fff}
+.mini-label{font-size:.625rem;color:#64748b;font-weight:600;line-height:1.2;margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.3px}
+.mini-value{font-size:1.5rem;font-weight:700;color:#1e293b;line-height:1}
+.mini-card-primary .mini-icon{background:#2563eb}
+.mini-card-primary .mini-value{color:#2563eb}
+.mini-card-success .mini-icon{background:#10b981}
+.mini-card-success .mini-value{color:#10b981}
+.mini-card-warning .mini-icon{background:#f59e0b}
+.mini-card-warning .mini-value{color:#f59e0b}
 
-.mini-card-primary .mini-icon{background:#2563eb;}
-.mini-card-primary .mini-value{color:#2563eb;}
-.mini-card-success .mini-icon{background:#10b981;}
-.mini-card-success .mini-value{color:#10b981;}
-.mini-card-warning .mini-icon{background:#f59e0b;}
-.mini-card-warning .mini-value{color:#f59e0b;}
+/* ===== NOTIFIKASI ===== */
+.notif-header{display:flex;align-items:center;gap:.5rem;padding:.625rem .875rem;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:10px 10px 0 0;color:#92400e;font-size:.875rem}
+.notif-header .material-icons{color:#f59e0b}
+.notif-list{background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;overflow:hidden}
+.notif-item{display:flex;align-items:center;gap:.75rem;padding:.75rem .875rem;border-bottom:1px solid #f1f5f9}
+.notif-item:last-child{border-bottom:none}
+.notif-main{flex:1;min-width:0}
+.notif-title{font-size:.875rem;font-weight:600;color:#1e293b;margin-bottom:.25rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.notif-meta{display:flex;gap:.75rem;font-size:.7rem;color:#64748b;flex-wrap:wrap}
+.notif-meta span{display:flex;align-items:center;gap:.2rem}
+.notif-meta .material-icons{font-size:12px}
 
-/* ===== TAB HOME: NOTIFIKASI ===== */
-.notif-header{
-  display:flex;
-  align-items:center;
-  gap:.5rem;
-  padding:.625rem .875rem;
-  background:linear-gradient(135deg,#fef3c7,#fde68a);
-  border-radius:10px 10px 0 0;
-  color:#92400e;
-  font-size:.875rem;
-}
-.notif-header .material-icons{color:#f59e0b;}
-.notif-list{background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;overflow:hidden;}
-.notif-item{
-  display:flex;
-  align-items:center;
-  gap:.75rem;
-  padding:.75rem .875rem;
-  border-bottom:1px solid #f1f5f9;
-}
-.notif-item:last-child{border-bottom:none;}
-.notif-main{flex:1;min-width:0;}
-.notif-title{font-size:.875rem;font-weight:600;color:#1e293b;margin-bottom:.25rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.notif-meta{display:flex;gap:.75rem;font-size:.7rem;color:#64748b;flex-wrap:wrap;}
-.notif-meta span{display:flex;align-items:center;gap:.2rem;}
-.notif-meta .material-icons{font-size:12px;}
+.session-item.resume{border-color:#10b981;background:linear-gradient(135deg,#ecfdf5,#fff)}
+.session-item.resume .session-status{background:#10b981;color:#fff}
 
-/* ===== TAB HOME: LIST SESI PERLU DIKERJAKAN (extend session-item) ===== */
-.session-item.resume{border-color:#10b981;background:linear-gradient(135deg,#ecfdf5,#fff);}
-.session-item.resume .session-status{background:#10b981;color:#fff;}
+/* ===== FEEDBACK TAB ===== */
+.fb-form-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1rem;margin-bottom:1rem}
+.fb-radio-label{flex:1;display:flex;align-items:center;justify-content:center;gap:.375rem;padding:.625rem;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:.8125rem;font-weight:600;color:#475569;transition:all .15s}
+.fb-radio-label input[type="radio"]{display:none}
+.fb-radio-label:has(input:checked){border-color:#2563eb;background:#eff6ff;color:#2563eb}
+.fb-radio-label .material-icons{font-size:18px}
+.fb-list-section{margin-top:1.25rem}
+.fb-item{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:.75rem .875rem;margin-bottom:.5rem}
+.fb-item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.375rem}
+.fb-item-subject{font-size:.875rem;font-weight:600;color:#1e293b;margin-bottom:.25rem}
+.fb-item-msg{font-size:.8125rem;color:#475569;line-height:1.5;white-space:pre-wrap}
 
-/* ===== TAB FEEDBACK ===== */
-.fb-form-card{
-  background:#fff;
-  border:1px solid #e2e8f0;
-  border-radius:12px;
-  padding:1rem;
-  margin-bottom:1rem;
-}
-.fb-radio-label{
-  flex:1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:.375rem;
-  padding:.625rem;
-  border:2px solid #e2e8f0;
-  border-radius:8px;
-  cursor:pointer;
-  font-size:.8125rem;
-  font-weight:600;
-  color:#475569;
-  transition:all .15s;
-}
-.fb-radio-label input[type="radio"]{display:none;}
-.fb-radio-label:has(input:checked){
-  border-color:#2563eb;
-  background:#eff6ff;
-  color:#2563eb;
-}
-.fb-radio-label .material-icons{font-size:18px;}
+/* ===== PROFILE TAB ===== */
+.pf-photo-card{background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);border-radius:16px;padding:1.5rem 1rem 1rem;text-align:center;color:#fff;margin-bottom:1rem;position:relative;overflow:hidden}
+.pf-photo-card::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;background:rgba(255,255,255,.08);border-radius:50%}
+.pf-photo-card::after{content:'';position:absolute;bottom:-60px;left:-30px;width:180px;height:180px;background:rgba(255,255,255,.05);border-radius:50%}
+.pf-photo{width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;margin:0 auto .75rem;border:3px solid rgba(255,255,255,.3);position:relative;z-index:1}
+.pf-emoji{font-size:42px;line-height:1}
+.pf-name{font-size:1.125rem;font-weight:700;margin-bottom:.25rem;position:relative;z-index:1}
+.pf-id{font-size:.75rem;opacity:.9;font-family:monospace;margin-bottom:.5rem;position:relative;z-index:1}
+.pf-batch{display:flex;justify-content:center;gap:.375rem;flex-wrap:wrap;margin-bottom:.75rem;position:relative;z-index:1}
+.pf-batch .badge{background:rgba(255,255,255,.2);color:#fff;font-size:.7rem}
+.pf-edit-motivasi{background:rgba(255,255,255,.15)!important;color:#fff!important;border:1px solid rgba(255,255,255,.3)!important;position:relative;z-index:1}
+.pf-motivasi{background:rgba(255,255,255,.15);border-radius:8px;padding:.625rem .75rem;margin-top:.625rem;font-size:.8125rem;line-height:1.5;font-style:italic;position:relative;z-index:1}
+.pf-motivasi-empty{opacity:.75;font-style:italic}
+.pf-info-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1rem;margin-bottom:.75rem}
+.pf-section-title{display:flex;align-items:center;gap:.375rem;font-size:.875rem;font-weight:700;color:#2563eb;margin-bottom:.625rem;padding-bottom:.5rem;border-bottom:1px solid #e2e8f0}
+.pf-section-title .material-icons{font-size:18px}
+.pf-info-row{display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;padding:.5rem 0;border-bottom:1px dashed #f1f5f9;font-size:.8125rem}
+.pf-info-row:last-child{border-bottom:none}
+.pf-info-label{display:flex;align-items:center;gap:.375rem;color:#64748b;flex-shrink:0;font-weight:500}
+.pf-info-label .material-icons{font-size:16px;color:#94a3b8}
+.pf-info-value{color:#1e293b;font-weight:600;text-align:right;flex:1;min-width:0;word-break:break-word}
+.pf-actions{display:grid;gap:.5rem;margin:.5rem 0}
+.pf-logout-wrap{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #e2e8f0}
+.pf-logout-btn{background:#ef4444;color:#fff;font-weight:600;padding:.875rem 1rem;justify-content:center}
+.pf-logout-btn:hover{background:#dc2626}
 
-.fb-list-section{margin-top:1.25rem;}
-.fb-item{
-  background:#fff;
-  border:1px solid #e2e8f0;
-  border-radius:10px;
-  padding:.75rem .875rem;
-  margin-bottom:.5rem;
-}
-.fb-item-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:.375rem;
-}
-.fb-item-subject{font-size:.875rem;font-weight:600;color:#1e293b;margin-bottom:.25rem;}
-.fb-item-msg{font-size:.8125rem;color:#475569;line-height:1.5;white-space:pre-wrap;}
-
-/* ===== TAB PROFILE ===== */
-.pf-photo-card{
-  background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);
-  border-radius:16px;
-  padding:1.5rem 1rem 1rem;
-  text-align:center;
-  color:#fff;
-  margin-bottom:1rem;
-  position:relative;
-  overflow:hidden;
-}
-.pf-photo-card::before{
-  content:'';
-  position:absolute;
-  top:-40px;right:-40px;
-  width:150px;height:150px;
-  background:rgba(255,255,255,.08);
-  border-radius:50%;
-}
-.pf-photo-card::after{
-  content:'';
-  position:absolute;
-  bottom:-60px;left:-30px;
-  width:180px;height:180px;
-  background:rgba(255,255,255,.05);
-  border-radius:50%;
-}
-.pf-photo{
-  width:80px;height:80px;
-  border-radius:50%;
-  background:rgba(255,255,255,.2);
-  display:flex;align-items:center;justify-content:center;
-  margin:0 auto .75rem;
-  border:3px solid rgba(255,255,255,.3);
-  position:relative;z-index:1;
-}
-.pf-emoji{font-size:42px;line-height:1;}
-.pf-name{font-size:1.125rem;font-weight:700;margin-bottom:.25rem;position:relative;z-index:1;}
-.pf-id{font-size:.75rem;opacity:.9;font-family:monospace;margin-bottom:.5rem;position:relative;z-index:1;}
-.pf-batch{display:flex;justify-content:center;gap:.375rem;flex-wrap:wrap;margin-bottom:.75rem;position:relative;z-index:1;}
-.pf-batch .badge{background:rgba(255,255,255,.2);color:#fff;font-size:.7rem;}
-.pf-edit-motivasi{
-  background:rgba(255,255,255,.15)!important;
-  color:#fff!important;
-  border:1px solid rgba(255,255,255,.3)!important;
-  position:relative;z-index:1;
-}
-.pf-motivasi{
-  background:rgba(255,255,255,.15);
-  border-radius:8px;
-  padding:.625rem .75rem;
-  margin-top:.625rem;
-  font-size:.8125rem;
-  line-height:1.5;
-  font-style:italic;
-  position:relative;z-index:1;
-}
-.pf-motivasi-empty{opacity:.75;font-style:italic;}
-
-.pf-info-card{
-  background:#fff;
-  border:1px solid #e2e8f0;
-  border-radius:12px;
-  padding:1rem;
-  margin-bottom:.75rem;
-}
-.pf-section-title{
-  display:flex;
-  align-items:center;
-  gap:.375rem;
-  font-size:.875rem;
-  font-weight:700;
-  color:#2563eb;
-  margin-bottom:.625rem;
-  padding-bottom:.5rem;
-  border-bottom:1px solid #e2e8f0;
-}
-.pf-section-title .material-icons{font-size:18px;}
-.pf-info-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:.75rem;
-  padding:.5rem 0;
-  border-bottom:1px dashed #f1f5f9;
-  font-size:.8125rem;
-}
-.pf-info-row:last-child{border-bottom:none;}
-.pf-info-label{
-  display:flex;
-  align-items:center;
-  gap:.375rem;
-  color:#64748b;
-  flex-shrink:0;
-  font-weight:500;
-}
-.pf-info-label .material-icons{font-size:16px;color:#94a3b8;}
-.pf-info-value{color:#1e293b;font-weight:600;text-align:right;flex:1;min-width:0;word-break:break-word;}
-
-.pf-actions{display:grid;gap:.5rem;margin:.5rem 0;}
-.pf-logout-wrap{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #e2e8f0;}
-.pf-logout-btn{
-  background:#ef4444;
-  color:#fff;
-  font-weight:600;
-  padding:.875rem 1rem;
-  justify-content:center;
-}
-.pf-logout-btn:hover{background:#dc2626;}
-
-/* ===== TAB RIWAYAT & NILAI ===== */
-.riwayat-item{
-  background:#fff;
-  border:1px solid #e2e8f0;
-  border-radius:10px;
-  padding:.875rem;
-  margin-bottom:.5rem;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:.75rem;
-}
-.riwayat-main{flex:1;min-width:0;}
-.riwayat-title{font-size:.875rem;font-weight:600;color:#1e293b;margin-bottom:.25rem;display:flex;align-items:center;gap:.375rem;}
-.riwayat-meta{display:flex;gap:.625rem;font-size:.7rem;color:#64748b;flex-wrap:wrap;}
-.riwayat-meta span{display:flex;align-items:center;gap:.2rem;}
-.riwayat-meta .material-icons{font-size:12px;}
-
-.nilai-table{
-  width:100%;
-  background:#fff;
-  border:1px solid #e2e8f0;
-  border-radius:10px;
-  overflow:hidden;
-  border-collapse:separate;
-  border-spacing:0;
-  font-size:.8125rem;
-}
-.nilai-table th{
-  background:#f8fafc;
-  padding:.625rem .75rem;
-  text-align:left;
-  font-weight:600;
-  color:#64748b;
-  font-size:.7rem;
-  text-transform:uppercase;
-  letter-spacing:.3px;
-  border-bottom:1px solid #e2e8f0;
-}
-.nilai-table td{
-  padding:.75rem .75rem;
-  border-bottom:1px solid #f1f5f9;
-  color:#1e293b;
-}
-.nilai-table tbody tr:last-child td{border-bottom:none;}
-.nilai-score{
-  font-weight:700;
-  font-size:1rem;
-  color:#2563eb;
-}
-.nilai-score.high{color:#10b981;}
-.nilai-score.low{color:#ef4444;}
+/* ===== RIWAYAT & NILAI ===== */
+.riwayat-item{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:.875rem;margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center;gap:.75rem}
+.riwayat-main{flex:1;min-width:0}
+.riwayat-title{font-size:.875rem;font-weight:600;color:#1e293b;margin-bottom:.25rem;display:flex;align-items:center;gap:.375rem}
+.riwayat-meta{display:flex;gap:.625rem;font-size:.7rem;color:#64748b;flex-wrap:wrap}
+.riwayat-meta span{display:flex;align-items:center;gap:.2rem}
+.riwayat-meta .material-icons{font-size:12px}
+.nilai-table{width:100%;background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;border-collapse:separate;border-spacing:0;font-size:.8125rem}
+.nilai-table th{background:#f8fafc;padding:.625rem .75rem;text-align:left;font-weight:600;color:#64748b;font-size:.7rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e2e8f0}
+.nilai-table td{padding:.75rem .75rem;border-bottom:1px solid #f1f5f9;color:#1e293b}
+.nilai-table tbody tr:last-child td{border-bottom:none}
+.nilai-score{font-weight:700;font-size:1rem;color:#2563eb}
+.nilai-score.high{color:#10b981}
+.nilai-score.low{color:#ef4444}
 
 /* ===== RESPONSIVE ===== */
 @media (max-width:400px){
-  .mini-grid{gap:.375rem;}
-  .mini-card{padding:.625rem .375rem;}
-  .mini-value{font-size:1.25rem;}
-  .mini-label{font-size:.5625rem;}
-  .bn-item{font-size:.5625rem;}
-  .bn-item .material-icons{font-size:20px;}
+  .mini-grid{gap:.375rem}
+  .mini-card{padding:.625rem .375rem}
+  .mini-value{font-size:1.25rem}
+  .mini-label{font-size:.5625rem}
+  .bn-item{font-size:.5625rem}
+  .bn-item .material-icons{font-size:20px}
+}
+@media (min-width:768px){
+  .mini-grid{grid-template-columns:repeat(3,1fr);max-width:600px;margin-left:auto;margin-right:auto}
+  .tab-page{padding:1rem 1.5rem}
+  .pf-photo-card{max-width:600px;margin-left:auto;margin-right:auto}
 }
 
-@media (min-width:768px){
-  .mini-grid{grid-template-columns:repeat(3,1fr);max-width:600px;margin-left:auto;margin-right:auto;}
-  .tab-page{padding:1rem 1.5rem;}
-  .pf-photo-card{max-width:600px;margin-left:auto;margin-right:auto;}
-}
+/* =========================================================================
+   TAMBAHAN v2.4 - MODE HOMEWORK (PR) & BADGE MODE
+   ========================================================================= */
+
+/* Badge mode: Live (biru) vs Homework/PR (kuning) */
+.mode-badge-live{display:inline-flex;align-items:center;gap:.25rem;background:#dbeafe;color:#1e40af;padding:.25rem .625rem;border-radius:50px;font-size:.7rem;font-weight:700}
+.mode-badge-live .material-icons{font-size:14px}
+.mode-badge-hw{display:inline-flex;align-items:center;gap:.25rem;background:#fef3c7;color:#92400e;padding:.25rem .625rem;border-radius:50px;font-size:.7rem;font-weight:700}
+.mode-badge-hw .material-icons{font-size:14px}
+
+/* Card homework di dashboard siswa (kuning) */
+.hw-card{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #f59e0b;border-radius:12px;padding:1rem;margin-bottom:.75rem;cursor:pointer;transition:all .2s}
+.hw-card:hover{box-shadow:0 4px 14px rgba(245,158,11,.25);transform:translateY(-2px)}
+.hw-card.disabled{opacity:.6;cursor:not-allowed;transform:none}
+.hw-card-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.5rem}
+.hw-card-title{font-weight:700;font-size:.9375rem;color:#92400e;display:flex;align-items:center;gap:.5rem}
+.hw-card-title .material-icons{color:#f59e0b}
+.hw-card-meta{display:flex;gap:.75rem;font-size:.75rem;color:#78350f;flex-wrap:wrap;margin-bottom:.5rem}
+.hw-card-meta span{display:flex;align-items:center;gap:.25rem}
+.hw-card-meta .material-icons{font-size:14px}
+
+/* Countdown deadline (absolute + relative) */
+.hw-deadline{display:flex;align-items:center;gap:.375rem;font-size:.75rem;font-weight:600;color:#92400e;background:#fff;border:1px solid #f59e0b;border-radius:8px;padding:.375rem .625rem}
+.hw-deadline .material-icons{font-size:16px;color:#f59e0b}
+.hw-deadline.urgent{background:#fee2e2;border-color:#ef4444;color:#991b1b;animation:pulse 1.5s infinite}
+.hw-deadline.urgent .material-icons{color:#ef4444}
+
+/* Progress bar gamified */
+.hw-progress{height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden;margin:.5rem 0}
+.hw-progress-fill{height:100%;background:linear-gradient(90deg,#f59e0b,#10b981);border-radius:5px;transition:width .4s ease}
+
+/* Feedback langsung per soal (Quizizz style) */
+.hw-fb-benar,.hw-fb-salah{display:flex;align-items:center;gap:.5rem;padding:.75rem 1rem;border-radius:10px;font-weight:700;font-size:.875rem;margin-top:.75rem;animation:hwPop .3s ease}
+.hw-fb-benar{background:#d1fae5;color:#065f46;border:2px solid #10b981}
+.hw-fb-salah{background:#fee2e2;color:#991b1b;border:2px solid #ef4444}
+.hw-fb-benar .material-icons,.hw-fb-salah .material-icons{font-size:20px}
+.hw-fb-pembahasan{margin-top:.5rem;padding:.75rem;background:#f8fafc;border-left:3px solid #2563eb;border-radius:6px;font-size:.8125rem;color:#334155;line-height:1.6}
+@keyframes hwPop{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+
+/* Badge retry */
+.hw-retry-badge{display:inline-flex;align-items:center;gap:.25rem;background:#fef3c7;color:#92400e;border:1px solid #f59e0b;padding:.25rem .625rem;border-radius:50px;font-size:.7rem;font-weight:700}
+.hw-retry-badge .material-icons{font-size:14px}
+.hw-retry-badge.used{background:#f1f5f9;color:#64748b;border-color:#e2e8f0}
+
+/* Option benar/salah setelah feedback (homework) */
+.option-item.hw-correct{border-color:#10b981;background:#d1fae5}
+.option-item.hw-wrong{border-color:#ef4444;background:#fee2e2}
