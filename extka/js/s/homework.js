@@ -1,27 +1,34 @@
-/* #40 | /root/js/s/homework.js | v 1.1 | u 10/09/2026 • 08:25:00 | xu : ke-2 | note : #noteresponse ok
-- FIX BUG "dua layar block bersamaan" (soal retry nongkrong di bawah semua menu):
-  * showHomeworkPage()  -> showScreen('test')  [hide login/app/result, show test]
-  * exitHomework()      -> showScreen('app') + setTab('home') sebelum render
-  * submitHomework() saat buka modal retry -> showScreen('result') dulu agar testPage
-    TIDAK bocor di belakang modal. Setelah modal ditutup (Retry/Lihat Hasil), handler
-    tombol mengatur layar yang tepat (initHomework/showResult).
-  * Header sHeader otomatis di-hide oleh showScreen (kecuali di layar 'app').
-- TETAP (tidak dipotong dari v1.0): localStorage (hwQKey/hwAKey), loadQuestionsHw,
-  initHomework, resumeHomework, persistHw, checkpointHw, startHwTimers/stopHwTimers,
-  deadlineTick, cleanupHwAnti, onHwVis/onHwBlur/onHwHide, hwViolation, lockedCount,
-  renderHwNav, renderHwQuestion, isCorrectHw, getPembahasan, lockAndFeedback,
-  hwAnswerPGS/hwToggleMCMA/hwSetPGK/hwSetIsian/hwCheck, confirmHwSubmit, submitHomework
-  (counter recompute session+student, modal retry 3A), isHomeworkSession, deadlineInfo,
-  hwExpired, hwCompleted, hwBest, hwRetryAvailable, isAssignedHw, startHomework. */
+/* s#15 | /root/js/s/homework.js | v 1.3 | u 17/09/2026 • 10:10:00 | xu : ke-4 | note : #noteresponse
+- v1.2 -> v1.3 (FIX: retry setelah deadline langsung auto-submit & gate expired):
+  * FIX #1: startHomework() sebelumnya menolak SEMUA sesi expired dengan alert
+    "Deadline Lewat", termasuk yang masih punya kesempatan retry. Kini gate
+    menjadi: tolak hanya bila expired DAN retry TIDAK tersedia. Jadi PR dengan
+    1 kesempatan retry tetap bisa dimulai walau deadline lewat (sesuai
+    permintaan user: PR sisa kesempatan masih hidup di dashboard & result).
+  * FIX #2: deadlineTick() sebelumnya auto-submit begitu deadline lewat. Untuk
+    attempt retry yang DIMULAI setelah deadline, auto-submit membuat retry
+    langsung selesai detik itu juga. Kini: bila PS.startTime > deadline sesi,
+    ticker menampilkan "Mode Retry: batas deadline tidak berlaku" dan TIDAK
+    auto-submit.
+  * FIX #3: PS.hwEndMs dicatat di initHomework & resumeHomework agar pengecekan
+    di atas konsisten.
+  * TETAP IDENTIK dari v1.2: modal retry khusus dari home tab (preview nilai
+    Try 1), badge RETRY (2/2) di header testPage, fallback showResultFromAttempt,
+    fallback retryMode, debug log [hw], showScreen terpusat, localStorage,
+    checkpoint 30 dtk, anti-cheat visibility/blur, lock & feedback per soal,
+    counter recompute, modal retry setelah submit Try 1.
+- EXPOSE: window.startHomework, window.initHomework, window.resumeHomework,
+  window.exitHomework, window.hwGoto, window.hwNav, window.hwAnswerPGS,
+  window.hwToggleMCMA, window.hwSetPGK, window.hwSetIsian, window.hwCheck,
+  window.confirmHwSubmit, window.submitHomework, window.isHomeworkSession. */
 
 (function(){
   'use strict';
   function $(id){ return document.getElementById(id); }
   function escH(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   var BULAN_S = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-  var RETRY_THRESHOLD = 50;   // fixed (2A)
+  var RETRY_THRESHOLD = 50;
 
-  // ===== localStorage helpers =====
   function lsGet(k){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){ return null; } }
   function lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
   function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
@@ -33,8 +40,13 @@
     return 0;
   }
   function p2(n){ return String(n).padStart(2,'0'); }
+  function hwrFmtDurHw(sec){
+    sec = Math.max(0, Math.round(sec||0));
+    var m = Math.floor(sec/60), s = sec%60;
+    if (m > 0) return m+'m '+s+'s';
+    return s+'s';
+  }
 
-  // ===== Helpers sesi homework =====
   window.isHomeworkSession = function(sid){
     var s = PS.sessions.find(function(x){ return x.id===sid; }) || PS.currentSession;
     return !!(s && s.mode === 'homework');
@@ -44,7 +56,7 @@
     return !!(PS.currentSession && PS.currentSession.antiCheat !== false);
   }
   function hwCompleted(sid){
-    return PS.myAttempts.filter(function(a){ return a.sessionId===sid && a.status==='completed' && (a.mode==='homework' || true); })
+    return PS.myAttempts.filter(function(a){ return a.sessionId===sid && a.status==='completed'; })
       .sort(function(a,b){ return (a.attemptNumber||1)-(b.attemptNumber||1); });
   }
   function hwBest(sid){
@@ -52,8 +64,14 @@
     atts.forEach(function(a){ if(!best || (a.score||0)>(best.score||0)) best=a; });
     return best;
   }
+  function getRetryMode(s){
+    if (!s) return 'once';
+    if (s.retryMode && typeof s.retryMode === 'string') return s.retryMode;
+    return (s.mode === 'homework') ? 'conditional' : 'once';
+  }
   function hwRetryAvailable(s){
-    if (!s || s.mode!=='homework' || s.retryMode!=='conditional') return false;
+    if (!s || s.mode!=='homework') return false;
+    if (getRetryMode(s) !== 'conditional') return false;
     var atts = hwCompleted(s.id);
     if (atts.length===0 || atts.length>=2) return false;
     var last = atts[atts.length-1];
@@ -82,8 +100,48 @@
     return arr.indexOf(PS.user.id) !== -1;
   }
 
-  // ===== START: validasi + modal konfirmasi =====
+  function safeShowResultFromAttempt(attemptId){
+    if (typeof window.showResultFromAttempt === 'function') { window.showResultFromAttempt(attemptId); return true; }
+    var att = PS.myAttempts.find(function(a){ return a.id === attemptId; });
+    if (att && typeof window.showResult === 'function') { window.showResult(att.score||0, att.correctAnswers||0, att.totalTime||0, false, att); return true; }
+    return false;
+  }
+
+  function showRetryModalFromHome(s, atts){
+    var last = atts[atts.length-1];
+    var dl = deadlineInfo(s);
+    var content =
+      '<div style="text-align:center;margin-bottom:1rem;">' +
+        '<div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(245,158,11,.35);">' +
+          '<span class="material-icons" style="font-size:32px;color:#fff;">refresh</span></div>' +
+        '<h3 style="margin-top:.75rem;color:#92400e;">Kesempatan Retry Tersedia</h3>' +
+        '<p style="color:#64748b;font-size:.8125rem;">Anda memiliki 1 kesempatan terakhir untuk memperbaiki nilai.</p>' +
+      '</div>' +
+      '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:.75rem;margin-bottom:.875rem;">' +
+        '<div style="font-size:.75rem;color:#92400e;font-weight:600;margin-bottom:.375rem;">Hasil Percobaan 1 (Try 1):</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.8125rem;">' +
+          '<div><span style="color:#64748b;">Skor:</span> <b style="color:#dc2626;">'+(last.score||0)+'</b></div>' +
+          '<div><span style="color:#64748b;">Benar:</span> <b>'+(last.correctAnswers||0)+'/'+(last.totalQuestions||0)+'</b></div>' +
+          '<div><span style="color:#64748b;">Durasi:</span> <b>'+hwrFmtDurHw(last.totalTime||0)+'</b></div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="background:#eff6ff;border-left:3px solid #2563eb;padding:.75rem;border-radius:6px;font-size:.8125rem;color:#1e40af;margin-bottom:.75rem;">' +
+        '<b>Catatan:</b> Nilai <b>tertinggi</b> dari kedua percobaan yang akan dicatat.' +
+      '</div>' +
+      '<div style="font-size:.8125rem;color:#64748b;">'+dl.text+'</div>';
+
+    M.custom({
+      title:'Retry Homework: '+escH(s.name),
+      message:content, type:'warning',
+      buttons:[
+        { text:'Lihat Hasil Try 1', class:'btn-secondary', action:function(){ safeShowResultFromAttempt(last.id); }},
+        { text:'Mulai Retry (Percobaan 2)', class:'btn-warning', action:function(){ initHomework(s.id, 2, true); }}
+      ]
+    });
+  }
+
   window.startHomework = async function(id){
+    console.log('[hw] startHomework:', id);
     var s = PS.sessions.find(function(x){ return x.id===id; });
     if (!s) { toast('Sesi tidak ditemukan','warning'); return; }
     if (s.mode !== 'homework') { if (window.startSession) startSession(id,'available'); return; }
@@ -91,20 +149,28 @@
       alert2('Akses Ditolak','Anda belum bisa akses simulasi tka ini, silahkan hubungi Mentor Teknis Simulasi TKA. terimakasih.','error');
       return;
     }
-    if (hwExpired(s)) { alert2('Deadline Lewat','Homework ini sudah melewati deadline. Hubungi mentor jika perlu perpanjangan.','warning'); return; }
 
     var atts = hwCompleted(id);
-    if (atts.length >= 2) { var b2=hwBest(id); if (b2 && window.showResultFromAttempt) showResultFromAttempt(b2.id); return; }
-    if (atts.length === 1 && !hwRetryAvailable(s)) { var b1=hwBest(id); if (b1 && window.showResultFromAttempt) showResultFromAttempt(b1.id); return; }
+    var retryEligible = hwRetryAvailable(s);
 
-    // resume in_progress
+    // FIX #1: expired hanya menolak bila retry tidak tersedia
+    if (hwExpired(s) && !retryEligible) {
+      alert2('Deadline Lewat','Homework ini sudah melewati deadline dan tidak ada kesempatan retry tersisa.','warning');
+      return;
+    }
+
+    if (atts.length >= 2) { var b2=hwBest(id); if (b2) safeShowResultFromAttempt(b2.id); return; }
+    if (atts.length === 1 && !retryEligible) { var b1=hwBest(id); if (b1) safeShowResultFromAttempt(b1.id); return; }
+
+    if (atts.length === 1 && retryEligible) { showRetryModalFromHome(s, atts); return; }
+
     try {
       var inc = await db.collection('attempts').where('studentId','==',PS.user.id).where('sessionId','==',id).where('status','==','in_progress').get();
       var incDoc=null; inc.forEach(function(d){ incDoc={id:d.id,data:d.data()}; });
       if (incDoc) { resumeHomework(id, incDoc); return; }
     } catch(e){}
 
-    var attemptNo = atts.length + 1;   // 1 atau 2
+    var attemptNo = atts.length + 1;
     var qcount = 0;
     var cached = lsGet(hwQKey(id));
     if (cached && cached.items && cached.items.length) qcount = cached.items.length;
@@ -113,12 +179,23 @@
       qcount = qSnap.size;
     }
     var dl = deadlineInfo(s);
+    var retryMode = getRetryMode(s);
 
     function row(icon,label,val){
       return '<div style="display:flex;align-items:center;gap:.75rem;background:#fffbeb;border:1px solid #f59e0b;border-radius:10px;padding:.625rem .75rem;">' +
         '<span class="material-icons" style="color:#f59e0b;font-size:20px;">'+icon+'</span>' +
         '<div style="flex:1;"><div style="font-size:.7rem;color:#92400e;">'+label+'</div>' +
         '<div style="font-size:.875rem;font-weight:600;color:#78350f;">'+val+'</div></div></div>';
+    }
+
+    var retryInfo = '';
+    if (attemptNo === 2 && retryMode === 'conditional') {
+      retryInfo =
+        '<div style="background:#fef3c7;border:2px solid #f59e0b;border-radius:10px;padding:.75rem;margin-bottom:.875rem;text-align:center;">' +
+          '<span class="material-icons" style="font-size:24px;color:#d97706;vertical-align:-6px;">refresh</span> ' +
+          '<b style="color:#92400e;font-size:1rem;">RETRY — Percobaan 2 dari 2</b>' +
+          '<div style="font-size:.75rem;color:#92400e;margin-top:.25rem;">Nilai tertinggi yang dicatat</div>' +
+        '</div>';
     }
 
     var content =
@@ -128,12 +205,13 @@
         '<h3 style="margin-top:.75rem;">Homework / PR</h3>' +
         '<p style="color:#64748b;font-size:.8125rem;">Kerjakan santai, feedback muncul langsung tiap soal</p>' +
       '</div>' +
+      retryInfo +
       '<div style="display:grid;gap:.5rem;margin-bottom:.875rem;">' +
         row('event_available','Sesi', escH(s.name)) +
         row('quiz','Jumlah Soal', qcount+' soal') +
         row('schedule','Deadline', dl.text) +
-        row('refresh','Percobaan', 'Ke-'+attemptNo+(s.retryMode==='conditional'?' dari 2':' dari 1')) +
-        row('shield','Anti-Cheat', hwAntiOn.call(null) || (s.antiCheat!==false && PS.settings.antiCheatEnabled) ? '<span style="color:#10b981;">Aktif</span>' : '<span style="color:#94a3b8;">Nonaktif</span>') +
+        row('refresh','Percobaan', 'Ke-'+attemptNo+(retryMode==='conditional'?' dari 2':' dari 1')) +
+        row('shield','Anti-Cheat', hwAntiOn() ? '<span style="color:#10b981;">Aktif</span>' : '<span style="color:#94a3b8;">Nonaktif</span>') +
       '</div>' +
       '<div style="background:#eff6ff;border-left:3px solid #2563eb;padding:.75rem;border-radius:6px;font-size:.8125rem;color:#1e40af;">' +
       'Jawaban tiap soal akan <b>terkunci setelah diperiksa</b>. Nilai tertinggi dari percobaan Anda yang dicatat.</div>';
@@ -142,12 +220,12 @@
       title:'Mulai Homework', message:content, type:'info',
       buttons:[
         { text:'Nanti Dulu', class:'btn-secondary' },
-        { text:'Mulai Mengerjakan', class:'btn-warning', action:function(){ initHomework(id, attemptNo); } }
+        { text: attemptNo===2?'Mulai Retry':'Mulai Mengerjakan', class: attemptNo===2?'btn-warning':'btn-primary',
+          action:function(){ initHomework(id, attemptNo, attemptNo===2); } }
       ]
     });
   };
 
-  // ===== INIT / RESUME =====
   async function loadQuestionsHw(sid, sess){
     var ver = verMs(sess);
     var cached = lsGet(hwQKey(sid));
@@ -159,7 +237,8 @@
     return arr;
   }
 
-  window.initHomework = async function(sid, attemptNo){
+  window.initHomework = async function(sid, attemptNo, isRetry){
+    console.log('[hw] initHomework: sid='+sid+' attemptNo='+attemptNo+' isRetry='+!!isRetry);
     var load = loading('Menyiapkan homework...');
     try {
       var sessSnap = await db.collection('sessions').doc(sid).get();
@@ -178,7 +257,11 @@
       PS.attemptId = ref.id;
       PS.answers={}; PS.hwLocked={}; PS.hwFb={}; PS.currentIndex=0;
       PS.tabSwitch=0; PS.blur=0; PS.antiLog=[];
-      PS.startTime=Date.now(); PS.attemptNumber=attemptNo||1;
+      PS.startTime=Date.now();
+      PS.attemptNumber=attemptNo||1;
+      PS.isRetry=!!isRetry;
+      // FIX #3: catat deadline sesi untuk logika deadlineTick
+      PS.hwEndMs = PS.currentSession.endTime ? new Date(PS.currentSession.endTime).getTime() : 0;
       persistHw();
       load.close();
       showHomeworkPage();
@@ -203,6 +286,7 @@
       var cache = lsGet(hwAKey(PS.user.id, sid));
       PS.attemptId = doc.id;
       PS.attemptNumber = doc.data.attemptNumber||1;
+      PS.isRetry = (PS.attemptNumber === 2);
       if (cache && cache.attemptId===doc.id) {
         PS.answers = cache.answers||{}; PS.hwLocked = cache.locked||{}; PS.currentIndex = cache.progress||0;
       } else {
@@ -210,19 +294,20 @@
       }
       PS.hwFb={}; PS.tabSwitch=doc.data.tabSwitchCount||0; PS.blur=doc.data.blurCount||0; PS.antiLog=doc.data.antiCheatLog||[];
       PS.startTime=Date.now();
+      PS.hwEndMs = PS.currentSession.endTime ? new Date(PS.currentSession.endTime).getTime() : 0;
       persistHw();
       load.close();
       showHomeworkPage();
     } catch(e){ load.close(); alert2('Error','Gagal melanjutkan: '+e.message,'error'); }
   };
 
-  // ===== Persist & checkpoint =====
   function persistHw(){
     if (!PS.attemptId || !PS.currentSession) return;
     lsSet(hwAKey(PS.user.id, PS.currentSession.id), {
       attemptId:PS.attemptId, sessionId:PS.currentSession.id, studentId:PS.user.id,
       answers:PS.answers, locked:PS.hwLocked, progress:PS.currentIndex,
-      attemptNumber:PS.attemptNumber, startedAtMs:PS.startTime, savedAtMs:Date.now()
+      attemptNumber:PS.attemptNumber, isRetry:!!PS.isRetry,
+      startedAtMs:PS.startTime, savedAtMs:Date.now()
     });
   }
   async function checkpointHw(){
@@ -235,31 +320,33 @@
       });
     } catch(e){}
   }
-  function startHwTimers(){
-    stopHwTimers();
-    PS.hwCpTimer = setInterval(checkpointHw, 30000);
-    PS.hwDlTimer = setInterval(deadlineTick, 1000);
-  }
+  function startHwTimers(){ stopHwTimers(); PS.hwCpTimer = setInterval(checkpointHw, 30000); PS.hwDlTimer = setInterval(deadlineTick, 1000); }
   function stopHwTimers(){
     if (PS.hwCpTimer) { clearInterval(PS.hwCpTimer); PS.hwCpTimer=null; }
     if (PS.hwDlTimer) { clearInterval(PS.hwDlTimer); PS.hwDlTimer=null; }
   }
+
+  // FIX #2: retry yang dimulai setelah deadline tidak auto-submit
   function deadlineTick(){
     var el = $('hwDeadline');
     var dl = deadlineInfo(PS.currentSession||{});
+    var startedAfter = PS.hwEndMs && PS.startTime > PS.hwEndMs;
     if (el) {
-      el.textContent = dl.text;
-      el.parentElement.classList.toggle('urgent', dl.urgent);
+      if (startedAfter) {
+        el.textContent = 'Mode Retry: batas deadline tidak berlaku';
+        el.parentElement.classList.remove('urgent');
+      } else {
+        el.textContent = dl.text;
+        el.parentElement.classList.toggle('urgent', dl.urgent);
+      }
     }
+    if (startedAfter) return;
     if (dl.over) { stopHwTimers(); alert2('Deadline Lewat','Waktu homework berakhir. Jawaban dikumpulkan otomatis.','warning', function(){ submitHomework(true); }); }
   }
 
-  // ===== UI PAGE (FIX: pakai showScreen) =====
   function showHomeworkPage(){
-    // FIX: hide login/app/result, show test; header sHeader otomatis di-hide oleh showScreen
     if (window.showScreen) showScreen('test');
     else {
-      // fallback bila state.js lama
       var ls=$('loginScreen'); if(ls) ls.style.display='none';
       var sa=$('studentApp'); if(sa) sa.style.display='none';
       var rp=$('resultPage'); if(rp) rp.style.display='none';
@@ -268,10 +355,16 @@
 
     var dl = deadlineInfo(PS.currentSession||{});
     var tp = $('testPage');
+    var retryBadge = PS.isRetry
+      ? '<span style="display:inline-flex;align-items:center;gap:.25rem;background:#fef3c7;color:#92400e;border:1px solid #f59e0b;padding:.125rem .5rem;border-radius:50px;font-size:.7rem;font-weight:700;margin-left:.375rem;">' +
+          '<span class="material-icons" style="font-size:12px;">refresh</span>RETRY (2/2)</span>'
+      : '';
+
     tp.innerHTML =
       '<div class="test-header">' +
         '<div class="th-left" style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">' +
           '<span class="mode-badge-hw"><span class="material-icons">menu_book</span>PR</span>' +
+          retryBadge +
           '<span>Soal <span id="hwCur">1</span>/<span id="hwTot">'+PS.questions.length+'</span></span>' +
         '</div>' +
         '<div style="display:flex;align-items:center;gap:.5rem;">' +
@@ -279,9 +372,7 @@
           '<button class="btn btn-secondary btn-sm" onclick="exitHomework()" title="Simpan & keluar"><span class="material-icons">logout</span></button>' +
         '</div>' +
       '</div>' +
-      '<div class="num-strip-row">' +
-        '<div class="num-strip" id="hwStrip"></div>' +
-      '</div>' +
+      '<div class="num-strip-row"><div class="num-strip" id="hwStrip"></div></div>' +
       '<div style="padding:0 1rem;"><div class="hw-progress"><div class="hw-progress-fill" id="hwProgressFill" style="width:0%;"></div></div></div>' +
       '<div class="test-body" id="testBody"></div>' +
       '<div class="bottom-nav">' +
@@ -293,7 +384,6 @@
     renderHwNav();
     renderHwQuestion();
     startHwTimers();
-    // anti-cheat homework (jika admin ON): hanya visibility/blur, tanpa back-trap/fullscreen
     cleanupHwAnti();
     document.addEventListener('visibilitychange', onHwVis);
     window.addEventListener('blur', onHwBlur);
@@ -301,13 +391,8 @@
   }
 
   function onHwHide(){ checkpointHw(); }
-  function onHwVis(){
-    if (!PS.attemptId) return;
-    if (document.hidden) { if (hwAntiOn()) hwViolation('tab_switch'); }
-  }
-  function onHwBlur(){
-    if (PS.attemptId) { PS.blur++; PS.antiLog.push({t:Date.now(),type:'blur'}); persistHw(); }
-  }
+  function onHwVis(){ if (!PS.attemptId) return; if (document.hidden) { if (hwAntiOn()) hwViolation('tab_switch'); } }
+  function onHwBlur(){ if (PS.attemptId) { PS.blur++; PS.antiLog.push({t:Date.now(),type:'blur'}); persistHw(); } }
   function cleanupHwAnti(){
     document.removeEventListener('visibilitychange', onHwVis);
     window.removeEventListener('blur', onHwBlur);
@@ -323,7 +408,6 @@
     }
   }
 
-  // FIX: pakai showScreen + setTab('home')
   window.exitHomework = function(){
     confirm2('Simpan & Keluar','Progress homework tersimpan. Anda bisa melanjutkan sebelum deadline.', function(){
       checkpointHw();
@@ -339,10 +423,7 @@
     });
   };
 
-  function lockedCount(){
-    var n=0; PS.questions.forEach(function(q){ if (PS.hwLocked && PS.hwLocked[q.id]) n++; });
-    return n;
-  }
+  function lockedCount(){ var n=0; PS.questions.forEach(function(q){ if (PS.hwLocked && PS.hwLocked[q.id]) n++; }); return n; }
   function renderHwNav(){
     var strip=$('hwStrip');
     if (strip) {
@@ -379,9 +460,7 @@
       '<div class="q-head">' +
         '<div class="q-head-left">Soal '+(PS.currentIndex+1)+' <span class="question-type-badge '+q.type.toLowerCase()+'">'+(labels[q.type]||q.type)+'</span>' +
         (locked?' <span class="badge badge-success">Terkunci</span>':'') + '</div>' +
-        '<div class="q-ctrl">' +
-          '<button onclick="openFeedbackFor(\''+q.id+'\')" title="Laporkan soal"><span class="material-icons">flag</span></button>' +
-        '</div>' +
+        '<div class="q-ctrl"><button onclick="openFeedbackFor(\''+q.id+'\')" title="Laporkan soal"><span class="material-icons">flag</span></button></div>' +
       '</div>' +
       '<div class="question-text" style="font-size:'+(PS.qFont||16)+'px;">'+escH(q.text||'')+'</div>';
 
@@ -389,12 +468,8 @@
       html+='<div class="options-list">';
       ['A','B','C','D'].forEach(function(l){
         if(!q.options||!q.options[l])return;
-        var sel=PS.answers[q.id]===l;
-        var extra='';
-        if (locked) {
-          if (l===q.correctAnswer) extra=' hw-correct';
-          else if (sel) extra=' hw-wrong';
-        }
+        var sel=PS.answers[q.id]===l; var extra='';
+        if (locked) { if (l===q.correctAnswer) extra=' hw-correct'; else if (sel) extra=' hw-wrong'; }
         html+='<div class="option-item'+(sel?' selected':'')+extra+'" '+(locked?'':'onclick="hwAnswerPGS(\''+q.id+'\',\''+l+'\')"')+' style="'+(locked?'cursor:default;':'')+'"><div class="option-label">'+l+'</div><div class="option-text">'+escH(q.options[l])+'</div></div>';
       });
       html+='</div>';
@@ -403,12 +478,8 @@
       html+='<div class="options-list">';
       ['A','B','C','D','E'].forEach(function(l){
         if(!q.options||!q.options[l])return;
-        var sel=cur.indexOf(l)!==-1;
-        var extra='';
-        if (locked) {
-          if ((q.correctAnswer||[]).indexOf(l)!==-1) extra=' hw-correct';
-          else if (sel) extra=' hw-wrong';
-        }
+        var sel=cur.indexOf(l)!==-1; var extra='';
+        if (locked) { if ((q.correctAnswer||[]).indexOf(l)!==-1) extra=' hw-correct'; else if (sel) extra=' hw-wrong'; }
         html+='<div class="option-item'+(sel?' selected':'')+extra+'" '+(locked?'':'onclick="hwToggleMCMA(\''+q.id+'\',\''+l+'\')"')+' style="'+(locked?'cursor:default;':'')+'"><div class="option-label">'+l+'</div><div class="option-text">'+escH(q.options[l])+'</div></div>';
       });
       html+='</div>';
@@ -417,8 +488,7 @@
       var arr=PS.answers[q.id]||[];
       html+='<div class="statement-list">';
       (q.statements||[]).forEach(function(st,i){
-        var v=arr[i];
-        var cv=(q.correctAnswer||[])[i];
+        var v=arr[i]; var cv=(q.correctAnswer||[])[i];
         html+='<div class="statement-item"><div class="statement-text">'+(i+1)+'. '+escH(st)+'</div><div class="statement-options">' +
           '<button class="statement-btn'+(v===true?' selected':'')+(locked&&cv===true?' hw-correct':'')+(locked&&v===true&&cv!==true?' hw-wrong':'')+'" '+(locked?'':'onclick="hwSetPGK(\''+q.id+'\','+i+',true)"')+'>True</button>' +
           '<button class="statement-btn'+(v===false?' selected':'')+(locked&&cv===false?' hw-correct':'')+(locked&&v===false&&cv!==false?' hw-wrong':'')+'" '+(locked?'':'onclick="hwSetPGK(\''+q.id+'\','+i+',false)"')+'>False</button></div></div>';
@@ -427,14 +497,10 @@
       if (!locked) html+='<button class="btn btn-warning w-full" style="margin-top:.75rem;" onclick="hwCheck(\''+q.id+'\')"><span class="material-icons">fact_check</span>Periksa Jawaban</button>';
     } else if (q.type==='ISIAN'){
       html+='<input type="text" class="answer-input" placeholder="Ketik jawaban..." value="'+escH(PS.answers[q.id]||'')+'" '+(locked?'disabled':'oninput="hwSetIsian(\''+q.id+'\', this.value)"')+'>';
-      if (locked) {
-        html+='<div style="margin-top:.5rem;font-size:.8125rem;color:#64748b;">Jawaban benar: <b style="color:#10b981;">'+escH(q.correctAnswer||'')+'</b></div>';
-      } else {
-        html+='<button class="btn btn-warning w-full" style="margin-top:.75rem;" onclick="hwCheck(\''+q.id+'\')"><span class="material-icons">fact_check</span>Periksa Jawaban</button>';
-      }
+      if (locked) html+='<div style="margin-top:.5rem;font-size:.8125rem;color:#64748b;">Jawaban benar: <b style="color:#10b981;">'+escH(q.correctAnswer||'')+'</b></div>';
+      else html+='<button class="btn btn-warning w-full" style="margin-top:.75rem;" onclick="hwCheck(\''+q.id+'\')"><span class="material-icons">fact_check</span>Periksa Jawaban</button>';
     }
 
-    // Feedback langsung (5A)
     if (locked) {
       var ok = isCorrectHw(q, PS.answers[q.id]);
       html += ok
@@ -455,33 +521,20 @@
     renderHwNav();
   }
 
-  // ===== Jawab & lock =====
   function lockAndFeedback(qid){
     PS.hwLocked = PS.hwLocked||{};
     PS.hwLocked[qid]=true;
-    persistHw();
-    checkpointHw();
-    renderHwQuestion();
+    persistHw(); checkpointHw(); renderHwQuestion();
   }
-  window.hwAnswerPGS=function(qid,l){
-    if (PS.hwLocked && PS.hwLocked[qid]) return;
-    PS.answers[qid]=l;
-    lockAndFeedback(qid);
-  };
+  window.hwAnswerPGS=function(qid,l){ if (PS.hwLocked && PS.hwLocked[qid]) return; PS.answers[qid]=l; lockAndFeedback(qid); };
   window.hwToggleMCMA=function(qid,l){
     if (PS.hwLocked && PS.hwLocked[qid]) return;
     var c=PS.answers[qid]||[]; var i=c.indexOf(l);
     if(i===-1)c.push(l); else c.splice(i,1);
     PS.answers[qid]=c; persistHw(); renderHwQuestion();
   };
-  window.hwSetPGK=function(qid,i,v){
-    if (PS.hwLocked && PS.hwLocked[qid]) return;
-    var a=PS.answers[qid]||[]; a[i]=v; PS.answers[qid]=a; persistHw(); renderHwQuestion();
-  };
-  window.hwSetIsian=function(qid,v){
-    if (PS.hwLocked && PS.hwLocked[qid]) return;
-    PS.answers[qid]=v.trim(); persistHw();
-  };
+  window.hwSetPGK=function(qid,i,v){ if (PS.hwLocked && PS.hwLocked[qid]) return; var a=PS.answers[qid]||[]; a[i]=v; PS.answers[qid]=a; persistHw(); renderHwQuestion(); };
+  window.hwSetIsian=function(qid,v){ if (PS.hwLocked && PS.hwLocked[qid]) return; PS.answers[qid]=v.trim(); persistHw(); };
   window.hwCheck=function(qid){
     if (PS.hwLocked && PS.hwLocked[qid]) return;
     var q=PS.questions.find(function(x){return x.id===qid;});
@@ -495,7 +548,6 @@
     lockAndFeedback(qid);
   };
 
-  // ===== Submit =====
   window.confirmHwSubmit=function(){
     var un = PS.questions.length - lockedCount();
     var msg='Kumpulkan homework ini?';
@@ -512,6 +564,8 @@
     var totalTime=Math.round((Date.now()-PS.startTime)/1000);
     var sid=PS.currentSession.id, attemptNo=PS.attemptNumber||1;
 
+    console.log('[hw] submit: score='+score+' correct='+correct+' attemptNo='+attemptNo+' auto='+auto);
+
     try {
       await db.collection('attempts').doc(PS.attemptId).update({
         status:'completed', mode:'homework', attemptNumber:attemptNo,
@@ -522,7 +576,6 @@
         autoSubmitted:!!auto
       });
 
-      // Counter sesi: recompute berbasis nilai tertinggi per siswa (retry tidak double count)
       var snap = await db.collection('attempts').where('sessionId','==',sid).where('status','==','completed').get();
       var bestBy={};
       snap.forEach(function(d){ var a=d.data(); var b=bestBy[a.studentId]; if(!b||(a.score||0)>(b.score||0)) bestBy[a.studentId]=a; });
@@ -530,26 +583,23 @@
       Object.keys(bestBy).forEach(function(k){ sum+=bestBy[k].score||0; });
       await db.collection('sessions').doc(sid).update({ completedCount:cnt, scoreSum:sum, questionsCount:PS.questions.length }).catch(function(){});
 
-      // Counter siswa: totalAttempts hanya naik pada percobaan 1; lastScore = terbaik sesi ini
-      var myBest=0; Object.keys(bestBy).forEach(function(){}); // noop
       var mine=null; snap.forEach(function(d){ var a=d.data(); if(a.studentId===PS.user.id && (!mine||(a.score||0)>(mine.score||0))) mine=a; });
       var stuUpd={ lastScore: mine?mine.score:score, lastSessionId:sid, updatedAt:firebase.firestore.FieldValue.serverTimestamp() };
       if (attemptNo===1) stuUpd.totalAttempts = firebase.firestore.FieldValue.increment(1);
       await db.collection('students').doc(PS.user.id).update(stuUpd).catch(function(){});
 
       lsDel(hwAKey(PS.user.id, sid));
-      // refresh attempts state
       if (window.loadAllData) { await loadAllData(); }
 
       load.close();
 
-      // ===== Retry decision (3A): modal langsung setelah percobaan 1 gagal threshold =====
       var s = PS.currentSession;
       var failed = (score < RETRY_THRESHOLD || correct < PS.questions.length/2);
-      if (!auto && s.retryMode==='conditional' && attemptNo===1 && failed) {
-        // FIX: sembunyikan testPage SEBELUM buka modal retry agar tidak bocor di belakang modal
-        if (window.showScreen) showScreen('result');
+      var retryMode = getRetryMode(s);
+      console.log('[hw] retry decision: failed='+failed+' retryMode='+retryMode+' attemptNo='+attemptNo);
 
+      if (!auto && retryMode==='conditional' && attemptNo===1 && failed) {
+        if (window.showScreen) showScreen('result');
         M.custom({
           title:'Kesempatan Retry Tersedia',
           message:
@@ -558,18 +608,15 @@
             '<p style="text-align:center;color:#64748b;font-size:.8125rem;">Belum mencapai target. Anda punya <b>1 kesempatan terakhir</b>. Nilai tertinggi yang dicatat.</p>',
           type:'warning',
           buttons:[
-            // "Lihat Hasil" -> result.js v2.1 akan showScreen('result')
             { text:'Lihat Hasil', class:'btn-secondary', action:function(){ showResult(score, correct, totalTime, false); } },
-            // "Retry Sekarang" -> initHomework memanggil showHomeworkPage -> showScreen('test')
-            { text:'Retry Sekarang', class:'btn-warning', action:function(){ initHomework(sid, 2); } }
+            { text:'Retry Sekarang', class:'btn-warning', action:function(){ initHomework(sid, 2, true); } }
           ]
         });
         return;
       }
-      // Jalur normal: showResult (dari result.js) yang akan atur layar
       showResult(score, correct, totalTime, auto);
     } catch(e){ load.close(); alert2('Error','Gagal menyimpan: '+e.message,'error'); }
   };
 
-  console.log('✅ s/homework.js v1.1 loaded — pakai showScreen()');
+  console.log('✅ s/homework.js v1.3 loaded — retry setelah deadline diperbolehkan & tidak auto-submit');
 })();
