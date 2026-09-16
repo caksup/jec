@@ -1,27 +1,69 @@
-/* #25 | /root/js/s/dashboard.js | v 2.5 | u 10/09/2026 • 07:20:00 | xu : ke-10 | note : #noteresponse
-- UPDATE 12 (Opsi A): fallback jumlah soal bila session.questionsCount kosong.
-  * Helper fillMissingQuestionsCount() mengumpulkan sessionId dari sesi yang akan
-    ditampilkan di Home (hwActive + hwMissed + live perlu), lalu query collection
-    questions dengan filter 'in' (chunked 30/sessionId agar aman), hitung count di client,
-    dan backfill sementara ke s.questionsCount di memory (TIDAK write ke Firestore).
-  * Card PR & Live sekarang menampilkan angka soal yang akurat sejak sesi dibuat,
-    tidak lagi "- soal".
-  * Query hanya dijalankan bila ada sesi tanpa counter; bila semua sesi sudah punya
-    questionsCount, tidak ada read tambahan.
-- TETAP (tidak dipotong dari v2.4): dispatcher 5 tab, loadAllData, computeStatus,
-  helper homework (isHw, hwCompletedAttempts, hwRetryAvailable, hwExpired, hwPending,
-  hwMissed), countdown deadline fmtDeadline, setSectionTitle, sessionView, openStart,
-  clearParamOnce, handleSessionParam, loadDashboard, fallback startHomework,
-  loadSessions, loadMyResults, escapeHtmlS. */
+/* s#15 | /root/js/s/dashboard.js | v 2.10 | u 17/09/2026 • 10:00:00 | xu : ke-15 | note : #noteresponse
+- v2.9 -> v2.10 (FIX SESUAI PERMINTAAN USER — tanpa grace period):
+  * HILANGKAN SEMUA gate "grace 24 jam" (RETRY_GRACE_HOURS, isInGracePeriod,
+    hwInGrace). Batas ini penyebab PR yang masih punya 1 kesempatan retry
+    menghilang dari dashboard setelah deadline lewat >24 jam. User TIDAK
+    pernah meminta batas tersebut.
+  * ATURAN TAMPIL BARU (hwPending):
+    - PR SELESAI (completedAttempts >= maxAttempts) -> TIDAK tampil di
+      dashboard (masuk Riwayat). maxAttempts = 2 bila retryMode conditional
+      (fallback default homework), else 1.
+    - PR punya attempt in_progress -> tampil (bisa dilanjutkan).
+    - PR belum expired & belum selesai -> tampil (card normal / card retry).
+    - PR SUDAH expired -> tampil HANYA bila retry tersedia (1 attempt completed
+      yang gagal threshold). Ini yang user minta: "PR yang masih ada 1
+      kesempatan masih di dashboard".
+    - PR expired tanpa attempt completed -> TIDAK tampil (forfeit; tidak
+      nongkrong seperti keluhan sebelumnya).
+  * hwRetryAvailable: retry = homework + retryMode conditional (fallback) +
+    tepat 1 attempt completed + attempt tsb gagal (score<50 ATAU benar<setengah).
+    TANPA cek deadline.
+  * TOMBOL RETRY EKSPLISIT di card HW retry dipertahankan dari v2.9
+    (.hw-retry-btn kuning, onclick startHomework).
+  * fmtDeadline kembali polos (tanpa teks grace).
+  * TETAP: filter realtime dari Live, section Realtime Exercise non-clickable,
+    Live expired tidak tampil di "Tersedia", fillMissingQuestionsCount,
+    dispatcher 5 tab, debug log [dash].
+- EXPOSE: window.loadDashboard, window.loadSessions, window.loadMyResults,
+  window.renderHomeTab, window.loadAllData, window.renderStudentTab. */
 
 (function(){
   'use strict';
   function $(id){ return document.getElementById(id); }
   var BULAN_S = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-  var RETRY_THRESHOLD = 50;   // fixed (2A)
-  var IN_CHUNK = 30;           // batas 'in' query Firestore
+  var RETRY_THRESHOLD = 50;
+  var IN_CHUNK = 30;
 
-  // ===== Dispatcher untuk 5 tab bottom nav =====
+  function dbg(){ var a=['[dash]']; for(var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console, a); }
+
+  function injectDashStyles(){
+    if (document.getElementById('s-dash-style-v210')) return;
+    ['s-dash-style-v29','s-dash-style-v28','s-dash-style-v27','s-dash-style-v26'].forEach(function(id){
+      var o = document.getElementById(id); if (o) o.remove();
+    });
+    var st = document.createElement('style');
+    st.id = 's-dash-style-v210';
+    st.textContent = [
+      '.hw-card.hw-card-retry{background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:2px solid #f59e0b;}',
+      '.hw-card.hw-card-retry .hw-card-title{color:#92400e;font-weight:700;}',
+      '.hw-retry-badge.big{background:#f59e0b;color:#fff;padding:.25rem .625rem;',
+      '  border-radius:50px;font-size:.7rem;font-weight:700;display:inline-flex;',
+      '  align-items:center;gap:.25rem;white-space:nowrap;}',
+      '.hw-retry-info{font-size:.75rem;color:#78350f;padding:.5rem .625rem;',
+      '  background:rgba(255,255,255,.6);border:1px dashed #f59e0b;border-radius:8px;',
+      '  margin-top:.375rem;line-height:1.4;}',
+      '.hw-retry-btn{margin-top:.625rem;width:100%;background:#f59e0b;color:#fff;',
+      '  border:none;border-radius:10px;padding:.625rem .875rem;font-weight:700;',
+      '  font-size:.875rem;display:inline-flex;align-items:center;justify-content:center;',
+      '  gap:.375rem;cursor:pointer;transition:all .15s;font-family:inherit;',
+      '  box-shadow:0 2px 6px rgba(245,158,11,.35);}',
+      '.hw-retry-btn:hover{background:#d97706;}',
+      '.hw-retry-btn:active{transform:scale(.99);}',
+      '.hw-retry-btn .material-icons{font-size:18px;}'
+    ].join('\n');
+    document.head.appendChild(st);
+  }
+
   window.renderStudentTab = function(name){
     switch(name){
       case 'home':     renderHomeTab(); break;
@@ -32,7 +74,6 @@
     }
   };
 
-  // ===== Load data bersama =====
   async function loadAllData(){
     try {
       var set = await db.collection('settings').doc('global_settings').get();
@@ -66,37 +107,52 @@
     return 'available';
   }
 
-  // ===== Helper mode homework =====
   function isHw(s){ return s.mode === 'homework'; }
+  function isRealtime(s){ return s.mode === 'realtime'; }
+
   function hwCompletedAttempts(s){
     return PS.myAttempts.filter(function(a){ return a.sessionId===s.id && a.status==='completed'; });
   }
-  function hwRetryAvailable(s){
-    if (!isHw(s) || s.retryMode !== 'conditional') return false;
-    var atts = hwCompletedAttempts(s);
-    if (atts.length === 0 || atts.length >= 2) return false;
-    var last = atts[atts.length-1];
-    var score = last.score||0;
-    var correct = last.correctAnswers||0;
-    var total = last.totalQuestions||1;
-    return (score < RETRY_THRESHOLD || correct < total/2);
+  function hwHasInProgress(s){
+    return PS.myAttempts.some(function(a){ return a.sessionId===s.id && a.status==='in_progress'; });
   }
+
+  function getRetryMode(s){
+    if (!s) return 'once';
+    if (s.retryMode && typeof s.retryMode === 'string') return s.retryMode;
+    return isHw(s) ? 'conditional' : 'once';
+  }
+  function maxAttempts(s){ return getRetryMode(s)==='conditional' ? 2 : 1; }
+
   function hwExpired(s){
     if (!s.endTime) return false;
     var end = new Date(s.endTime).getTime();
     return !isNaN(end) && Date.now() > end;
   }
-  function hwPending(s){
-    if (!isHw(s) || hwExpired(s)) return false;
+
+  // Retry tersedia: 1 attempt completed yang gagal. TANPA cek deadline.
+  function hwRetryAvailable(s){
+    if (!isHw(s)) return false;
+    if (getRetryMode(s) !== 'conditional') return false;
     var atts = hwCompletedAttempts(s);
-    if (atts.length === 0) return true;
-    return hwRetryAvailable(s);
-  }
-  function hwMissed(s){
-    return isHw(s) && hwExpired(s) && hwCompletedAttempts(s).length === 0;
+    if (atts.length === 0 || atts.length >= maxAttempts(s)) return false;
+    var last = atts[atts.length-1];
+    var score = last.score||0;
+    var correct = last.correctAnswers||0;
+    var total = last.totalQuestions||1;
+    return (score < RETRY_THRESHOLD) || (correct < total/2);
   }
 
-  // ===== Countdown deadline (6C: absolute + relative) =====
+  // Aturan tampil baru (lihat header)
+  function hwPending(s){
+    if (!isHw(s)) return false;
+    var atts = hwCompletedAttempts(s);
+    if (atts.length >= maxAttempts(s)) return false;      // selesai -> Riwayat
+    if (hwHasInProgress(s)) return true;                   // bisa dilanjutkan
+    if (!hwExpired(s)) return true;                        // masih dalam deadline
+    return hwRetryAvailable(s);                            // expired: hanya bila retry tersedia
+  }
+
   function p2(n){ return String(n).padStart(2,'0'); }
   function relTime(ms){
     var m = Math.floor(ms/60000);
@@ -116,7 +172,6 @@
     return { text:'Deadline: '+abs+' ('+relTime(diff)+' lagi)', urgent:(diff < 24*3600*1000), over:false };
   }
 
-  // ===== Set judul section dinamis (ubah h2 bawaan sp.html) =====
   function setSectionTitle(containerId, icon, text, color){
     var c = $(containerId);
     if (!c) return;
@@ -126,13 +181,12 @@
     }
   }
 
-  // ===== Label session untuk LIVE =====
   function sessionView(s, att){
-    if (att && att.status === 'completed')  return { label:'Selesai',        cls:'completed', disabled:true,  status:'completed' };
-    if (att && att.status === 'in_progress')return { label:'Lanjutkan',      cls:'completed', disabled:false, status:'available' };
+    if (att && att.status === 'completed')  return { label:'Selesai',   cls:'completed', disabled:true,  status:'completed' };
+    if (att && att.status === 'in_progress')return { label:'Lanjutkan', cls:'completed', disabled:false, status:'available' };
     var st = computeStatus(s);
-    if (st === 'locked')                    return { label:'Belum Dimulai',  cls:'locked',    disabled:true,  status:'locked' };
-    if (st === 'expired')                   return { label:'Terlewat',       cls:'expired',   disabled:true,  status:'expired' };
+    if (st === 'locked')  return { label:'Belum Dimulai', cls:'locked',  disabled:true, status:'locked' };
+    if (st === 'expired') return { label:'Terlewat',      cls:'expired', disabled:true, status:'expired' };
     return { label:'Mulai', cls:'available', disabled:false, status:'available' };
   }
 
@@ -173,48 +227,95 @@
     if (window.PS && typeof PS.setTab === 'function') PS.setTab('home');
   }
 
-  // ===== Fallback startHomework (homework.js akan override saat load) =====
   if (!window.startHomework) {
     window.startHomework = function(id){ if (window.startSession) startSession(id, 'available'); };
   }
 
-  // ===== UPDATE 12: backfill sementara jumlah soal untuk sesi tanpa counter =====
-  // Mengisi s.questionsCount di memory (bukan Firestore) dengan query 'in' chunked 30.
-  // Hanya session yang akan ditampilkan (hwActive, hwMissed, live perlu) yang dihitung.
   async function fillMissingQuestionsCount(sessionsToRender){
-    var need = sessionsToRender.filter(function(s){
-      return !s.questionsCount && s.questionsCount !== 0;
-    });
+    var need = sessionsToRender.filter(function(s){ return !s.questionsCount && s.questionsCount !== 0; });
     if (!need.length) return;
-
     var ids = need.map(function(s){ return s.id; });
-    var counts = {};   // sid -> count
-
+    var counts = {};
     try {
-      // Chunk 30 per query (batas Firestore 'in')
       for (var i = 0; i < ids.length; i += IN_CHUNK) {
         var chunk = ids.slice(i, i + IN_CHUNK);
         var snap = await db.collection('questions').where('sessionId', 'in', chunk).get();
         snap.forEach(function(d){
-          var sid = d.data().sessionId;
-          counts[sid] = (counts[sid] || 0) + 1;
+          var qd = d.data();
+          if (qd.deleted === true) return;
+          counts[qd.sessionId] = (counts[qd.sessionId] || 0) + 1;
         });
       }
-      // Backfill sementara ke memory PS.sessions (jangan write Firestore)
-      need.forEach(function(s){
-        if (counts[s.id] !== undefined) s.questionsCount = counts[s.id];
-      });
+      need.forEach(function(s){ if (counts[s.id] !== undefined) s.questionsCount = counts[s.id]; });
       console.log('[PS] questionsCount backfill:', counts);
-    } catch(e){
-      console.warn('[PS] fill questionsCount gagal:', e.message);
-    }
+    } catch(e){ console.warn('[PS] fill questionsCount gagal:', e.message); }
   }
 
-  // ===== TAB HOME =====
+  // ===== Card PR: retry (dengan TOMBOL) atau normal =====
+  function buildHwPendingCard(s){
+    var dl = fmtDeadline(s);
+    var retry = hwRetryAvailable(s);
+    var atts = hwCompletedAttempts(s);
+    var qLabel = (s.questionsCount!=null) ? s.questionsCount : '-';
+    var sid = s.id.replace(/'/g, "\\'");
+
+    if (retry) {
+      var last = atts[atts.length-1];
+      return '<div class="hw-card hw-card-retry">' +
+        '<div class="hw-card-head">' +
+          '<div class="hw-card-title"><span class="material-icons">refresh</span>' + escapeHtmlS(s.name) + '</div>' +
+          '<span class="hw-retry-badge big"><span class="material-icons" style="font-size:12px;">refresh</span>RETRY TERSEDIA</span>' +
+        '</div>' +
+        '<div class="hw-retry-info">' +
+          '<span class="material-icons" style="font-size:14px;vertical-align:-2px;">info</span> ' +
+          'Nilai Try 1: <b>'+(last.score||0)+'</b> (benar '+(last.correctAnswers||0)+'/'+(last.totalQuestions||0)+')' +
+          '<br>Sisa 1 kesempatan — nilai tertinggi yang dicatat.' +
+        '</div>' +
+        '<div class="hw-card-meta">' +
+          '<span><span class="material-icons">quiz</span>' + qLabel + ' soal</span>' +
+          '<span><span class="material-icons">timer</span>' + (s.duration||60) + ' mnt</span>' +
+          '<span><span class="material-icons">history</span>Percobaan: ' + atts.length + '/2</span>' +
+        '</div>' +
+        '<button type="button" class="hw-retry-btn" onclick="startHomework(\'' + sid + '\')">' +
+          '<span class="material-icons">refresh</span>Retry Sekarang (Percobaan 2/2)' +
+        '</button>' +
+        '<div class="hw-deadline' + (dl.urgent?' urgent':'') + '"><span class="material-icons">schedule</span>' + dl.text + '</div>' +
+      '</div>';
+    }
+
+    return '<div class="hw-card" onclick="startHomework(\'' + sid + '\')">' +
+      '<div class="hw-card-head">' +
+        '<div class="hw-card-title"><span class="material-icons">menu_book</span>' + escapeHtmlS(s.name) + '</div>' +
+      '</div>' +
+      '<div class="hw-card-meta">' +
+        '<span><span class="material-icons">quiz</span>' + qLabel + ' soal</span>' +
+        '<span><span class="material-icons">timer</span>' + (s.duration||60) + ' mnt</span>' +
+        (atts.length ? '<span><span class="material-icons">history</span>Percobaan: ' + atts.length + '/2</span>' : '') +
+      '</div>' +
+      '<div class="hw-deadline' + (dl.urgent?' urgent':'') + '"><span class="material-icons">schedule</span>' + dl.text + '</div>' +
+    '</div>';
+  }
+
+  function ensureRtSection(){
+    var rtContainer = $('homeRtList');
+    if (rtContainer) return rtContainer;
+    var homePage = $('page-home');
+    if (!homePage) return null;
+    var h2 = document.createElement('h2');
+    h2.className = 'section-title';
+    h2.innerHTML = '<span class="material-icons" style="color:#7c3aed;">sports_esports</span>Realtime Exercise';
+    rtContainer = document.createElement('div');
+    rtContainer.id = 'homeRtList';
+    homePage.appendChild(h2);
+    homePage.appendChild(rtContainer);
+    return rtContainer;
+  }
+
   async function renderHomeTab(){
+    injectDashStyles();
+    dbg('renderHomeTab: start');
     if (!PS.sessions || !PS.sessions.length) { await loadAllData(); }
 
-    // ----- 1. OVERVIEW -----
     var sesiDikerjakan = PS.myAttempts.length;
     var soalDikerjakan = 0, totalScore = 0, countCompleted = 0;
     PS.myAttempts.forEach(function(a){
@@ -236,63 +337,41 @@
         '</div>';
     }
 
-    // ===== Siapkan daftar sesi yang akan ditampilkan (untuk fillMissingQuestionsCount) =====
     var hwActive = PS.sessions.filter(hwPending);
-    var hwMissedArr = PS.sessions.filter(hwMissed);
-    var liveSessions = PS.sessions.filter(function(s){ return !isHw(s); });
+    var liveSessions = PS.sessions.filter(function(s){ return !isHw(s) && !isRealtime(s) && !hwExpired(s); });
     var perlu = liveSessions.filter(function(s){
       var att = PS.myAttempts.find(function(a){ return a.sessionId === s.id; });
       var v = sessionView(s, att);
-      return (v.label === 'Mulai' || v.label === 'Lanjutkan' || v.label === 'Terlewat');
+      return (v.label === 'Mulai' || v.label === 'Lanjutkan');
     });
-    var allToRender = [].concat(hwActive, hwMissedArr, perlu);
-    await fillMissingQuestionsCount(allToRender);
+    var rtAssigned = PS.sessions.filter(function(s){
+      if (!isRealtime(s)) return false;
+      var arr = s.assignedStudents;
+      if (!arr || !arr.length) return true;
+      return arr.indexOf(PS.user.id) !== -1;
+    });
 
-    // ----- 2. HOMEWORK PENDING (PR) -----
+    dbg('filter: hwActive='+hwActive.length+', liveTersedia='+perlu.length+', rt='+rtAssigned.length);
+
+    await fillMissingQuestionsCount([].concat(hwActive, perlu, rtAssigned));
+
     setSectionTitle('homeNotif', 'menu_book', 'Homework Pending (PR)', '#f59e0b');
     var hwWrap = $('homeNotif');
     if (hwWrap) {
-      if (hwActive.length === 0 && hwMissedArr.length === 0) {
+      if (hwActive.length === 0) {
         hwWrap.innerHTML =
           '<div class="empty-state" style="padding:1.5rem;"><span class="material-icons">check_circle</span>' +
           '<p>Tidak ada homework pending. Kerja bagus!</p></div>';
       } else {
-        var html = '';
+        var retryCards = [], normalCards = [];
         hwActive.forEach(function(s){
-          var dl = fmtDeadline(s);
-          var retry = hwRetryAvailable(s);
-          var atts = hwCompletedAttempts(s);
-          var qLabel = (s.questionsCount!=null) ? s.questionsCount : '-';
-          html +=
-            '<div class="hw-card" onclick="startHomework(\'' + s.id + '\')">' +
-              '<div class="hw-card-head">' +
-                '<div class="hw-card-title"><span class="material-icons">menu_book</span>' + escapeHtmlS(s.name) + '</div>' +
-                (retry ? '<span class="hw-retry-badge"><span class="material-icons">refresh</span>Retry tersedia</span>' : '') +
-              '</div>' +
-              '<div class="hw-card-meta">' +
-                '<span><span class="material-icons">quiz</span>' + qLabel + ' soal</span>' +
-                '<span><span class="material-icons">timer</span>' + (s.duration||60) + ' mnt</span>' +
-                (atts.length ? '<span><span class="material-icons">history</span>Percobaan: ' + atts.length + '/2</span>' : '') +
-              '</div>' +
-              '<div class="hw-deadline' + (dl.urgent?' urgent':'') + '"><span class="material-icons">schedule</span>' + dl.text + '</div>' +
-            '</div>';
+          if (hwRetryAvailable(s)) retryCards.push(buildHwPendingCard(s));
+          else normalCards.push(buildHwPendingCard(s));
         });
-        hwMissedArr.forEach(function(s){
-          var dl = fmtDeadline(s);
-          html +=
-            '<div class="hw-card disabled">' +
-              '<div class="hw-card-head">' +
-                '<div class="hw-card-title"><span class="material-icons">menu_book</span>' + escapeHtmlS(s.name) + '</div>' +
-                '<span class="session-status expired">Terlewat</span>' +
-              '</div>' +
-              '<div class="hw-deadline urgent"><span class="material-icons">schedule</span>' + dl.text + '</div>' +
-            '</div>';
-        });
-        hwWrap.innerHTML = html;
+        hwWrap.innerHTML = retryCards.concat(normalCards).join('');
       }
     }
 
-    // ----- 3. LIVE EXERCISE TERSEDIA -----
     setSectionTitle('homeSesiList', 'bolt', 'Live Exercise Tersedia', '#2563eb');
     var liveWrap = $('homeSesiList');
     if (liveWrap) {
@@ -304,13 +383,10 @@
         liveWrap.innerHTML = perlu.map(function(s){
           var att = PS.myAttempts.find(function(a){ return a.sessionId === s.id; });
           var v = sessionView(s, att);
-          var cls = 'session-item' + (v.label==='Lanjutkan' ? ' resume' : '') + (v.disabled ? ' disabled' : '');
-          var sub = '';
-          if (v.label === 'Lanjutkan') sub = 'Progress: ' + (att.progress||0) + '/' + (att.totalQuestions||0);
-          else if (v.label === 'Terlewat') sub = 'Waktu sesi telah berakhir sebelum dikerjakan';
-          else sub = 'Belum dikerjakan';
+          var cls = 'session-item' + (v.label==='Lanjutkan' ? ' resume' : '');
+          var sub = (v.label === 'Lanjutkan') ? ('Progress: ' + (att.progress||0) + '/' + (att.totalQuestions||0)) : 'Belum dikerjakan';
           var qLabel = (s.questionsCount!=null) ? s.questionsCount : '-';
-          return '<div class="' + cls + '"' + (v.disabled ? '' : ' onclick="startSession(\'' + s.id + '\',\'' + v.status + '\')"') + '>' +
+          return '<div class="' + cls + '" onclick="startSession(\'' + s.id + '\',\'' + v.status + '\')">' +
             '<div><div class="session-title"><span class="material-icons">bolt</span>' + escapeHtmlS(s.name) + '</div>' +
             '<div class="session-meta">' +
               '<span><span class="material-icons">timer</span>' + (s.duration||60) + ' mnt</span>' +
@@ -318,6 +394,32 @@
             '</div>' +
             '<div style="font-size:.75rem;color:#64748b;margin-top:.25rem;">' + sub + '</div></div>' +
             '<span class="session-status ' + v.cls + '">' + v.label + '</span></div>';
+        }).join('');
+      }
+    }
+
+    var rtWrap = ensureRtSection();
+    if (rtWrap) {
+      if (rtAssigned.length === 0) {
+        rtWrap.innerHTML =
+          '<div class="empty-state" style="padding:1.5rem;"><span class="material-icons">sports_esports</span>' +
+          '<p>Belum ada sesi realtime yang ditugaskan untuk Anda.</p></div>';
+      } else {
+        rtWrap.innerHTML = rtAssigned.map(function(s){
+          var qLabel = (s.questionsCount!=null) ? s.questionsCount : '-';
+          return '<div class="session-item disabled">' +
+            '<div><div class="session-title"><span class="material-icons" style="color:#7c3aed;">sports_esports</span>' +
+              escapeHtmlS(s.name) +
+              ' <span class="session-status" style="background:#ede9fe;color:#5b21b6;font-size:.65rem;padding:2px 6px;">Realtime</span>' +
+            '</div>' +
+            '<div class="session-meta">' +
+              '<span><span class="material-icons">timer</span>' + (s.duration||60) + ' mnt</span>' +
+              '<span><span class="material-icons">quiz</span>' + qLabel + ' soal</span>' +
+            '</div>' +
+            '<div style="font-size:.75rem;color:#7c3aed;margin-top:.25rem;font-weight:500;">' +
+              'Sesi ini harus dimulai lewat kode Realtime dari guru. Tunggu instruksi di kelas!' +
+            '</div></div>' +
+            '<span class="session-status locked">Menunggu Kode</span></div>';
         }).join('');
       }
     }
@@ -332,4 +434,6 @@
   window.loadMyResults = loadMyResults;
   window.renderHomeTab = renderHomeTab;
   window.loadAllData = loadAllData;
+
+  console.log('✅ dashboard.js v2.10 loaded (PR sisa kesempatan tetap tampil + tombol Retry, tanpa grace)');
 })();
