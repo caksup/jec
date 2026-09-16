@@ -1,27 +1,31 @@
-/* s#14 | /root/js/s/realtime.js | v 1.5 | u 15/09/2026 • 11:00:00 | xu : ke-6 | note : #noteresponse
-- v1.4 -> v1.5 (UPDATE REQUEST USER: #2 #4 #5 siswa-side):
-  * UPDATE #2 (siswa): TOMBOL REFRESH koneksi di header lobby & playing (icon refresh).
-    Memanggil rtRefreshConnection() yang unsub semua listener, re-fetch room +
-    players + soal, lalu subscribe ulang. Berguna bila koneksi hang.
-  * UPDATE #4 (siswa): LOBBY dengan KOSAKATA PARTS OF SPEECH melayang acak di
-    background (30+ vocab EN:ID: noun, verb, adjective, adverb, preposition).
-    Animasi CSS translateY + rotate + opacity, durasi 18-30s, posisi acak.
-    Auto-aktif saat masuk lobby, auto-hilang saat masuk playing/finished.
-  * UPDATE #5 (siswa): INDIKATOR RADAR HIJAU ONLINE di header lobby & playing
-    (bulatan hijau berkedip dengan CSS pulse). Berubah merah saat koneksi error.
-  * VALIDASI KODE JOIN: kini menerima format JEC-RTxxx (8 karakter, prefix JEC-RT
-    + 3 digit angka). backward compatible dengan kode 6-char lama bila ada.
-    Regex: /^JEC-RT\d{3,}$/i ATAU /^[A-Z0-9]{6}$/.
-  * CSS baru di-inject dari JS (id rt-style-v15): animasi @keyframes rtRadarPulse
-    dan @keyframes rtVocabFloat untuk kosakata melayang.
-  * TETAP IDENTIK dari v1.4:
-    - Auto-detect ?jec-rt, login wajib (PS.user), join via akun siswa.
-    - 3 onSnapshot + watchdog 2 dtk + poin normal.
-    - Feedback jawaban + pembahasan, leaderboard live.
-    - rejoin localStorage, CSS minimalis-elegan-responsive.
+/* s#14 | /root/js/s/realtime.js | v 1.6 | u 18/09/2026 • 03:15:00 | xu : ke-7 | note : #noteresponse
+- v1.5 (baseline user) -> v1.6 (FIX poin 2: validasi JEC-xxx + input kode manual):
+  * UPDATE #1: isValidJoinCode() sekarang menerima 3 format kode:
+    - JEC-xxx (3 digit angka urut, contoh: JEC-001, JEC-042) ← BARU
+    - JEC-RTxxx (8 karakter, contoh: JEC-RT001)              ← lama
+    - 6 char legacy (contoh: JEC7K9)                        ← lama
+    Regex ditambahkan: /^JEC-\d{3,}$/i
+  * UPDATE #2: TAMBAH window.rtOpenJoin() — buka layar input kode manual
+    dari luar (?jec-rt). Dipanggil oleh dashboard.js v2.11 saat siswa klik
+    "Punya Kode?" di kartu Realtime yang belum ada room aktif.
+    - showRealtimePage() + showScreen('rtJoinScreen')
+    - Fokus input kode (code input)
+    - Kosongkan field kalau user baru buka manual (bukan dari URL)
+  * UPDATE #3: pesan error di rtJoinLobby() disesuaikan ke
+    "Format: JEC-001 (atau JEC-RTxxx)" agar siswa tahu format baru.
+  * UPDATE #4: bila input manual + user belum login, tampilkan login dulu
+    (sama seperti flow URL), lalu auto-join setelah login sukses.
+  * TETAP IDENTIK dari v1.5:
+    - Auto-detect ?jec-rt + login wajib (PS.user)
+    - 3 onSnapshot + watchdog 2 dtk + poin normal
+    - Floating vocab parts of speech di lobby (30+ vocab)
+    - Refresh koneksi di lobby & playing (UPDATE #2 v1.5)
+    - Radar online/offline indicator (UPDATE #5 v1.5)
+    - Feedback jawaban + pembahasan + leaderboard live
+    - Rejoin via localStorage
 - EXPOSE: window.rtJoinLobby, window.rtSubmitAnswer, window.rtBackToHome,
   window.rtSelectOption, window.rtToggleMCMA, window.rtTogglePGK,
-  window.rtUpdateIsian, window.rtRefreshConnection. */
+  window.rtUpdateIsian, window.rtRefreshConnection, window.rtOpenJoin. */
 
 (function(){
   'use strict';
@@ -59,11 +63,15 @@
   }
 
   // ============================================
-  // VALIDASI KODE JOIN (JEC-RTxxx atau 6-char legacy)
+  // VALIDASI KODE JOIN (UPDATE #1: + JEC-xxx)
   // ============================================
   function isValidJoinCode(code){
     if (!code) return false;
+    // BARU: JEC-001, JEC-042, ... (minimal 3 digit)
+    if (/^JEC-\d{3,}$/i.test(code)) return true;
+    // Lama: JEC-RT001
     if (/^JEC-RT\d{3,}$/i.test(code)) return true;
+    // Legacy: 6 char alfanumerik
     if (/^[A-Z0-9]{6}$/.test(code)) return true;
     return false;
   }
@@ -72,39 +80,33 @@
   // KOSAKATA PARTS OF SPEECH (melayang di lobby)
   // ============================================
   var RT_VOCAB = [
-    // Nouns
     { en:'book', id:'buku', pos:'noun' },
     { en:'student', id:'siswa', pos:'noun' },
     { en:'teacher', id:'guru', pos:'noun' },
     { en:'knowledge', id:'pengetahuan', pos:'noun' },
     { en:'happiness', id:'kebahagiaan', pos:'noun' },
     { en:'journey', id:'perjalanan', pos:'noun' },
-    // Verbs
     { en:'run', id:'berlari', pos:'verb' },
     { en:'study', id:'belajar', pos:'verb' },
     { en:'achieve', id:'mencapai', pos:'verb' },
     { en:'discover', id:'menemukan', pos:'verb' },
     { en:'understand', id:'memahami', pos:'verb' },
     { en:'create', id:'menciptakan', pos:'verb' },
-    // Adjectives
     { en:'beautiful', id:'cantik', pos:'adj' },
     { en:'brilliant', id:'cemerlang', pos:'adj' },
     { en:'curious', id:'penasaran', pos:'adj' },
     { en:'diligent', id:'rajin', pos:'adj' },
     { en:'honest', id:'jujur', pos:'adj' },
     { en:'intelligent', id:'cerdas', pos:'adj' },
-    // Adverbs
     { en:'quickly', id:'dengan cepat', pos:'adv' },
     { en:'carefully', id:'dengan hati-hati', pos:'adv' },
     { en:'happily', id:'dengan bahagia', pos:'adv' },
     { en:'wisely', id:'dengan bijak', pos:'adv' },
     { en:'patiently', id:'dengan sabar', pos:'adv' },
-    // Prepositions / conjunctions
     { en:'between', id:'di antara', pos:'prep' },
     { en:'although', id:'meskipun', pos:'conj' },
     { en:'however', id:'namun', pos:'conj' },
     { en:'therefore', id:'oleh karena itu', pos:'conj' },
-    // Phrases
     { en:'break the ice', id:'memulai percakapan', pos:'idiom' },
     { en:'piece of cake', id:'sangat mudah', pos:'idiom' },
     { en:'hit the books', id:'belajar giat', pos:'idiom' }
@@ -112,7 +114,6 @@
 
   function injectRtStyles(){
     if (document.getElementById('rt-style-v15')) return;
-    // Hapus versi lama
     var old = document.getElementById('rt-style-v14');
     if (old) old.remove();
 
@@ -134,14 +135,12 @@
       '.rt-player-chip{display:flex;align-items:center;gap:.5rem;padding:.4375rem .625rem;',
       '  background:#f8fafc;border:1px solid #eef2f6;border-radius:8px;font-size:.8125rem;color:#334155;margin-bottom:.3125rem;}',
       '.rt-player-chip .material-icons{font-size:15px;color:#94a3b8;}',
-      /* sticky header saat playing */
       '#rtPlayingScreen .rt-hero{position:sticky;top:0;z-index:20;border-radius:0 0 14px 14px;',
       '  padding:.625rem .875rem;margin:-0.875rem -0.875rem .875rem;display:flex;align-items:center;',
       '  justify-content:space-between;gap:.625rem;text-align:left;}',
       '#rtPlayingScreen .rt-hero .rt-timer-big{font-size:1.375rem;margin:0;font-weight:800;color:#fff;}',
       '#rtPlayingScreen .rt-hero .rt-timer-big.urgent{color:#fecaca;}',
       '.rt-qmeta{font-size:.75rem;opacity:.9;}',
-      /* options */
       '.rt-option{padding:.8125rem .875rem;background:#fff;border:1.5px solid #e6eaf0;border-radius:12px;',
       '  margin-bottom:.5rem;cursor:pointer;font-size:.9375rem;line-height:1.45;',
       '  transition:border-color .12s, background .12s;}',
@@ -152,7 +151,6 @@
       '  font-weight:700;font-size:.8125rem;margin-right:.5rem;flex:0 0 auto;}',
       '.rt-option.selected .opt-letter{background:#6d28d9;color:#fff;}',
       '#rtAnswerFeedback{border-radius:12px;padding:.75rem .875rem;}',
-      /* leaderboard */
       '.rt-leaderboard-row{display:flex;align-items:center;gap:.5rem;padding:.4375rem .5rem;',
       '  border-bottom:1px solid #f1f5f9;font-size:.8125rem;}',
       '.rt-leaderboard-row:last-child{border-bottom:none;}',
@@ -161,8 +159,6 @@
       '.rt-leaderboard-row .rt-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
       '.rt-leaderboard-row .rt-score{font-weight:700;color:#047857;flex:0 0 auto;}',
       '#rtSubmitArea .btn{border-radius:12px;}',
-
-      /* UPDATE #5: radar online indicator */
       '.rt-online-radar{display:inline-block;width:10px;height:10px;background:#10b981;',
       '  border-radius:50%;margin-right:.375rem;vertical-align:middle;',
       '  animation:rtRadarPulse 2s ease-in-out infinite;}',
@@ -171,8 +167,6 @@
       '  0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.7);}',
       '  50%{box-shadow:0 0 0 6px rgba(16,185,129,0);}',
       '}',
-
-      /* UPDATE #4: floating vocab */
       '.rt-vocab-bg{position:fixed;top:0;left:0;width:100%;height:100%;overflow:hidden;',
       '  pointer-events:none;z-index:0;}',
       '.rt-vocab-item{position:absolute;top:-40px;font-weight:600;font-size:.9375rem;',
@@ -188,15 +182,12 @@
       '  90%{opacity:.6;}',
       '  100%{transform:translateY(105vh) rotate(3deg);opacity:0;}',
       '}',
-
-      /* header action bar */
       '.rt-head-actions{display:flex;gap:.375rem;align-items:center;}',
       '.rt-head-btn{background:rgba(255,255,255,.18);border:none;color:#fff;',
       '  padding:.375rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;',
       '  transition:background .15s;}',
       '.rt-head-btn:hover{background:rgba(255,255,255,.3);}',
       '.rt-head-btn .material-icons{font-size:18px;}',
-
       '@media (max-width:400px){',
       '  .rt-container{padding:.625rem .625rem 3rem;}',
       '  #rtPlayingScreen .rt-hero{margin:-0.625rem -0.625rem .75rem;}',
@@ -212,7 +203,6 @@
       var el = $(id);
       if (el) el.style.display = (id === screenId) ? 'block' : 'none';
     });
-    // UPDATE #4: auto-toggle vocab background
     toggleVocabBg(screenId === 'rtLobbyScreen');
   }
 
@@ -252,6 +242,15 @@
     if (codeInput) { codeInput.readOnly = true; codeInput.style.opacity = '.85'; }
   }
 
+  function showManualNameInput(){
+    var nameInput = $('rtNameInput');
+    if (!nameInput) return;
+    var fg = nameInput.closest ? nameInput.closest('.form-group') : null;
+    if (fg) fg.style.display = 'block';
+    var codeInput = $('rtCodeInput');
+    if (codeInput) { codeInput.readOnly = false; codeInput.style.opacity = '1'; }
+  }
+
   function updateJoinIdentityText(){
     var btn = document.querySelector('#rtJoinScreen button[onclick*="rtJoinLobby"]');
     if (btn && window.PS && PS.user) {
@@ -283,7 +282,6 @@
     var bg = $('rtVocabBg');
     if (!bg) return;
     bg.innerHTML = '';
-    // Tampilkan ~14 item sekaligus, staggered
     var pool = RT_VOCAB.slice().sort(function(){ return Math.random()-0.5; });
     var shown = pool.slice(0, Math.min(14, pool.length));
     shown.forEach(function(v, i){
@@ -299,11 +297,9 @@
       bg.appendChild(el);
     });
 
-    // Auto respawn setiap 20 detik agar selalu fresh
     if (window.__rtVocabTimer) clearInterval(window.__rtVocabTimer);
     window.__rtVocabTimer = setInterval(function(){
       if (!$('rtVocabBg')) { clearInterval(window.__rtVocabTimer); return; }
-      // Tambahkan 2-3 item baru
       var pool2 = RT_VOCAB.slice().sort(function(){ return Math.random()-0.5; });
       var addCount = 2 + Math.floor(Math.random()*2);
       for (var k=0; k<addCount; k++){
@@ -422,6 +418,29 @@
   }
 
   // ============================================
+  // UPDATE #2: input kode manual dari luar (dashboard)
+  // ============================================
+  window.rtOpenJoin = function(){
+    injectRtStyles();
+    RT.realtimeParamCode = null;
+    RT.roomCode = null;
+
+    showRealtimePage();
+    showScreen('rtJoinScreen');
+    showManualNameInput();
+
+    var codeInput = $('rtCodeInput');
+    if (codeInput) {
+      codeInput.value = '';
+      codeInput.readOnly = false;
+      codeInput.style.opacity = '1';
+      setTimeout(function(){ codeInput.focus(); }, 100);
+    }
+    setJoinError('');
+    updateJoinIdentityText();
+  };
+
+  // ============================================
   // JOIN
   // ============================================
   window.rtJoinLobby = async function(){
@@ -431,9 +450,9 @@
     var codeInput = $('rtCodeInput');
     var code = normCode((codeInput && codeInput.value) || RT.roomCode || RT.realtimeParamCode);
 
-    // UPDATE: validasi kode JEC-RTxxx atau 6-char legacy
+    // UPDATE #1: validasi menerima JEC-xxx, JEC-RTxxx, 6-char legacy
     if (!isValidJoinCode(code)) {
-      setJoinError('Kode join tidak valid. Format: JEC-RTxxx (misal JEC-RT001).');
+      setJoinError('Kode tidak valid. Format: JEC-001 (atau JEC-RTxxx / 6-char).');
       return;
     }
 
@@ -582,7 +601,6 @@
     rtStartWatchdog();
   }
 
-  // UPDATE #5: update radar indicator tanpa full re-render
   function updateOnlineIndicator(){
     var radarEls = document.querySelectorAll('.rt-online-radar');
     radarEls.forEach(function(el){
@@ -649,12 +667,11 @@
   }
 
   // ============================================
-  // LOBBY (UPDATE #4: hero dengan radar + kode besar)
+  // LOBBY
   // ============================================
   function rtRenderLobby(){
     if (!RT.room) return;
 
-    // Re-render hero lobby (dengan radar + refresh)
     var heroEl = $('rtLobbyHero');
     if (heroEl) {
       var radarClass = RT.online ? 'rt-online-radar' : 'rt-online-radar offline';
@@ -736,7 +753,6 @@
 
     var total = (RT.room.questionIds && RT.room.questionIds.length) ? RT.room.questionIds.length : RT.questions.length;
 
-    // UPDATE #5: render playing hero (dengan radar + refresh)
     var heroEl = $('rtPlayingHero');
     if (heroEl) {
       var radarClass = RT.online ? 'rt-online-radar' : 'rt-online-radar offline';
@@ -753,7 +769,6 @@
             '<span class="material-icons">refresh</span></button>' +
         '</div>';
     } else {
-      // Fallback update element lama
       var numEl = $('rtQNum'); if (numEl) numEl.textContent = cur.index + 1;
       var totalEl = $('rtQTotal'); if (totalEl) totalEl.textContent = total;
     }
@@ -1048,7 +1063,7 @@
   }
 
   // ============================================
-  // REFRESH CONNECTION (UPDATE #2)
+  // REFRESH CONNECTION
   // ============================================
   window.rtRefreshConnection = async function(){
     if (!RT.roomId) { toastSafe('Belum ada room aktif','warning'); return; }
@@ -1067,7 +1082,6 @@
       RT.questions = [];
       RT.questionsById = {};
 
-      // Re-fetch players
       var pSnap = await db.collection('liveRooms').doc(RT.roomId).collection('players').get();
       RT.players = {};
       pSnap.forEach(function(d){ RT.players[d.id] = Object.assign({id:d.id}, d.data()); });
@@ -1114,5 +1128,5 @@
     setTimeout(initRealtimeFromUrl, 50);
   }
 
-  console.log('✅ realtime.js v1.5 loaded (refresh + vocab float + radar + JEC-RTxxx)');
+  console.log('✅ realtime.js v1.6 loaded (+ JEC-xxx + rtOpenJoin manual)');
 })();
