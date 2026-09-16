@@ -1,29 +1,23 @@
-/* s#15 | /root/js/s/dashboard.js | v 2.10 | u 17/09/2026 • 10:00:00 | xu : ke-15 | note : #noteresponse
-- v2.9 -> v2.10 (FIX SESUAI PERMINTAAN USER — tanpa grace period):
-  * HILANGKAN SEMUA gate "grace 24 jam" (RETRY_GRACE_HOURS, isInGracePeriod,
-    hwInGrace). Batas ini penyebab PR yang masih punya 1 kesempatan retry
-    menghilang dari dashboard setelah deadline lewat >24 jam. User TIDAK
-    pernah meminta batas tersebut.
-  * ATURAN TAMPIL BARU (hwPending):
-    - PR SELESAI (completedAttempts >= maxAttempts) -> TIDAK tampil di
-      dashboard (masuk Riwayat). maxAttempts = 2 bila retryMode conditional
-      (fallback default homework), else 1.
-    - PR punya attempt in_progress -> tampil (bisa dilanjutkan).
-    - PR belum expired & belum selesai -> tampil (card normal / card retry).
-    - PR SUDAH expired -> tampil HANYA bila retry tersedia (1 attempt completed
-      yang gagal threshold). Ini yang user minta: "PR yang masih ada 1
-      kesempatan masih di dashboard".
-    - PR expired tanpa attempt completed -> TIDAK tampil (forfeit; tidak
-      nongkrong seperti keluhan sebelumnya).
-  * hwRetryAvailable: retry = homework + retryMode conditional (fallback) +
-    tepat 1 attempt completed + attempt tsb gagal (score<50 ATAU benar<setengah).
-    TANPA cek deadline.
-  * TOMBOL RETRY EKSPLISIT di card HW retry dipertahankan dari v2.9
-    (.hw-retry-btn kuning, onclick startHomework).
-  * fmtDeadline kembali polos (tanpa teks grace).
-  * TETAP: filter realtime dari Live, section Realtime Exercise non-clickable,
-    Live expired tidak tampil di "Tersedia", fillMissingQuestionsCount,
-    dispatcher 5 tab, debug log [dash].
+/* s#15 | /root/js/s/dashboard.js | v 2.11 | u 18/09/2026 • 03:45:00 | xu : ke-16 | note : #noteresponse
+- v2.10 (baseline user) -> v2.11 (TOMBOL REFRESH DI CARD REALTIME EXERCISE):
+  * UPDATE: TAMBAH tombol refresh (icon only, circular) di header section
+    "Realtime Exercise" (kanan atas section, sejajar dengan judul).
+    - Icon: `refresh` material-icons
+    - Fungsi: panggil window.rtOpenJoin() untuk membuka layar input kode
+      manual dari realtime.js v1.6. Siswa bisa join room Realtime tanpa
+      harus klik link URL — tinggal klik tombol refresh lalu ketik kode
+      JEC-001.
+    - Tooltip: "Masuk pakai kode Realtime"
+    - Tema: ungu muda (#ede9fe) sesuai tema realtime.
+  * UPDATE ensureRtSection(): h2 section title kini dibungkus .rt-section-head
+    flex container dengan tombol refresh di kanan. Hanya dibuat 1 tombol
+    di level section, bukan per card (karena ini global action).
+  * CSS tombol refresh di-inject di injectDashStyles() (id s-dash-style-v211).
+    Button pakai .rt-refresh-btn (icon-only, circular 30px, hover darker).
+  * TETAP IDENTIK dari v2.10 (semua fix PR retry, tanpa grace period,
+    hwPending/hwRetryAvailable, buildHwPendingCard dengan tombol retry,
+    filter realtime dari Live, section Realtime non-clickable,
+    fillMissingQuestionsCount, dispatcher 5 tab, debug log [dash]).
 - EXPOSE: window.loadDashboard, window.loadSessions, window.loadMyResults,
   window.renderHomeTab, window.loadAllData, window.renderStudentTab. */
 
@@ -37,12 +31,12 @@
   function dbg(){ var a=['[dash]']; for(var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console, a); }
 
   function injectDashStyles(){
-    if (document.getElementById('s-dash-style-v210')) return;
-    ['s-dash-style-v29','s-dash-style-v28','s-dash-style-v27','s-dash-style-v26'].forEach(function(id){
+    if (document.getElementById('s-dash-style-v211')) return;
+    ['s-dash-style-v210','s-dash-style-v29','s-dash-style-v28','s-dash-style-v27','s-dash-style-v26'].forEach(function(id){
       var o = document.getElementById(id); if (o) o.remove();
     });
     var st = document.createElement('style');
-    st.id = 's-dash-style-v210';
+    st.id = 's-dash-style-v211';
     st.textContent = [
       '.hw-card.hw-card-retry{background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:2px solid #f59e0b;}',
       '.hw-card.hw-card-retry .hw-card-title{color:#92400e;font-weight:700;}',
@@ -59,7 +53,17 @@
       '  box-shadow:0 2px 6px rgba(245,158,11,.35);}',
       '.hw-retry-btn:hover{background:#d97706;}',
       '.hw-retry-btn:active{transform:scale(.99);}',
-      '.hw-retry-btn .material-icons{font-size:18px;}'
+      '.hw-retry-btn .material-icons{font-size:18px;}',
+      /* UPDATE v2.11: tombol refresh di section Realtime Exercise */
+      '.rt-section-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;width:100%;}',
+      '.rt-section-head > div{display:flex;align-items:center;gap:.375rem;}',
+      '.rt-refresh-btn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;',
+      '  width:30px;height:30px;border-radius:50%;border:none;cursor:pointer;',
+      '  background:#ede9fe;color:#5b21b6;transition:all .15s;',
+      '  box-shadow:0 1px 3px rgba(91,33,182,.2);}',
+      '.rt-refresh-btn:hover{background:#ddd6fe;transform:rotate(45deg);}',
+      '.rt-refresh-btn:active{transform:scale(.92);}',
+      '.rt-refresh-btn .material-icons{font-size:17px;}'
     ].join('\n');
     document.head.appendChild(st);
   }
@@ -130,7 +134,6 @@
     return !isNaN(end) && Date.now() > end;
   }
 
-  // Retry tersedia: 1 attempt completed yang gagal. TANPA cek deadline.
   function hwRetryAvailable(s){
     if (!isHw(s)) return false;
     if (getRetryMode(s) !== 'conditional') return false;
@@ -143,14 +146,13 @@
     return (score < RETRY_THRESHOLD) || (correct < total/2);
   }
 
-  // Aturan tampil baru (lihat header)
   function hwPending(s){
     if (!isHw(s)) return false;
     var atts = hwCompletedAttempts(s);
-    if (atts.length >= maxAttempts(s)) return false;      // selesai -> Riwayat
-    if (hwHasInProgress(s)) return true;                   // bisa dilanjutkan
-    if (!hwExpired(s)) return true;                        // masih dalam deadline
-    return hwRetryAvailable(s);                            // expired: hanya bila retry tersedia
+    if (atts.length >= maxAttempts(s)) return false;
+    if (hwHasInProgress(s)) return true;
+    if (!hwExpired(s)) return true;
+    return hwRetryAvailable(s);
   }
 
   function p2(n){ return String(n).padStart(2,'0'); }
@@ -251,7 +253,6 @@
     } catch(e){ console.warn('[PS] fill questionsCount gagal:', e.message); }
   }
 
-  // ===== Card PR: retry (dengan TOMBOL) atau normal =====
   function buildHwPendingCard(s){
     var dl = fmtDeadline(s);
     var retry = hwRetryAvailable(s);
@@ -296,6 +297,7 @@
     '</div>';
   }
 
+  // UPDATE v2.11: tombol refresh di header section (hanya 1 tombol di level section)
   function ensureRtSection(){
     var rtContainer = $('homeRtList');
     if (rtContainer) return rtContainer;
@@ -303,13 +305,32 @@
     if (!homePage) return null;
     var h2 = document.createElement('h2');
     h2.className = 'section-title';
-    h2.innerHTML = '<span class="material-icons" style="color:#7c3aed;">sports_esports</span>Realtime Exercise';
+    h2.innerHTML =
+      '<div class="rt-section-head">' +
+        '<div>' +
+          '<span class="material-icons" style="color:#7c3aed;">sports_esports</span>' +
+          'Realtime Exercise' +
+        '</div>' +
+        '<button type="button" class="rt-refresh-btn" onclick="openRealtimeJoin()" title="Masuk pakai kode Realtime">' +
+          '<span class="material-icons">refresh</span>' +
+        '</button>' +
+      '</div>';
     rtContainer = document.createElement('div');
     rtContainer.id = 'homeRtList';
     homePage.appendChild(h2);
     homePage.appendChild(rtContainer);
     return rtContainer;
   }
+
+  // Handler tombol refresh Realtime — buka layar input kode manual
+  window.openRealtimeJoin = function(){
+    if (typeof window.rtOpenJoin === 'function') {
+      window.rtOpenJoin();
+    } else {
+      // Fallback bila realtime.js belum siap: arahkan ke ?jec-rt= kosong
+      toast('Modul Realtime belum siap','warning');
+    }
+  };
 
   async function renderHomeTab(){
     injectDashStyles();
@@ -403,7 +424,7 @@
       if (rtAssigned.length === 0) {
         rtWrap.innerHTML =
           '<div class="empty-state" style="padding:1.5rem;"><span class="material-icons">sports_esports</span>' +
-          '<p>Belum ada sesi realtime yang ditugaskan untuk Anda.</p></div>';
+          '<p>Belum ada sesi realtime yang ditugaskan untuk Anda. Klik tombol refresh di atas untuk masuk pakai kode.</p></div>';
       } else {
         rtWrap.innerHTML = rtAssigned.map(function(s){
           var qLabel = (s.questionsCount!=null) ? s.questionsCount : '-';
@@ -417,7 +438,7 @@
               '<span><span class="material-icons">quiz</span>' + qLabel + ' soal</span>' +
             '</div>' +
             '<div style="font-size:.75rem;color:#7c3aed;margin-top:.25rem;font-weight:500;">' +
-              'Sesi ini harus dimulai lewat kode Realtime dari guru. Tunggu instruksi di kelas!' +
+              'Sesi ini harus dimulai lewat kode Realtime dari guru. Klik tombol refresh di atas atau tunggu instruksi di kelas.' +
             '</div></div>' +
             '<span class="session-status locked">Menunggu Kode</span></div>';
         }).join('');
@@ -435,5 +456,5 @@
   window.renderHomeTab = renderHomeTab;
   window.loadAllData = loadAllData;
 
-  console.log('✅ dashboard.js v2.10 loaded (PR sisa kesempatan tetap tampil + tombol Retry, tanpa grace)');
+  console.log('✅ dashboard.js v2.11 loaded (+ tombol refresh Realtime section)');
 })();
