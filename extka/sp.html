@@ -1,22 +1,113 @@
-<!-- #13 | /root/sp.html | v 4.2 | u 09/09/2026 • 10:10:00 | xu : ke-7 | note : #noteresponse
-- TAMBAH: js/s/homework.js?v=5 (handler mode Homework/PR) di urutan alfabet.
-- BUMP: seluruh cache-bust js/s/*.js dan css/s.css ke ?v=5 (mode Live vs Homework).
-- Struktur TIDAK diubah: login, header brand + date line, 6 tab-page, test page (Live & Homework
-  pakai container sama; routing otomatis via test.js v1.9), result page (badge mode via result.js v2.0). -->
+<!-- s#13 | /root/sp.html | v 4.7 | u 18/09/2026 • 02:30:00 | xu : ke-13 | note : #noteresponse
+- v4.6 -> v4.7 (HEADER UPDATE: nickname + indikator online/offline):
+  * UPDATE struktur .header-user:
+    - Tambah elemen #sUserNickname di atas ID+nama untuk nama panggilan.
+    - Icon school tetap di kiri, dua baris teks di kanan (nickname atas,
+      ID+nama bawah).
+  * UPDATE struktur .s-date-line (jadi flex container):
+    - Kiri: icon schedule + teks jam real-time (#sClockText).
+    - Kanan mepet: indikator koneksi #connStatus dengan radar bulat
+      (#connRadar) + label kecil (#connLabel).
+  * STRUKTUR LAIN SAMA PERSIS v4.6: login, studentApp (6 tab), testPage,
+    resultPage, realtimePage (4 screen), modal & toast, bottom-nav,
+    PS & RT state.
+  * BUMP CACHE-BUST:
+    - css/s.css?v=9 -> ?v=11 (patch v2.8)
+    - js/s/login.js?v=7 -> ?v=8 (v2.3: nickname + koneksi monitor)
+  * File lain cache-bust SAMA dengan v4.6.
+  * CATATAN: state.js TIDAK diubah (field nickname ditampung otomatis di
+    PS.user via assignment object). -->
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#2563eb">
+<meta name="theme-color" content="#008069">
 <title>Panel Siswa - Exercise TKA English</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <link href="css/g.css" rel="stylesheet">
-<link href="css/s.css?v=5" rel="stylesheet">
+<link href="css/s.css?v=13" rel="stylesheet">
 <link href="css/brand.css" rel="stylesheet">
+<style id="rt-inline-css">
+  /* Fondasi CSS Realtime Student */
+  .rt-page{position:fixed;inset:0;background:#f8fafc;z-index:100;overflow-y:auto;display:none;}
+  .rt-page.active{display:block;}
+  .rt-container{max-width:640px;margin:0 auto;padding:1rem;}
+  .rt-hero{background:linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%);color:#fff;border-radius:16px;padding:1.5rem;margin-bottom:1rem;text-align:center;position:relative;}
+  .rt-hero h1{font-size:1.25rem;font-weight:700;margin-bottom:.25rem;}
+  .rt-hero .rt-code{font-size:2rem;font-weight:800;font-family:monospace;letter-spacing:.22em;margin:.75rem 0;background:rgba(255,255,255,.15);padding:.5rem 1rem;border-radius:12px;display:inline-block;}
+  .rt-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1rem;margin-bottom:1rem;}
+  .rt-input-group{display:flex;gap:.5rem;margin-top:.75rem;}
+  .rt-input-group input{flex:1;}
+  .rt-player-chip{display:flex;align-items:center;gap:.5rem;padding:.4375rem .625rem;background:#f8fafc;border:1px solid #eef2f6;border-radius:8px;font-size:.8125rem;color:#334155;margin-bottom:.3125rem;}
+  .rt-question-text{font-size:1.125rem;line-height:1.6;margin:1rem 0;font-weight:500;}
+  .rt-option{padding:.875rem 1rem;background:#fff;border:2px solid #e2e8f0;border-radius:10px;margin-bottom:.5rem;cursor:pointer;transition:all .15s;font-size:.9375rem;}
+  .rt-option:hover{border-color:#7c3aed;background:#f5f3ff;}
+  .rt-option.selected{border-color:#7c3aed;background:#ede9fe;font-weight:600;}
+  .rt-option.correct{border-color:#10b981;background:#d1fae5;}
+  .rt-option.wrong{border-color:#ef4444;background:#fee2e2;}
+  .rt-leaderboard-row{display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;border-bottom:1px solid #f1f5f9;font-size:.875rem;}
+  .rt-leaderboard-row.me{background:#fef3c7;font-weight:700;}
+  .rt-leaderboard-row .rt-rank{font-weight:700;color:#7c3aed;width:2rem;}
+  .rt-leaderboard-row .rt-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rt-leaderboard-row .rt-score{font-weight:700;color:#047857;min-width:3rem;text-align:right;}
+  .rt-status-pill{display:inline-flex;align-items:center;gap:.375rem;padding:.375rem .75rem;border-radius:50px;font-size:.75rem;font-weight:700;}
+  .rt-status-pill.lobby{background:#ede9fe;color:#5b21b6;}
+  .rt-status-pill.playing{background:#fee2e2;color:#991b1b;animation:rt-pulse 1.5s infinite;}
+  .rt-status-pill.finished{background:#e2e8f0;color:#475569;}
+  @keyframes rt-pulse{0%,100%{opacity:1;}50%{opacity:.6;}}
+  .rt-timer-big{font-size:2rem;font-weight:800;font-family:monospace;text-align:center;color:#fff;margin:.5rem 0;}
+  .rt-timer-big.urgent{color:#fecaca;}
+
+  /* radar online indicator */
+  .rt-online-radar{display:inline-block;width:10px;height:10px;background:#10b981;
+    border-radius:50%;margin-right:.375rem;vertical-align:middle;
+    animation:rtRadarPulse 2s ease-in-out infinite;}
+  .rt-online-radar.offline{background:#ef4444;animation:none;}
+  @keyframes rtRadarPulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.7);}
+    50%{box-shadow:0 0 0 6px rgba(16,185,129,0);}
+  }
+
+  /* head action buttons di hero */
+  .rt-head-actions{display:flex;gap:.375rem;align-items:center;}
+  .rt-head-btn{background:rgba(255,255,255,.18);border:none;color:#fff;
+    padding:.375rem;border-radius:8px;cursor:pointer;display:inline-flex;
+    align-items:center;justify-content:center;transition:background .15s;
+    width:34px;height:34px;}
+  .rt-head-btn:hover{background:rgba(255,255,255,.3);}
+  .rt-head-btn .material-icons{font-size:18px;}
+
+  /* kosakata melayang di lobby */
+  .rt-vocab-bg{position:fixed;top:0;left:0;width:100%;height:100%;overflow:hidden;
+    pointer-events:none;z-index:0;}
+  .rt-vocab-item{position:absolute;top:-40px;font-weight:600;font-size:.9375rem;
+    color:#a78bfa;opacity:.45;white-space:nowrap;
+    animation:rtVocabFloat var(--rt-dur, 22s) linear var(--rt-delay, 0s) infinite;
+    text-shadow:0 1px 3px rgba(255,255,255,.8);}
+  .rt-vocab-item .rt-pos{font-size:.625rem;font-weight:700;color:#fff;
+    background:#8b5cf6;padding:1px 5px;border-radius:50px;margin-left:.25rem;
+    text-transform:uppercase;letter-spacing:.03em;}
+  @keyframes rtVocabFloat{
+    0%{transform:translateY(-10vh) rotate(-3deg);opacity:0;}
+    10%{opacity:.6;}
+    90%{opacity:.6;}
+    100%{transform:translateY(105vh) rotate(3deg);opacity:0;}
+  }
+
+  /* Sticky hero saat playing */
+  #rtPlayingScreen .rt-hero{position:sticky;top:0;z-index:20;
+    border-radius:0 0 14px 14px;padding:1rem;margin:-1rem -1rem 1rem;
+    display:flex;align-items:center;justify-content:space-between;gap:.625rem;
+    text-align:left;}
+  #rtPlayingScreen .rt-hero .rt-timer-big{font-size:1.5rem;margin:0;}
+
+  #rtLobbyScreen .rt-container,
+  #rtPlayingScreen .rt-container{position:relative;z-index:1;}
+</style>
 </head>
 <body>
 
@@ -49,7 +140,6 @@
     </form>
     <div class="login-footer">
       <p>Exercise TKA English &copy; 2026 Jagat Education Center</p>
-      <p style="margin-top:.25rem;"><a href="sp.html?devtools" style="color:#64748b;font-size:.7rem;">DevTools</a></p>
     </div>
   </div>
 </div>
@@ -59,7 +149,6 @@
      ============================================ -->
 <div id="studentApp" class="student-app" style="display:none;">
 
-  <!-- HEADER (brand + ID + nama, tanpa logout) -->
   <header class="app-header" id="sHeader" style="display:none;">
     <div class="header-brand">
       <span class="material-icons">school</span>
@@ -71,21 +160,36 @@
     <div class="header-right">
       <div class="header-user">
         <span class="material-icons">school</span>
-        <strong id="sUserId">-</strong>
-        <span class="header-name" id="sUserName"></span>
+        <div class="header-user-text">
+          <!-- UPDATE v4.7: nickname di atas, ID+nama di bawah -->
+          <div class="s-user-nickname" id="sUserNickname"></div>
+          <div class="s-user-idline">
+            <strong id="sUserId">-</strong>
+            <span class="header-name" id="sUserName"></span>
+          </div>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- DATE LINE (hari, tanggal, jam real-time) -->
+  <!-- UPDATE v4.7: sDateLine flex — jam kiri, status kanan mepet -->
   <div class="s-date-line" id="sDateLine">
-    <span class="material-icons">schedule</span>Memuat waktu...
+    <div class="sdl-left">
+      <span class="material-icons">schedule</span>
+      <span id="sClockText">Memuat waktu...</span>
+    </div>
+    <div class="sdl-right">
+      <div class="conn-status" id="connStatus" title="Status koneksi">
+        <div class="conn-indicator">
+          <span class="conn-radar" id="connRadar"></span>
+        </div>
+        <span class="conn-label" id="connLabel">-</span>
+      </div>
+    </div>
   </div>
 
-  <!-- ====== TAB PAGES ====== -->
   <div style="max-width:800px;margin:0 auto;">
 
-    <!-- TAB: HOME -->
     <div id="page-home" class="tab-page active">
       <h2 class="section-title"><span class="material-icons">dashboard</span>Overview</h2>
       <div id="homeOverview"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
@@ -97,36 +201,30 @@
       <div id="homeSesiList"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
     </div>
 
-    <!-- TAB: RIWAYAT -->
     <div id="page-riwayat" class="tab-page">
       <h2 class="section-title"><span class="material-icons">history</span>Riwayat Sesi</h2>
       <div id="riwayatList"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
     </div>
 
-    <!-- TAB: NILAI -->
     <div id="page-nilai" class="tab-page">
       <h2 class="section-title"><span class="material-icons">emoji_events</span>Nilai Per Sesi</h2>
       <div id="nilaiTable"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
     </div>
 
-    <!-- TAB: FEEDBACK -->
     <div id="page-feedback" class="tab-page">
       <div id="feedbackTabContent"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
     </div>
 
-    <!-- TAB: PROFILE -->
     <div id="page-profile" class="tab-page">
       <div id="profileTabContent"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
     </div>
 
-    <!-- TAB: INFO -->
     <div id="page-info" class="tab-page">
       <div id="infoTabContent"><div class="empty-state"><span class="material-icons">hourglass_empty</span><p>Memuat...</p></div></div>
     </div>
 
   </div>
 
-  <!-- ====== BOTTOM NAVIGATION (6 tab, clickable) ====== -->
   <nav class="bottom-nav-tabs" id="bottomNav">
     <button class="bn-item active" data-tab="home" onclick="PS.setTab('home')">
       <span class="material-icons">home</span><span>Home</span>
@@ -150,7 +248,7 @@
 </div>
 
 <!-- ============================================
-     TEST PAGE (dipakai Live Exercise & Homework)
+     TEST PAGE (Live Exercise & Homework)
      ============================================ -->
 <div id="testPage" class="test-page" style="display:none;">
   <div class="test-header">
@@ -187,7 +285,7 @@
 </div>
 
 <!-- ============================================
-     RESULT PAGE (badge mode di-inject oleh result.js v2.0)
+     RESULT PAGE
      ============================================ -->
 <div id="resultPage" class="result-page" style="display:none;">
   <div class="result-card">
@@ -208,6 +306,126 @@
   </div>
 </div>
 
+<!-- ============================================
+     REALTIME PAGE (join lobby via ?jec-rt=<code>)
+     Handler: js/s/realtime.js v1.5
+     ============================================ -->
+<div id="realtimePage" class="rt-page">
+  <div class="rt-container">
+
+    <!-- SCREEN 1: JOIN -->
+    <div id="rtJoinScreen" class="rt-screen">
+      <div class="rt-hero">
+        <span class="material-icons" style="font-size:3rem;">sports_esports</span>
+        <h1>Realtime Exercise</h1>
+        <p>Join via kode dari guru Anda</p>
+      </div>
+      <div class="rt-card">
+        <div class="form-group">
+          <label class="form-label"><span class="material-icons">pin</span>Kode Join</label>
+          <input type="text" class="form-control" id="rtCodeInput" placeholder="JEC-RT001" style="text-transform:uppercase;font-family:monospace;font-size:1.25rem;letter-spacing:.18em;text-align:center;">
+          <small style="color:#64748b;font-size:.75rem;">Format: JEC-RT001, JEC-RT002, ...</small>
+        </div>
+        <div class="form-group" id="rtNameGroup" style="display:none;">
+          <label class="form-label"><span class="material-icons">person</span>Nama Anda</label>
+          <input type="text" class="form-control" id="rtNameInput" placeholder="Nama lengkap" maxlength="50">
+        </div>
+        <button class="btn btn-primary w-full" onclick="window.rtJoinLobby && window.rtJoinLobby()">
+          <span class="material-icons">login</span>Masuk Lobby
+        </button>
+        <div id="rtJoinError" style="display:none;margin-top:.75rem;padding:.5rem .75rem;background:#fee2e2;border-radius:8px;font-size:.8125rem;color:#991b1b;"></div>
+      </div>
+    </div>
+
+    <!-- SCREEN 2: LOBBY -->
+    <div id="rtLobbyScreen" class="rt-screen" style="display:none;">
+      <div class="rt-hero" id="rtLobbyHero">
+        <span class="rt-status-pill lobby"><span class="material-icons" style="font-size:14px;">hourglass_empty</span>LOBBY</span>
+        <h1 id="rtSessionName">Sesi Realtime</h1>
+        <p>Menunggu guru memulai sesi...</p>
+        <div class="rt-code" id="rtCodeDisplay">------</div>
+      </div>
+      <div class="rt-card">
+        <strong>Pemain di lobby:</strong>
+        <div id="rtPlayerList" style="margin-top:.5rem;min-height:2rem;">
+          <div class="empty-state" style="padding:.5rem;"><p style="font-size:.8125rem;">Belum ada pemain lain</p></div>
+        </div>
+      </div>
+      <div class="rt-card">
+        <strong style="display:flex;align-items:center;gap:.375rem;">
+          <span class="material-icons" style="font-size:18px;">leaderboard</span>Leaderboard
+        </strong>
+        <div id="rtLeaderboard" style="margin-top:.5rem;">
+          <div class="empty-state" style="padding:.5rem;"><p style="font-size:.8125rem;">Belum ada skor</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 3: PLAYING -->
+    <div id="rtPlayingScreen" class="rt-screen" style="display:none;">
+      <div class="rt-hero" id="rtPlayingHero">
+        <div style="display:flex;flex-direction:column;gap:.125rem;flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:.25rem;font-size:.75rem;opacity:.9;">
+            <span class="rt-online-radar" title="Koneksi aktif"></span>
+            <span>Soal <b id="rtQNum">1</b> / <b id="rtQTotal">0</b></span>
+          </div>
+          <div id="rtTimerBig" class="rt-timer-big">00:00</div>
+        </div>
+      </div>
+      <div class="rt-card">
+        <div id="rtQuestionType" style="margin-bottom:.5rem;"></div>
+        <div class="rt-question-text" id="rtQuestionText">Memuat soal...</div>
+        <div id="rtOptions"></div>
+        <div id="rtSubmitArea" style="margin-top:.75rem;display:none;">
+          <button class="btn btn-primary w-full" onclick="window.rtSubmitAnswer && window.rtSubmitAnswer()">
+            <span class="material-icons">send</span>Kirim Jawaban
+          </button>
+        </div>
+        <div id="rtAnswerFeedback" style="display:none;margin-top:.75rem;padding:.75rem;border-radius:8px;font-size:.875rem;"></div>
+      </div>
+      <div class="rt-card">
+        <strong style="display:flex;align-items:center;gap:.375rem;">
+          <span class="material-icons" style="font-size:18px;">leaderboard</span>Leaderboard
+        </strong>
+        <div id="rtLeaderboardPlaying" style="margin-top:.5rem;">
+          <div class="empty-state" style="padding:.5rem;"><p style="font-size:.8125rem;">Belum ada skor</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 4: FINISHED -->
+    <div id="rtFinishedScreen" class="rt-screen" style="display:none;">
+      <div class="rt-hero" style="background:linear-gradient(135deg,#10b981,#059669);">
+        <span class="material-icons" style="font-size:4rem;">emoji_events</span>
+        <h1>Sesi Selesai!</h1>
+        <p>Terima kasih sudah berpartisipasi</p>
+      </div>
+      <div class="rt-card" style="text-align:center;">
+        <div style="font-size:.875rem;color:#64748b;">Posisi akhir Anda</div>
+        <div id="rtFinalRank" style="font-size:3rem;font-weight:800;color:#7c3aed;margin:.5rem 0;">-</div>
+        <div style="display:flex;justify-content:space-around;margin-top:1rem;padding-top:1rem;border-top:1px solid #e2e8f0;">
+          <div>
+            <div style="font-size:.75rem;color:#64748b;">Skor</div>
+            <div id="rtFinalScore" style="font-size:1.5rem;font-weight:700;color:#047857;">0</div>
+          </div>
+          <div>
+            <div style="font-size:.75rem;color:#64748b;">Benar</div>
+            <div id="rtFinalCorrect" style="font-size:1.5rem;font-weight:700;color:#10b981;">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="rt-card">
+        <strong>Podium Final:</strong>
+        <div id="rtFinalLeaderboard" style="margin-top:.5rem;"></div>
+      </div>
+      <button class="btn btn-primary w-full" onclick="window.rtBackToHome && window.rtBackToHome()">
+        <span class="material-icons">home</span>Kembali ke Dashboard
+      </button>
+    </div>
+
+  </div>
+</div>
+
 <!-- Modal & Toast -->
 <div id="modalOverlay" class="modal-overlay" style="display:none;">
   <div class="modal-box">
@@ -222,7 +440,7 @@
 <div id="toast" class="toast"></div>
 
 <!-- ============================================
-     SCRIPTS (urut dependency + alfabet, cache-busted v5)
+     SCRIPTS
      ============================================ -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -235,24 +453,34 @@ window.PS = window.PS || {
   attemptId:null, myAttempts:[],
   activeTab:'home', myProfile:null, myValues:[]
 };
+window.RT = window.RT || {
+  roomCode:null, roomId:null, playerId:null, playerName:null,
+  unsubRoom:null, unsubPlayers:null, unsubAnswers:null, tickTimer:null,
+  watchTimer:null, room:null, players:{}, answers:{}, questions:[],
+  questionsById:{}, questionsLoadedForSession:null,
+  currentQIndex:-999, currentQId:null, myAnswer:null, submitted:false,
+  lastRenderedAnswerKey:'', realtimeParamCode:null, waitLoginTimer:null,
+  online:true
+};
 </script>
 
 <script type="text/javascript" src="js/fc.js"></script>
 <script type="text/javascript" src="js/rwmonitor.js"></script>
 <script type="text/javascript" src="js/hash.js"></script>
 <script type="text/javascript" src="js/modal.js"></script>
-<script type="text/javascript" src="js/s/state.js?v=5"></script>
-<script type="text/javascript" src="js/s/login.js?v=5"></script>
-<script type="text/javascript" src="js/s/dashboard.js?v=5"></script>
-<script type="text/javascript" src="js/s/feedback.js?v=5"></script>
-<script type="text/javascript" src="js/s/homework.js?v=5"></script>
-<script type="text/javascript" src="js/s/info.js?v=5"></script>
-<script type="text/javascript" src="js/s/nilai.js?v=5"></script>
-<script type="text/javascript" src="js/s/profile.js?v=5"></script>
-<script type="text/javascript" src="js/s/result.js?v=5"></script>
-<script type="text/javascript" src="js/s/riwayat.js?v=5"></script>
-<script type="text/javascript" src="js/s/test.js?v=5"></script>
-<script type="text/javascript" src="js/s/s-devtools.js"></script>
+<script type="text/javascript" src="js/s/state.js?v=7"></script>
+<script type="text/javascript" src="js/s/login.js?v=9"></script>
+<script type="text/javascript" src="js/s/dashboard.js?v=8"></script>
+<script type="text/javascript" src="js/s/feedback.js?v=7"></script>
+<script type="text/javascript" src="js/s/homework.js?v=8"></script>
+<script type="text/javascript" src="js/s/info.js?v=8"></script>
+<script type="text/javascript" src="js/s/nilai.js?v=7"></script>
+<script type="text/javascript" src="js/s/profile.js?v=7"></script>
+<script type="text/javascript" src="js/s/realtime.js?v=5"></script>
+<script type="text/javascript" src="js/s/result.js?v=9"></script>
+<script type="text/javascript" src="js/s/riwayat.js?v=8"></script>
+<script type="text/javascript" src="js/s/test.js?v=7"></script>
+<script type="text/javascript" src="js/s/s-devtools.js?v=5"></script>
 
 </body>
 </html>
