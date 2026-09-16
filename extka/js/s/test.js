@@ -1,22 +1,25 @@
-/* #26 | /root/js/s/test.js | v 2.0 | u 10/09/2026 • 08:45:00 | xu : ke-12 | note : #noteresponse
-- FIX BUG "dua layar block bersamaan":
-  * showTestPage() -> showScreen('test')
-  * exitTestMode() tidak lagi manipulasi display manual (showResult/backToDashboard
-    memanggil showScreen sendiri via result.js v2.1).
-- FIX BUG answerPGK: q.id -> qid (typo dari v1.0 yang menyebabkan crash pada soal True/False).
-- TETAP (tidak dipotong dari v1.9): routing cerdas mode HOMEWORK vs LIVE (startSession
-  delegasi, initTest delegasi, autoResume delegasi), counter pelanggaran, True/False,
-  modal modern, Menu Soal icon-only, assigned-check, 4 tipe soal, timer, saveRemaining,
-  saveProgress, submitTest, confirmSubmit, anti-cheat per sesi (isAntiCheatOn), back trap,
-  playAlarm, enterFS/exitFS, infoRow, updateViolDisplay, isAssigned/blockNotAssigned. */
+/* s#16 | /root/js/s/test.js | v 2.1 | u 13/09/2026 • 21:00:00 | xu : ke-13 | note : #noteresponse
+- v2.0 -> v2.1 (FIX BUG "siswa bisa langsung kerjakan sesi realtime tanpa host"):
+  * TAMBAH guard di awal startSession(): bila sesi ber-mode realtime, tampilkan
+    alert2 info "Sesi ini harus dimulai melalui kode Realtime dari guru Anda" dan
+    return (tidak lanjut ke initTest). Ini adalah pertahanan lapis kedua setelah
+    dashboard.js v2.6 yang sudah menyembunyikan tombol "Mulai" untuk realtime.
+  * TAMBAH guard di autoResume(): bila mode realtime, jangan auto-resume test biasa.
+  * TAMBAH guard di initTest(): defense in depth — bila somehow berhasil lewat
+    layer 1 & 2 (misal via URL ?jec-sim-tka=), tetap diblokir di sini.
+- TETAP (tidak dipotong dari v2.0): routing cerdas mode HOMEWORK vs LIVE, counter
+  pelanggaran, True/False, modal modern, Menu Soal icon-only, assigned-check,
+  4 tipe soal, timer, saveRemaining, saveProgress, submitTest, confirmSubmit,
+  anti-cheat per sesi, back trap, playAlarm, enterFS/exitFS, infoRow,
+  updateViolDisplay, isAssigned/blockNotAssigned. FIX "dua layar block bersamaan"
+  (showScreen terpusat) & FIX typo answerPGK (q.id -> qid) tetap ada. */
 
 (function(){
   'use strict';
   function $(id){ return document.getElementById(id); }
 
-  var AC = null; // AudioContext
+  var AC = null;
 
-  // ===== Cek apakah anti-cheat aktif untuk sesi saat ini =====
   function isAntiCheatOn(){
     if (!PS.settings.antiCheatEnabled) return false;
     if (PS.currentSession && PS.currentSession.antiCheat === false) return false;
@@ -79,7 +82,6 @@
       'error');
   }
 
-  // ===== START SESSION (entry point umum) =====
   async function startSession(id, status){
     console.log('[TKA] startSession dipanggil, id=', id, 'status=', status);
     if (status === 'locked' || status === 'expired') { toast('Sesi belum/tidak tersedia', 'warning'); return; }
@@ -92,14 +94,23 @@
     var name = s ? s.name : 'Sesi';
     var dur = s ? (s.duration||60) : 60;
 
+    // ===== FIX v2.1: BLOCK sesi realtime =====
+    if (s && s.mode === 'realtime') {
+      alert2('Sesi Realtime',
+        'Sesi <b>'+escapeHtmlS(name)+'</b> adalah sesi <b>Realtime Exercise</b> ' +
+        'yang harus dimulai melalui <b>kode join dari guru Anda</b> di kelas.<br><br>' +
+        'Minta guru membagikan kode 6 digit, lalu buka link:<br>' +
+        '<code style="font-size:.75rem;word-break:break-all;">sp.html?jec-rt=KODE</code>',
+        'info');
+      return;
+    }
+
     if (s && !isAssigned(s)) { blockNotAssigned(); return; }
 
-    // ===== DELEGASI: bila sesi ber-mode homework -> ke homework.js =====
     if (s && s.mode === 'homework' && window.startHomework) {
       return window.startHomework(id);
     }
 
-    // ===== Jalur LIVE =====
     var qSnap = await db.collection('questions').where('sessionId','==',id).get();
 
     var startStr = (s && s.startTime) ? formatDate(s.startTime) : '-';
@@ -129,7 +140,6 @@
     var plainText = 'Fokus Simulasi TKA\n\nAnda akan memulai: '+name+'\nJumlah soal: '+qSnap.size+'\nDurasi: '+dur+' menit\nWaktu: '+startStr+' s/d '+endStr+'\n\nPeringatan: Dilarang keluar browser / pindah tab.';
 
     try {
-      console.log('[TKA] Mencoba M.custom...');
       if (window.M && typeof M.custom === 'function') {
         M.custom({
           title: 'Konfirmasi Mulai',
@@ -141,32 +151,31 @@
             { text:'Mulai Sekarang', class:'btn-primary', action: function(){ initTest(id); } }
           ]
         });
-        console.log('[TKA] M.custom berhasil dipanggil');
       } else if (window.M && typeof M.confirm === 'function') {
-        console.log('[TKA] Fallback ke M.confirm');
         M.confirm('Mulai Sesi', plainText.replace(/\n/g,'<br>'), function(){ initTest(id); });
       } else {
-        console.log('[TKA] Fallback ke confirm native');
         if (confirm(plainText)) initTest(id);
       }
     } catch(e) {
-      console.error('[TKA] Error saat buka modal:', e);
       if (confirm(plainText)) initTest(id);
     }
   }
 
-  // ===== AUTO RESUME (dari dashboard/param URL) =====
   window.autoResume = async function(sessionId){
     try {
       var snap = await db.collection('sessions').doc(sessionId).get();
       if (snap.exists && snap.data().mode === 'homework' && window.resumeHomework) {
         return window.resumeHomework(sessionId, null);
       }
+      // FIX v2.1: bila mode realtime, jangan auto-resume test biasa
+      if (snap.exists && snap.data().mode === 'realtime') {
+        alert2('Sesi Realtime', 'Sesi ini harus dimulai lewat kode join dari guru.', 'info');
+        return;
+      }
     } catch(e){ console.warn('[TKA] cek mode sesi gagal:', e); }
     return initTest(sessionId);
   };
 
-  // ===== INIT TEST (untuk LIVE; delegasi ke homework.js bila mode homework) =====
   async function initTest(sessionId){
     var load = loading('Menyiapkan sesi...');
     try {
@@ -174,7 +183,13 @@
       if (!sessSnap.exists) { load.close(); alert2('Error','Sesi tidak ditemukan','error'); return; }
       PS.currentSession = Object.assign({ id: sessionId }, sessSnap.data());
 
-      // ===== DELEGASI: bila homework -> ke homework.js =====
+      // FIX v2.1: guard realtime juga di initTest (defense in depth)
+      if (PS.currentSession.mode === 'realtime') {
+        load.close();
+        alert2('Sesi Realtime', 'Sesi ini harus dimulai lewat kode join dari guru.', 'info');
+        return;
+      }
+
       if (PS.currentSession.mode === 'homework' && window.resumeHomework) {
         load.close();
         return window.resumeHomework(sessionId, null);
@@ -225,7 +240,6 @@
   }
 
   function showTestPage(){
-    // FIX: pakai showScreen terpusat
     if (window.showScreen) showScreen('test');
     else {
       var ls=$('loginScreen'); if(ls) ls.style.display='none';
@@ -277,7 +291,6 @@
     window.removeEventListener('popstate', onBack);
     cleanupAntiCheat();
     exitFS();
-    // TIDAK manipulasi display di sini — showResult/backToDashboard yang atur via showScreen
   }
   function onBack(){
     history.pushState(null, '', location.href);
@@ -379,7 +392,6 @@
 
   window.answerPGS=function(qid,l){PS.answers[qid]=l;saveProgress();renderQuestion();};
   window.answerMCMA=function(qid,l){var c=PS.answers[qid]||[];var i=c.indexOf(l);if(i===-1)c.push(l);else c.splice(i,1);PS.answers[qid]=c;saveProgress();renderQuestion();};
-  // FIX: typo q.id -> qid (crash pada soal True/False di Live Exercise)
   window.answerPGK=function(qid,i,v){var a=PS.answers[qid]||[];a[i]=v;PS.answers[qid]=a;saveProgress();renderQuestion();};
   window.answerISIAN=function(qid,v){PS.answers[qid]=v.trim();saveProgress();};
   window.navQ=function(d){var n=PS.currentIndex+d;if(n<0||n>=PS.questions.length)return;PS.currentIndex=n;saveProgress();renderQuestion();};
@@ -447,3 +459,5 @@
   window.startSession = startSession;
   window.escapeHtml = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
 })();
+
+console.log('✅ test.js v2.1 loaded (block realtime dari startSession)');
