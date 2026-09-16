@@ -1,4 +1,4 @@
-/* #40 | /root/js/s/homework.js | v 1.1 | u 10/09/2026 • 08:25:00 | xu : ke-2 | note : #noteresponse
+/* #40 | /root/js/s/homework.js | v 1.1 | u 10/09/2026 • 08:25:00 | xu : ke-2 | note : #noteresponse ok
 - FIX BUG "dua layar block bersamaan" (soal retry nongkrong di bawah semua menu):
   * showHomeworkPage()  -> showScreen('test')  [hide login/app/result, show test]
   * exitHomework()      -> showScreen('app') + setTab('home') sebelum render
